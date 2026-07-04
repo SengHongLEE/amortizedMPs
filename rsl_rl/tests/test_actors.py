@@ -1,5 +1,6 @@
 import importlib.util
 import unittest
+from fractions import Fraction
 
 import torch
 import torch.nn as nn
@@ -266,11 +267,64 @@ class SNNActorTest(unittest.TestCase):
                 with self.assertRaisesRegex(ValueError, "input_scale"):
                     SNNActor(5, [8], 2, input_scale=value)
 
+    def test_normalizes_fractional_numeric_configuration(self):
+        neuron = LIFNeuron(
+            beta=Fraction(1, 2),
+            threshold=Fraction(1, 2),
+            surrogate_alpha=Fraction(1, 2),
+        )
+        actor = SNNActor(5, [8], 2, input_scale=Fraction(1, 2))
+
+        for value in (
+            neuron.beta,
+            neuron.threshold,
+            neuron.surrogate_alpha,
+            actor.input_scale,
+        ):
+            self.assertIs(type(value), float)
+
+        spike, membrane = neuron(torch.ones(2, 3), torch.zeros(2, 3))
+        actions = actor(torch.randn(3, 5))
+        self.assertTrue(torch.isfinite(spike).all())
+        self.assertTrue(torch.isfinite(membrane).all())
+        self.assertTrue(torch.isfinite(actions).all())
+
+    def test_rejects_boolean_numeric_configuration(self):
+        invalid_constructors = [
+            ("beta", lambda: LIFNeuron(beta=True)),
+            ("threshold", lambda: LIFNeuron(threshold=True)),
+            ("surrogate_alpha", lambda: LIFNeuron(surrogate_alpha=True)),
+            ("input_scale", lambda: SNNActor(5, [8], 2, input_scale=True)),
+        ]
+        for parameter, constructor in invalid_constructors:
+            with self.subTest(parameter=parameter):
+                with self.assertRaisesRegex(ValueError, parameter):
+                    constructor()
+
+    def test_rejects_complex_numeric_configuration(self):
+        invalid_constructors = [
+            ("beta", lambda: LIFNeuron(beta=0.5 + 0j)),
+            ("threshold", lambda: LIFNeuron(threshold=1.0 + 0j)),
+            (
+                "surrogate_alpha",
+                lambda: LIFNeuron(surrogate_alpha=5.0 + 0j),
+            ),
+            (
+                "input_scale",
+                lambda: SNNActor(5, [8], 2, input_scale=1.0 + 0j),
+            ),
+        ]
+        for parameter, constructor in invalid_constructors:
+            with self.subTest(parameter=parameter):
+                with self.assertRaisesRegex(ValueError, parameter):
+                    constructor()
+
     def test_accepts_finite_negative_input_scale(self):
         actor = SNNActor(5, [8], 2, input_scale=-1.5)
 
         actions = actor(torch.randn(3, 5))
 
+        self.assertIs(type(actor.input_scale), float)
         self.assertTrue(torch.isfinite(actions).all())
 
     def test_uses_required_initialization(self):

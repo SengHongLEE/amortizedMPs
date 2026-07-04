@@ -7,9 +7,18 @@ import torch
 import torch.nn as nn
 
 
-def _validate_finite_real(name: str, value: Real) -> None:
-    if not isinstance(value, Real) or not math.isfinite(value):
+def _normalize_finite_real(name: str, value: Real) -> float:
+    if isinstance(value, bool) or not isinstance(value, Real):
         raise ValueError(f"{name} must be a finite real number, got {value!r}.")
+    try:
+        normalized_value = float(value)
+    except (OverflowError, TypeError, ValueError) as error:
+        raise ValueError(
+            f"{name} must be a finite real number, got {value!r}."
+        ) from error
+    if not math.isfinite(normalized_value):
+        raise ValueError(f"{name} must be a finite real number, got {value!r}.")
+    return normalized_value
 
 
 def _validate_dimension(name: str, value: int) -> None:
@@ -66,9 +75,12 @@ class LIFNeuron(nn.Module):
         reset_mode: str = "subtract",
     ):
         super().__init__()
-        _validate_finite_real("beta", beta)
-        _validate_finite_real("threshold", threshold)
-        _validate_finite_real("surrogate_alpha", surrogate_alpha)
+        beta = _normalize_finite_real("beta", beta)
+        threshold = _normalize_finite_real("threshold", threshold)
+        surrogate_alpha = _normalize_finite_real(
+            "surrogate_alpha",
+            surrogate_alpha,
+        )
         if not 0.0 <= beta < 1.0:
             raise ValueError(f"beta must be in [0, 1), got {beta}.")
         if threshold <= 0.0:
@@ -123,7 +135,7 @@ class SNNActor(nn.Module):
         _validate_dimension("output_dim", output_dim)
         hidden_dims = _validate_hidden_dims(hidden_dims)
         _validate_dimension("num_snn_steps", num_snn_steps)
-        _validate_finite_real("input_scale", input_scale)
+        input_scale = _normalize_finite_real("input_scale", input_scale)
 
         self.input_dim = input_dim
         self.output_dim = output_dim
