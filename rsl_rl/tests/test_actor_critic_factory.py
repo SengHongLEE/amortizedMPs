@@ -1,4 +1,5 @@
 import ast
+import io
 import inspect
 import unittest
 
@@ -7,6 +8,7 @@ import torch.nn as nn
 from torch.distributions import Distribution, Normal
 
 import rsl_rl.modules.actor_critic as actor_critic_module
+from rsl_rl.algorithms import PPO, PPOtwin
 from rsl_rl.modules.actor_critic import ActorCritic, get_activation
 from rsl_rl.modules.actors import MLPActor
 from rsl_rl.modules.reservoir_actors import (
@@ -219,6 +221,120 @@ class ActorCriticFactoryTest(unittest.TestCase):
             with self.subTest(call=call):
                 with self.assertRaisesRegex(ValueError, "reservoir_states"):
                     call()
+
+    def test_all_actor_types_round_trip_strict_state_dict(self):
+        for actor_type in ACTOR_TYPES:
+            with self.subTest(actor_type=actor_type):
+                model = make_model(actor_type)
+                rebuilt_model = make_model(actor_type)
+                checkpoint = io.BytesIO()
+                torch.save(model.state_dict(), checkpoint)
+                checkpoint.seek(0)
+
+                rebuilt_model.load_state_dict(
+                    torch.load(
+                        checkpoint,
+                        map_location="cpu",
+                        weights_only=True,
+                    ),
+                    strict=True,
+                )
+
+                for name, value in model.state_dict().items():
+                    self.assertTrue(torch.equal(
+                        value,
+                        rebuilt_model.state_dict()[name],
+                    ))
+
+    def test_ppotwin_updates_all_actor_types(self):
+        observations = torch.full((4, 5), 2.0)
+        critic_observations = torch.randn(4, 7)
+        env_ids = torch.arange(4)
+
+        for actor_type in ACTOR_TYPES:
+            with self.subTest(actor_type=actor_type):
+                torch.manual_seed(31)
+                model = make_model(actor_type)
+                algorithm = PPOtwin(
+                    model,
+                    num_learning_epochs=1,
+                    num_mini_batches=1,
+                    learning_rate=1e-2,
+                    schedule="fixed",
+                    device="cpu",
+                )
+                algorithm.init_storage(4, 1, [5], [7], [2])
+
+                readout_before = None
+                if model.is_reservoir:
+                    reservoir_states = torch.zeros(
+                        4,
+                        model.actor.reservoir_state_dim,
+                    )
+                    readout_before = {
+                        name: parameter.detach().clone()
+                        for name, parameter
+                        in model.actor.readout.named_parameters()
+                    }
+                    actions, _ = algorithm.act(
+                        env_ids,
+                        torch.zeros(4, dtype=torch.long),
+                        observations,
+                        critic_observations,
+                        reservoir_states,
+                    )
+                else:
+                    actions = algorithm.act(
+                        env_ids,
+                        torch.zeros(4, dtype=torch.long),
+                        observations,
+                        critic_observations,
+                    )
+
+                algorithm.process_env_step(
+                    1,
+                    env_ids,
+                    torch.tensor([1.0, 2.0, 3.0, 4.0]),
+                    torch.zeros(4, dtype=torch.bool),
+                    critic_observations,
+                    {},
+                )
+                algorithm.compute_returns(critic_observations)
+                losses = algorithm.update()
+
+                self.assertEqual(actions.shape, (4, 2))
+                self.assertTrue(all(torch.isfinite(
+                    torch.tensor(loss),
+                ) for loss in losses))
+                if model.is_reservoir:
+                    self.assertTrue(any(
+                        not torch.equal(
+                            readout_before[name],
+                            parameter.detach(),
+                        )
+                        for name, parameter
+                        in model.actor.readout.named_parameters()
+                    ))
+                    self.assertIsNone(model.actor.reservoir.w_in.grad)
+                    self.assertIsNone(model.actor.reservoir.w_res.grad)
+
+    def test_ordinary_ppo_rejects_reservoir_actor_at_act(self):
+        model = make_model("analog_reservoir_mlp")
+        algorithm = PPO(model)
+
+        with self.assertRaisesRegex(RuntimeError, "PPOtwin"):
+            algorithm.act(torch.randn(2, 5), torch.randn(2, 7))
+
+    def test_ordinary_ppo_accepts_stateless_actors(self):
+        for actor_type in ("mlp", "snn"):
+            with self.subTest(actor_type=actor_type):
+                model = make_model(actor_type)
+                actions = PPO(model).act(
+                    torch.full((2, 5), 2.0),
+                    torch.randn(2, 7),
+                )
+
+                self.assertEqual(actions.shape, (2, 2))
 
 
 if __name__ == "__main__":
