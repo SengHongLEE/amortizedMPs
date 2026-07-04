@@ -1,5 +1,6 @@
 import contextlib
 import ast
+import copy
 import io
 import inspect
 import os
@@ -73,6 +74,19 @@ class RecordingPolicy:
             observations.shape[0],
             self.action_dim,
             device=observations.device,
+        )
+
+
+class RecordingReservoirPolicy(RecordingPolicy):
+    def __call__(self, observations, reservoir_states):
+        self.last_observations = observations
+        return (
+            torch.ones(
+                observations.shape[0],
+                self.action_dim,
+                device=observations.device,
+            ),
+            reservoir_states + 2.0,
         )
 
 
@@ -157,6 +171,54 @@ class TwinPolicyRunnerTest(unittest.TestCase):
             "get_reservoir_state_dim",
         ))
 
+    def test_runner_rejects_unknown_policy_and_algorithm_names(self):
+        cases = (
+            ("policy_class_name", "UnknownPolicy", "ActorCritic"),
+            ("algorithm_class_name", "UnknownAlgorithm", "PPOtwin"),
+        )
+
+        for config_key, invalid_name, supported_name in cases:
+            with self.subTest(config_key=config_key):
+                train_cfg = self.make_train_cfg("mlp")
+                train_cfg["runner"][config_key] = invalid_name
+
+                error = None
+                try:
+                    TwinPolicyRunner(
+                        FakeEnvironment(),
+                        train_cfg,
+                        device="cpu",
+                    )
+                except Exception as caught_error:
+                    error = caught_error
+
+                self.assertIsInstance(error, ValueError)
+                self.assertRegex(
+                    str(error),
+                    f"{invalid_name}.*{supported_name}",
+                )
+
+    def test_runner_does_not_evaluate_malicious_policy_expression(self):
+        marker = "TWIN_POLICY_RUNNER_EVAL_EXECUTED"
+        malicious_name = (
+            f"__import__('os').environ.__setitem__('{marker}', '1') "
+            "or ActorCritic"
+        )
+        train_cfg = self.make_train_cfg("mlp")
+        train_cfg["runner"]["policy_class_name"] = malicious_name
+        os.environ.pop(marker, None)
+
+        try:
+            with self.assertRaisesRegex(ValueError, "ActorCritic"):
+                TwinPolicyRunner(
+                    FakeEnvironment(),
+                    train_cfg,
+                    device="cpu",
+                )
+            self.assertNotIn(marker, os.environ)
+        finally:
+            os.environ.pop(marker, None)
+
     def test_inference_only_evaluates_due_environments(self):
         runner = TwinPolicyRunner.__new__(TwinPolicyRunner)
         runner.env = FakeEnvironment()
@@ -177,12 +239,60 @@ class TwinPolicyRunnerTest(unittest.TestCase):
         self.assertEqual(mu_policy.last_observations.shape[0], 2)
         self.assertEqual(omega_policy.last_observations.shape[0], 3)
 
+    def test_inference_resets_both_reservoir_states_for_done_envs(self):
+        runner = TwinPolicyRunner.__new__(TwinPolicyRunner)
+        runner.env = FakeEnvironment()
+        runner.env.step = lambda actions: (
+            torch.zeros(3, runner.env.num_obs),
+            torch.zeros(3, runner.env.num_privileged_obs),
+            torch.zeros(3),
+            torch.tensor([False, True, True]),
+            {},
+        )
+        runner.device = "cpu"
+        runner.mu_cached = torch.zeros(3, 1)
+        runner.omega_cached = torch.zeros(3, 1)
+        runner.actions = torch.zeros(3, 2)
+        runner.mu_reservoir_states = torch.ones(3, 2)
+        runner.omega_reservoir_states = torch.ones(3, 2)
+
+        runner.inference_rollout(
+            torch.zeros(3, runner.env.num_obs),
+            RecordingReservoirPolicy(1),
+            RecordingReservoirPolicy(1),
+        )
+
+        self.assertTrue(torch.equal(
+            runner.mu_reservoir_states,
+            torch.tensor([
+                [3.0, 3.0],
+                [0.0, 0.0],
+                [0.0, 0.0],
+            ]),
+        ))
+        self.assertTrue(torch.equal(
+            runner.omega_reservoir_states,
+            torch.tensor([
+                [3.0, 3.0],
+                [0.0, 0.0],
+                [0.0, 0.0],
+            ]),
+        ))
+
     def test_checkpoint_restores_both_optimizers(self):
         runner = TwinPolicyRunner.__new__(TwinPolicyRunner)
         runner.device = "cpu"
         runner.current_learning_iteration = 7
         runner.mu_alg = self.make_algorithm()
         runner.omega_alg = self.make_algorithm()
+        self.take_optimizer_step(runner.mu_alg, 1.0)
+        self.take_optimizer_step(runner.omega_alg, 2.0)
+        expected_mu_optimizer = copy.deepcopy(
+            runner.mu_alg.optimizer.state_dict()
+        )
+        expected_omega_optimizer = copy.deepcopy(
+            runner.omega_alg.optimizer.state_dict()
+        )
 
         with tempfile.TemporaryDirectory() as temp_dir:
             checkpoint_path = os.path.join(temp_dir, "model.pt")
@@ -196,7 +306,25 @@ class TwinPolicyRunnerTest(unittest.TestCase):
             self.assertIn("mu_optimizer_state_dict", checkpoint)
             self.assertIn("omega_optimizer_state_dict", checkpoint)
 
+            runner.mu_alg.optimizer = torch.optim.Adam(
+                runner.mu_alg.actor_critic.parameters(),
+                lr=0.123,
+            )
+            runner.omega_alg.optimizer = torch.optim.Adam(
+                runner.omega_alg.actor_critic.parameters(),
+                lr=0.456,
+            )
+            runner.current_learning_iteration = -1
             runner.load(checkpoint_path, load_optimizer=True)
+
+            self.assert_nested_equal(
+                expected_mu_optimizer,
+                runner.mu_alg.optimizer.state_dict(),
+            )
+            self.assert_nested_equal(
+                expected_omega_optimizer,
+                runner.omega_alg.optimizer.state_dict(),
+            )
             self.assertEqual(runner.current_learning_iteration, 7)
 
     def test_checkpoint_loading_is_strict(self):
@@ -275,6 +403,30 @@ class TwinPolicyRunnerTest(unittest.TestCase):
             "actor_critic": actor_critic,
             "optimizer": torch.optim.Adam(actor_critic.parameters()),
         })()
+
+    @staticmethod
+    def take_optimizer_step(algorithm, scale):
+        algorithm.optimizer.zero_grad()
+        loss = algorithm.actor_critic(
+            torch.full((2, 2), scale),
+        ).square().sum()
+        loss.backward()
+        algorithm.optimizer.step()
+
+    def assert_nested_equal(self, expected, actual):
+        self.assertIs(type(actual), type(expected))
+        if isinstance(expected, dict):
+            self.assertEqual(expected.keys(), actual.keys())
+            for key in expected:
+                self.assert_nested_equal(expected[key], actual[key])
+        elif isinstance(expected, (list, tuple)):
+            self.assertEqual(len(expected), len(actual))
+            for expected_item, actual_item in zip(expected, actual):
+                self.assert_nested_equal(expected_item, actual_item)
+        elif isinstance(expected, torch.Tensor):
+            self.assertTrue(torch.equal(expected, actual))
+        else:
+            self.assertEqual(expected, actual)
 
     @staticmethod
     def make_train_cfg(actor_type):

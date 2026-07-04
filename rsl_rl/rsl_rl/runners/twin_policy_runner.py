@@ -12,6 +12,28 @@ from pathlib import Path
 from torch.utils.tensorboard import SummaryWriter
 import torch
 
+
+_POLICY_CLASSES = {
+    "ActorCritic": ActorCritic,
+    "ActorCriticTwin": ActorCriticTwin,
+}
+_ALGORITHM_CLASSES = {
+    "PPO": PPO,
+    "PPOtwin": PPOtwin,
+}
+
+
+def _resolve_class(name, classes, class_kind):
+    try:
+        return classes[name]
+    except (KeyError, TypeError):
+        supported = ", ".join(classes)
+        raise ValueError(
+            f"Unsupported {class_kind} {name!r}. "
+            f"Supported values: {supported}."
+        ) from None
+
+
 class TwinPolicyRunner(OnPolicyRunner):
     def __init__(self, env, train_cfg, log_dir=None, device='cpu'):
         self.cfg=train_cfg["runner"]
@@ -25,10 +47,16 @@ class TwinPolicyRunner(OnPolicyRunner):
         else:
             num_critic_obs = self.env.num_obs
 
-        #Policy
-        actor_critic_class = eval(self.cfg["policy_class_name"]) # ActorCriticTwin
-        #Algorithm
-        alg_class = eval(self.cfg["algorithm_class_name"]) # PPOTwin
+        actor_critic_class = _resolve_class(
+            self.cfg["policy_class_name"],
+            _POLICY_CLASSES,
+            "policy class",
+        )
+        alg_class = _resolve_class(
+            self.cfg["algorithm_class_name"],
+            _ALGORITHM_CLASSES,
+            "algorithm class",
+        )
 
         mu_actor_critic: ActorCritic = actor_critic_class( self.env.num_obs,
                                             num_critic_obs,
@@ -154,6 +182,11 @@ class TwinPolicyRunner(OnPolicyRunner):
         obs, privileged_obs, rewards, dones, infos = self.env.step(self.actions)
         critic_obs = privileged_obs if privileged_obs is not None else obs
         obs, critic_obs, rewards, dones = obs.to(self.device), critic_obs.to(self.device), rewards.to(self.device), dones.to(self.device)
+
+        if getattr(self, "mu_reservoir_states", None) is not None:
+            self.mu_reservoir_states[dones] = 0.0
+        if getattr(self, "omega_reservoir_states", None) is not None:
+            self.omega_reservoir_states[dones] = 0.0
 
         return obs, critic_obs, rewards, dones, infos
 
