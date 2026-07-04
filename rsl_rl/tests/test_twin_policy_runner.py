@@ -198,6 +198,23 @@ class TwinPolicyRunnerTest(unittest.TestCase):
                     f"{invalid_name}.*{supported_name}",
                 )
 
+    def test_runner_rejects_ordinary_ppo_with_supported_name(self):
+        train_cfg = self.make_train_cfg("mlp")
+        train_cfg["runner"]["algorithm_class_name"] = "PPO"
+
+        error = None
+        try:
+            TwinPolicyRunner(
+                FakeEnvironment(),
+                train_cfg,
+                device="cpu",
+            )
+        except Exception as caught_error:
+            error = caught_error
+
+        self.assertIsInstance(error, ValueError)
+        self.assertRegex(str(error), "PPO.*PPOtwin")
+
     def test_runner_does_not_evaluate_malicious_policy_expression(self):
         marker = "TWIN_POLICY_RUNNER_EVAL_EXECUTED"
         malicious_name = (
