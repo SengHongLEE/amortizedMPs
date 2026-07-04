@@ -1,3 +1,4 @@
+import math
 import os
 import sys
 import unittest
@@ -23,9 +24,11 @@ class AnalogReservoirTest(unittest.TestCase):
         )
 
     def test_relu_update_is_nonnegative_and_exposes_state_as_features(self):
+        observations = torch.randn(3, 5, requires_grad=True)
+        initial_state = torch.zeros(3, 8, requires_grad=True)
         next_state = self.reservoir.update_state(
-            torch.randn(3, 5),
-            torch.zeros(3, 8),
+            observations,
+            initial_state,
         )
 
         self.assertEqual(self.reservoir.state_dim, 8)
@@ -37,6 +40,23 @@ class AnalogReservoirTest(unittest.TestCase):
             next_state,
         )
         self.assertFalse(next_state.requires_grad)
+
+    def test_default_sparse_initialization_succeeds_for_multiple_seeds(self):
+        for seed in range(32):
+            with self.subTest(seed=seed):
+                torch.manual_seed(seed)
+                reservoir = AnalogReservoir(
+                    input_dim=3,
+                    reservoir_dim=2,
+                )
+                radius = torch.linalg.eigvals(
+                    reservoir.w_res.to(torch.float64)
+                ).abs().max()
+                self.assertAlmostEqual(radius.item(), 0.9, places=5)
+
+    def test_rejects_single_unit_reservoir(self):
+        with self.assertRaisesRegex(ValueError, "at least 2"):
+            AnalogReservoir(input_dim=3, reservoir_dim=1)
 
     def test_fixed_random_weights_and_bias_are_buffers(self):
         parameter_names = dict(self.reservoir.named_parameters())
@@ -99,6 +119,30 @@ class AnalogReservoirTest(unittest.TestCase):
                     **arguments,
                 )
 
+    def test_rejects_nonfinite_and_negative_float_configuration(self):
+        invalid_arguments = (
+            {"spectral_radius": math.nan},
+            {"spectral_radius": math.inf},
+            {"connectivity": math.nan},
+            {"connectivity": math.inf},
+            {"input_scale": math.nan},
+            {"input_scale": math.inf},
+            {"input_scale": -0.1},
+            {"bias_scale": math.nan},
+            {"bias_scale": math.inf},
+            {"bias_scale": -0.1},
+            {"leak_rate": math.nan},
+            {"leak_rate": math.inf},
+        )
+
+        for arguments in invalid_arguments:
+            with self.subTest(arguments=arguments), self.assertRaises(ValueError):
+                AnalogReservoir(
+                    input_dim=5,
+                    reservoir_dim=8,
+                    **arguments,
+                )
+
 
 class LIFReservoirTest(unittest.TestCase):
     def setUp(self):
@@ -111,9 +155,11 @@ class LIFReservoirTest(unittest.TestCase):
         )
 
     def test_packs_membrane_and_binary_spikes_and_uses_spikes_as_features(self):
+        observations = torch.randn(3, 5, requires_grad=True)
+        initial_state = torch.zeros(3, 16, requires_grad=True)
         next_state = self.reservoir.update_state(
-            torch.randn(3, 5),
-            torch.zeros(3, 16),
+            observations,
+            initial_state,
         )
         _, spikes = next_state.chunk(2, dim=-1)
 
@@ -179,6 +225,24 @@ class LIFReservoirTest(unittest.TestCase):
             {"num_reservoir_steps": 0},
             {"num_reservoir_steps": 1.5},
             {"train_reservoir": True},
+        )
+
+        for arguments in invalid_arguments:
+            with self.subTest(arguments=arguments), self.assertRaises(ValueError):
+                LIFReservoir(
+                    input_dim=5,
+                    reservoir_dim=8,
+                    **arguments,
+                )
+
+    def test_rejects_nonfinite_lif_configuration(self):
+        invalid_arguments = (
+            {"lif_beta": math.nan},
+            {"lif_beta": math.inf},
+            {"lif_threshold": math.nan},
+            {"lif_threshold": math.inf},
+            {"surrogate_alpha": math.nan},
+            {"surrogate_alpha": math.inf},
         )
 
         for arguments in invalid_arguments:

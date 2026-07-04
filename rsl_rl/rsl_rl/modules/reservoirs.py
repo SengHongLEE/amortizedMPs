@@ -1,9 +1,20 @@
+import math
+
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
 from .actors import get_activation
 from .snn import LIFNeuron
+
+
+def _is_finite_number(value) -> bool:
+    if isinstance(value, bool):
+        return False
+    try:
+        return math.isfinite(value)
+    except (TypeError, ValueError):
+        return False
 
 
 class _FixedReservoirBase(nn.Module):
@@ -29,13 +40,29 @@ class _FixedReservoirBase(nn.Module):
         if (
             isinstance(reservoir_dim, bool)
             or not isinstance(reservoir_dim, int)
-            or reservoir_dim <= 0
+            or reservoir_dim < 2
         ):
-            raise ValueError("reservoir_dim must be a positive integer.")
-        if not 0.0 < connectivity <= 1.0:
+            raise ValueError("reservoir_dim must be an integer of at least 2.")
+        if (
+            not _is_finite_number(connectivity)
+            or not 0.0 < connectivity <= 1.0
+        ):
             raise ValueError("connectivity must be in (0, 1].")
-        if spectral_radius <= 0.0:
+        if (
+            not _is_finite_number(spectral_radius)
+            or spectral_radius <= 0.0
+        ):
             raise ValueError("spectral_radius must be positive.")
+        if (
+            not _is_finite_number(input_scale)
+            or input_scale < 0.0
+        ):
+            raise ValueError("input_scale must be finite and nonnegative.")
+        if (
+            not _is_finite_number(bias_scale)
+            or bias_scale < 0.0
+        ):
+            raise ValueError("bias_scale must be finite and nonnegative.")
         if (
             isinstance(num_reservoir_steps, bool)
             or not isinstance(num_reservoir_steps, int)
@@ -61,20 +88,49 @@ class _FixedReservoirBase(nn.Module):
         reservoir_bias = torch.empty(reservoir_dim)
         nn.init.uniform_(reservoir_bias, -bias_scale, bias_scale)
 
-        w_res = torch.randn(reservoir_dim, reservoir_dim)
-        sparse_mask = torch.rand_like(w_res) < connectivity
-        w_res.mul_(sparse_mask)
         expected_fan_in = reservoir_dim * connectivity
-        w_res.div_(expected_fan_in ** 0.5)
-        w_res.fill_diagonal_(0.0)
-        w_res = self._scale_spectral_radius(
-            w_res,
-            target_radius=spectral_radius,
+        w_res = self._initialize_recurrent_matrix(
+            reservoir_dim=reservoir_dim,
+            connectivity=connectivity,
+            expected_fan_in=expected_fan_in,
+            spectral_radius=spectral_radius,
         )
 
         self.register_buffer("w_in", w_in)
         self.register_buffer("w_res", w_res)
         self.register_buffer("reservoir_bias", reservoir_bias)
+
+    @classmethod
+    @torch.no_grad()
+    def _initialize_recurrent_matrix(
+        cls,
+        reservoir_dim: int,
+        connectivity: float,
+        expected_fan_in: float,
+        spectral_radius: float,
+    ) -> torch.Tensor:
+        fan_in_scale = expected_fan_in ** 0.5
+        for _ in range(8):
+            matrix = torch.randn(reservoir_dim, reservoir_dim)
+            sparse_mask = torch.rand_like(matrix) < connectivity
+            matrix.mul_(sparse_mask)
+            matrix.div_(fan_in_scale)
+            matrix.fill_diagonal_(0.0)
+            try:
+                return cls._scale_spectral_radius(
+                    matrix,
+                    target_radius=spectral_radius,
+                )
+            except RuntimeError:
+                continue
+
+        matrix = torch.zeros(reservoir_dim, reservoir_dim)
+        matrix[0, 1] = 1.0 / fan_in_scale
+        matrix[1, 0] = 1.0 / fan_in_scale
+        return cls._scale_spectral_radius(
+            matrix,
+            target_radius=spectral_radius,
+        )
 
     @staticmethod
     @torch.no_grad()
@@ -155,7 +211,10 @@ class AnalogReservoir(_FixedReservoirBase):
         activation: str = "tanh",
         train_reservoir: bool = False,
     ):
-        if not 0.0 < leak_rate <= 1.0:
+        if (
+            not _is_finite_number(leak_rate)
+            or not 0.0 < leak_rate <= 1.0
+        ):
             raise ValueError("leak_rate must be in (0, 1].")
 
         try:
@@ -223,13 +282,22 @@ class LIFReservoir(_FixedReservoirBase):
         reset_mode: str = "subtract",
         train_reservoir: bool = False,
     ):
-        if not 0.0 <= lif_beta < 1.0:
+        if (
+            not _is_finite_number(lif_beta)
+            or not 0.0 <= lif_beta < 1.0
+        ):
             raise ValueError(f"lif_beta must be in [0, 1), got {lif_beta}.")
-        if lif_threshold <= 0.0:
+        if (
+            not _is_finite_number(lif_threshold)
+            or lif_threshold <= 0.0
+        ):
             raise ValueError(
                 f"lif_threshold must be positive, got {lif_threshold}."
             )
-        if surrogate_alpha <= 0.0:
+        if (
+            not _is_finite_number(surrogate_alpha)
+            or surrogate_alpha <= 0.0
+        ):
             raise ValueError("surrogate_alpha must be positive.")
         if reset_mode not in ("subtract", "zero"):
             raise ValueError("reset_mode must be 'subtract' or 'zero'.")
