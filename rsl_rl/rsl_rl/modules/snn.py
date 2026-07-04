@@ -1,8 +1,15 @@
+import math
 from collections.abc import Sequence
+from numbers import Real
 from typing import List
 
 import torch
 import torch.nn as nn
+
+
+def _validate_finite_real(name: str, value: Real) -> None:
+    if not isinstance(value, Real) or not math.isfinite(value):
+        raise ValueError(f"{name} must be a finite real number, got {value!r}.")
 
 
 def _validate_dimension(name: str, value: int) -> None:
@@ -59,12 +66,17 @@ class LIFNeuron(nn.Module):
         reset_mode: str = "subtract",
     ):
         super().__init__()
+        _validate_finite_real("beta", beta)
+        _validate_finite_real("threshold", threshold)
+        _validate_finite_real("surrogate_alpha", surrogate_alpha)
         if not 0.0 <= beta < 1.0:
             raise ValueError(f"beta must be in [0, 1), got {beta}.")
         if threshold <= 0.0:
             raise ValueError(f"threshold must be positive, got {threshold}.")
         if surrogate_alpha <= 0.0:
-            raise ValueError("surrogate_alpha must be positive.")
+            raise ValueError(
+                f"surrogate_alpha must be positive, got {surrogate_alpha}."
+            )
         if reset_mode not in ("subtract", "zero"):
             raise ValueError("reset_mode must be 'subtract' or 'zero'.")
 
@@ -111,6 +123,7 @@ class SNNActor(nn.Module):
         _validate_dimension("output_dim", output_dim)
         hidden_dims = _validate_hidden_dims(hidden_dims)
         _validate_dimension("num_snn_steps", num_snn_steps)
+        _validate_finite_real("input_scale", input_scale)
 
         self.input_dim = input_dim
         self.output_dim = output_dim

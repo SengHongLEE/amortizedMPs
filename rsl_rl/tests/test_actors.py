@@ -162,9 +162,14 @@ class SNNActorTest(unittest.TestCase):
         actions.sum().backward()
 
         self.assertEqual(actions.shape, (2, 3, 2))
+        self.assertTrue(torch.isfinite(actions).all())
         self.assertIsNotNone(observations.grad)
+        self.assertTrue(torch.isfinite(observations.grad).all())
         self.assertGreater(observations.grad.abs().sum().item(), 0.0)
         self.assertIsNotNone(actor.linear_layers[0].weight.grad)
+        self.assertTrue(
+            torch.isfinite(actor.linear_layers[0].weight.grad).all()
+        )
         self.assertGreater(
             actor.linear_layers[0].weight.grad.abs().sum().item(),
             0.0,
@@ -246,6 +251,27 @@ class SNNActorTest(unittest.TestCase):
             with self.subTest(kwargs=kwargs):
                 with self.assertRaises(ValueError):
                     LIFNeuron(**kwargs)
+
+    def test_rejects_non_finite_and_non_numeric_lif_parameters(self):
+        invalid_values = [float("nan"), float("inf"), float("-inf"), "bad"]
+        for parameter in ("beta", "threshold", "surrogate_alpha"):
+            for value in invalid_values:
+                with self.subTest(parameter=parameter, value=value):
+                    with self.assertRaisesRegex(ValueError, parameter):
+                        LIFNeuron(**{parameter: value})
+
+    def test_rejects_non_finite_and_non_numeric_input_scale(self):
+        for value in [float("nan"), float("inf"), float("-inf"), "bad"]:
+            with self.subTest(value=value):
+                with self.assertRaisesRegex(ValueError, "input_scale"):
+                    SNNActor(5, [8], 2, input_scale=value)
+
+    def test_accepts_finite_negative_input_scale(self):
+        actor = SNNActor(5, [8], 2, input_scale=-1.5)
+
+        actions = actor(torch.randn(3, 5))
+
+        self.assertTrue(torch.isfinite(actions).all())
 
     def test_uses_required_initialization(self):
         actor = SNNActor(5, [8], 2)
