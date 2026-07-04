@@ -174,7 +174,6 @@ class ActorCritic(nn.Module):
 
         self.std = nn.Parameter(init_noise_std * torch.ones(num_actions))
         self.distribution = None
-        Normal.set_default_validate_args = False
 
     @staticmethod
     def init_weights(sequential, scales):
@@ -217,7 +216,11 @@ class ActorCritic(nn.Module):
             )
         else:
             mean = self.actor(observations)
-        self.distribution = Normal(mean, mean * 0.0 + self.std)
+        self.distribution = Normal(
+            mean,
+            mean * 0.0 + self.std,
+            validate_args=False,
+        )
         return reservoir_states
 
     def act(self, observations, reservoir_states=None, **kwargs):
@@ -254,7 +257,11 @@ class ActorCritic(nn.Module):
             observations,
             reservoir_states,
         )
-        self.distribution = Normal(mean, mean * 0.0 + self.std)
+        self.distribution = Normal(
+            mean,
+            mean * 0.0 + self.std,
+            validate_args=False,
+        )
         return self.distribution.sample()
 
     def evaluate(self, critic_observations, **kwargs):

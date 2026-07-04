@@ -4,6 +4,7 @@ import unittest
 
 import torch
 import torch.nn as nn
+from torch.distributions import Distribution, Normal
 
 import rsl_rl.modules.actor_critic as actor_critic_module
 from rsl_rl.modules.actor_critic import ActorCritic, get_activation
@@ -53,6 +54,39 @@ def make_model(actor_type="mlp"):
 class ActorCriticFactoryTest(unittest.TestCase):
     def setUp(self):
         torch.manual_seed(31)
+
+    def test_actor_critic_does_not_mutate_normal_validation_api(self):
+        original_setter = Normal.set_default_validate_args
+        original_setter_descriptor = inspect.getattr_static(
+            Normal,
+            "set_default_validate_args",
+        )
+        original_validate_args = Distribution._validate_args
+
+        try:
+            model = make_model("mlp")
+            model.act(torch.randn(3, 5))
+
+            self.assertTrue(callable(Normal.set_default_validate_args))
+            self.assertIs(
+                Normal.set_default_validate_args,
+                original_setter,
+            )
+            self.assertIs(
+                inspect.getattr_static(
+                    Normal,
+                    "set_default_validate_args",
+                ),
+                original_setter_descriptor,
+            )
+            self.assertEqual(
+                Distribution._validate_args,
+                original_validate_args,
+            )
+        finally:
+            if "set_default_validate_args" in Normal.__dict__:
+                del Normal.set_default_validate_args
+            Distribution._validate_args = original_validate_args
 
     def test_registry_selects_all_six_actor_classes_and_preserves_critic(self):
         for actor_type, expected_class in ACTOR_TYPES.items():
