@@ -71,15 +71,22 @@ class AnalogReservoirTest(unittest.TestCase):
             input_dim=3,
             reservoir_dim=12,
             connectivity=1.0,
-            spectral_radius=0.7,
+            spectral_radius=0.9,
         )
 
         self.assertTrue(torch.equal(
             reservoir.w_res.diagonal(),
             torch.zeros(12),
         ))
-        radius = torch.linalg.eigvals(reservoir.w_res).abs().max()
-        self.assertAlmostEqual(radius.item(), 0.7, places=4)
+        radius = torch.linalg.eigvals(
+            reservoir.w_res.to(torch.float64)
+        ).abs().max()
+        self.assertTrue(torch.isclose(
+            radius,
+            torch.tensor(0.9, dtype=torch.float64),
+            rtol=1e-4,
+            atol=0.0,
+        ))
 
     def test_rejects_spectral_target_that_underflows_scaled_matrix(self):
         torch.manual_seed(3)
@@ -97,6 +104,22 @@ class AnalogReservoirTest(unittest.TestCase):
                 reservoir_dim=8,
                 spectral_radius=smallest_positive_float32,
             )
+
+    def test_rejects_spectral_target_that_cannot_be_achieved_accurately(self):
+        smallest_positive_float32 = torch.nextafter(
+            torch.tensor(0.0, dtype=torch.float32),
+            torch.tensor(1.0, dtype=torch.float32),
+        ).item()
+
+        for seed in (5, 9):
+            with self.subTest(seed=seed):
+                torch.manual_seed(seed)
+                with self.assertRaisesRegex(ValueError, "accurately"):
+                    AnalogReservoir(
+                        input_dim=3,
+                        reservoir_dim=8,
+                        spectral_radius=smallest_positive_float32,
+                    )
 
     def test_rejects_invalid_observation_and_state_shapes(self):
         invalid_calls = (

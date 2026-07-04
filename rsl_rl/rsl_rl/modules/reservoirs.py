@@ -169,10 +169,24 @@ class _FixedReservoirBase(nn.Module):
             scaled_matrix.to(torch.float64)
         )
         scaled_radius = scaled_eigenvalues.abs().max().real
-        if not torch.isfinite(scaled_radius) or scaled_radius <= 0.0:
+        target_radius_tensor = torch.tensor(
+            target_radius,
+            dtype=scaled_radius.dtype,
+            device=scaled_radius.device,
+        )
+        if (
+            not torch.isfinite(scaled_radius)
+            or scaled_radius <= 0.0
+            or not torch.isclose(
+                scaled_radius,
+                target_radius_tensor,
+                rtol=1e-4,
+                atol=0.0,
+            )
+        ):
             raise ValueError(
-                "spectral_radius target is too small or unrepresentable "
-                "for the generated float32 matrix."
+                "spectral_radius target is too small or cannot be "
+                "represented accurately by the generated float32 matrix."
             )
         return scaled_matrix
 
