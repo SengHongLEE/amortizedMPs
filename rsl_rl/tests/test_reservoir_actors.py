@@ -10,6 +10,7 @@ RSL_RL_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 if RSL_RL_ROOT not in sys.path:
     sys.path.insert(0, RSL_RL_ROOT)
 
+import rsl_rl.modules as public_modules
 from rsl_rl.modules.actors import MLPActor
 from rsl_rl.modules.reservoir_actors import (
     AnalogReservoirMLPReadoutActor,
@@ -28,6 +29,16 @@ ACTOR_CASES = (
     (LIFReservoirMLPReadoutActor, LIFReservoir, MLPActor, 14),
     (LIFReservoirSNNReadoutActor, LIFReservoir, SNNActor, 14),
 )
+
+
+class PublicReservoirActorAPITest(unittest.TestCase):
+    def test_exports_supported_reservoir_actor_types(self):
+        for actor_type, _, _, _ in ACTOR_CASES:
+            with self.subTest(name=actor_type.__name__):
+                self.assertIs(
+                    getattr(public_modules, actor_type.__name__),
+                    actor_type,
+                )
 
 
 class ReservoirActorCombinationTest(unittest.TestCase):

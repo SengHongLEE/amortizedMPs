@@ -3,8 +3,43 @@ import unittest
 import torch
 import torch.nn as nn
 
+import rsl_rl.modules as public_modules
+from rsl_rl.modules.actor_critic import ActorCritic
+from rsl_rl.modules.actor_critic_recurrent import ActorCriticRecurrent
+from rsl_rl.modules.actor_critic_twin import ActorCriticTwin
 from rsl_rl.modules.actors import MLPActor, get_activation
 from rsl_rl.modules.snn import LIFNeuron, SNNActor
+
+
+class PublicActorAPITest(unittest.TestCase):
+    def test_exports_supported_actor_types(self):
+        expected_exports = {
+            "ActorCritic": ActorCritic,
+            "ActorCriticTwin": ActorCriticTwin,
+            "ActorCriticRecurrent": ActorCriticRecurrent,
+            "MLPActor": MLPActor,
+            "SNNActor": SNNActor,
+        }
+
+        for name, expected_type in expected_exports.items():
+            with self.subTest(name=name):
+                self.assertIs(getattr(public_modules, name), expected_type)
+
+    def test_does_not_export_removed_actor_types(self):
+        removed_names = (
+            "ActorCriticReservoir",
+            "ActorCriticSNNReservoir",
+            "ActorCriticSNN",
+            "ReservoirActor",
+            "SNNReservoirActor",
+            "MLPReadout",
+            "SNNReadout",
+            "ReservoirReadoutActor",
+        )
+
+        for name in removed_names:
+            with self.subTest(name=name):
+                self.assertFalse(hasattr(public_modules, name))
 
 
 class MLPActorTest(unittest.TestCase):

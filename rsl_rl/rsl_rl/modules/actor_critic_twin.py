@@ -1,7 +1,7 @@
 import torch
 
-from rsl_rl.modules import ActorCritic
-from rsl_rl.modules.actors import MLPActor
+from .actor_critic import ActorCritic
+from .actors import MLPActor
 
 
 class ActorCriticTwin(ActorCritic):

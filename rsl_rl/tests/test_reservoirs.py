@@ -10,7 +10,20 @@ RSL_RL_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 if RSL_RL_ROOT not in sys.path:
     sys.path.insert(0, RSL_RL_ROOT)
 
+import rsl_rl.modules as public_modules
 from rsl_rl.modules.reservoirs import AnalogReservoir, LIFReservoir
+
+
+class PublicReservoirAPITest(unittest.TestCase):
+    def test_exports_supported_reservoir_types(self):
+        expected_exports = {
+            "AnalogReservoir": AnalogReservoir,
+            "LIFReservoir": LIFReservoir,
+        }
+
+        for name, expected_type in expected_exports.items():
+            with self.subTest(name=name):
+                self.assertIs(getattr(public_modules, name), expected_type)
 
 
 class AnalogReservoirTest(unittest.TestCase):
