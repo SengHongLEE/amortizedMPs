@@ -165,6 +165,15 @@ class _FixedReservoirBase(nn.Module):
             raise ValueError(
                 "spectral_radius produces non-finite float32 weights."
             )
+        scaled_eigenvalues = torch.linalg.eigvals(
+            scaled_matrix.to(torch.float64)
+        )
+        scaled_radius = scaled_eigenvalues.abs().max().real
+        if not torch.isfinite(scaled_radius) or scaled_radius <= 0.0:
+            raise ValueError(
+                "spectral_radius target is too small or unrepresentable "
+                "for the generated float32 matrix."
+            )
         return scaled_matrix
 
     def input_projection(

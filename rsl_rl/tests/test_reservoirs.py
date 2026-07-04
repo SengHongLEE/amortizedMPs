@@ -81,6 +81,23 @@ class AnalogReservoirTest(unittest.TestCase):
         radius = torch.linalg.eigvals(reservoir.w_res).abs().max()
         self.assertAlmostEqual(radius.item(), 0.7, places=4)
 
+    def test_rejects_spectral_target_that_underflows_scaled_matrix(self):
+        torch.manual_seed(3)
+        smallest_positive_float32 = torch.nextafter(
+            torch.tensor(0.0, dtype=torch.float32),
+            torch.tensor(1.0, dtype=torch.float32),
+        ).item()
+
+        with self.assertRaisesRegex(
+            ValueError,
+            "too small|unrepresentable",
+        ):
+            AnalogReservoir(
+                input_dim=3,
+                reservoir_dim=8,
+                spectral_radius=smallest_positive_float32,
+            )
+
     def test_rejects_invalid_observation_and_state_shapes(self):
         invalid_calls = (
             lambda: self.reservoir.update_state(
