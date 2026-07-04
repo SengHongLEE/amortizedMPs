@@ -178,7 +178,11 @@ class SNNActor(nn.Module):
                     membrane_states[index],
                 )
                 membrane_states[index] = membrane
-                spike_sums[index] = spike_sums[index] + spike.detach().mean()
+                if spike.numel() == 0:
+                    spike_rate = spike.detach().new_zeros(())
+                else:
+                    spike_rate = spike.detach().mean()
+                spike_sums[index] = spike_sums[index] + spike_rate
                 x = spike
             action_sum = action_sum + self.output_layer(x)
 

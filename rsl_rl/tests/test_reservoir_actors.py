@@ -104,6 +104,36 @@ class ReservoirActorCombinationTest(unittest.TestCase):
                 self.assertTrue(actor.include_input_in_readout)
                 self.assertEqual(actor.readout.input_dim, 12)
 
+    def test_snn_combinations_define_zero_rates_for_empty_batches(self):
+        snn_cases = (
+            (AnalogReservoirSNNReadoutActor, 7),
+            (LIFReservoirSNNReadoutActor, 14),
+        )
+        observations = torch.empty(0, 5, dtype=torch.float64)
+
+        for actor_type, state_dim in snn_cases:
+            with self.subTest(actor=actor_type.__name__):
+                actor = actor_type(
+                    input_dim=5,
+                    output_dim=2,
+                    reservoir_dim=7,
+                    reservoir_connectivity=1.0,
+                    readout_hidden_dims=(6, 4),
+                ).double()
+
+                actions, updated_states = actor(observations)
+
+                self.assertEqual(actions.shape, (0, 2))
+                self.assertEqual(updated_states.shape, (0, state_dim))
+                self.assertEqual(len(actor.readout.last_spike_rates), 2)
+                for spike_rate in actor.readout.last_spike_rates:
+                    self.assertEqual(spike_rate.ndim, 0)
+                    self.assertEqual(spike_rate.dtype, observations.dtype)
+                    self.assertEqual(spike_rate.device, observations.device)
+                    self.assertFalse(spike_rate.requires_grad)
+                    self.assertTrue(torch.isfinite(spike_rate))
+                    self.assertEqual(spike_rate.item(), 0.0)
+
     def test_reservoir_is_fixed_and_detached_but_readout_has_gradients(self):
         for actor_type, _, _, _ in ACTOR_CASES:
             with self.subTest(actor=actor_type.__name__):

@@ -130,6 +130,22 @@ class SNNActorTest(unittest.TestCase):
             self.assertGreaterEqual(spike_rate.item(), 0.0)
             self.assertLessEqual(spike_rate.item(), 1.0)
 
+    def test_empty_batch_records_finite_zero_spike_rates(self):
+        actor = SNNActor(5, [8, 4], 2).double()
+        observations = torch.empty(0, 5, dtype=torch.float64)
+
+        actions = actor(observations)
+
+        self.assertEqual(actions.shape, (0, 2))
+        self.assertEqual(len(actor.last_spike_rates), 2)
+        for spike_rate in actor.last_spike_rates:
+            self.assertEqual(spike_rate.ndim, 0)
+            self.assertEqual(spike_rate.dtype, observations.dtype)
+            self.assertEqual(spike_rate.device, observations.device)
+            self.assertFalse(spike_rate.requires_grad)
+            self.assertTrue(torch.isfinite(spike_rate))
+            self.assertEqual(spike_rate.item(), 0.0)
+
     def test_membrane_state_is_reset_between_forward_calls(self):
         actor = SNNActor(5, [8, 4], 2, num_snn_steps=3)
         observations = torch.randn(6, 5)
