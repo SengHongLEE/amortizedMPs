@@ -146,6 +146,29 @@ class AnalogReservoirTest(unittest.TestCase):
                     **arguments,
                 )
 
+    def test_rejects_positive_parameters_that_underflow_float32(self):
+        invalid_arguments = (
+            {"spectral_radius": 1e-100},
+            {"connectivity": 1e-100},
+        )
+
+        for arguments in invalid_arguments:
+            with self.subTest(arguments=arguments):
+                try:
+                    AnalogReservoir(
+                        input_dim=5,
+                        reservoir_dim=8,
+                        **arguments,
+                    )
+                except ValueError:
+                    continue
+                except Exception as error:
+                    self.fail(
+                        f"Expected ValueError, got "
+                        f"{type(error).__name__}: {error}"
+                    )
+                self.fail("ValueError not raised")
+
 
 class LIFReservoirTest(unittest.TestCase):
     def setUp(self):

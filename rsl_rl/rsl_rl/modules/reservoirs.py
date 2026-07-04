@@ -1,4 +1,5 @@
 import math
+from typing import Optional
 
 import torch
 import torch.nn as nn
@@ -12,16 +13,18 @@ _FLOAT32_MAX = torch.finfo(torch.float32).max
 _FLOAT32_UNIFORM_LIMIT = _FLOAT32_MAX / 2.0
 
 
-def _is_finite_float32(value) -> bool:
+def _to_finite_float32(value) -> Optional[float]:
     if isinstance(value, bool):
-        return False
+        return None
     try:
         if not math.isfinite(value):
-            return False
+            return None
         converted = torch.tensor(value, dtype=torch.float32).item()
-        return math.isfinite(converted)
-    except (TypeError, ValueError, RuntimeError):
-        return False
+        if math.isfinite(converted):
+            return converted
+    except (OverflowError, TypeError, ValueError, RuntimeError):
+        pass
+    return None
 
 
 class _FixedReservoirBase(nn.Module):
@@ -50,26 +53,24 @@ class _FixedReservoirBase(nn.Module):
             or reservoir_dim < 2
         ):
             raise ValueError("reservoir_dim must be an integer of at least 2.")
-        if (
-            not _is_finite_float32(connectivity)
-            or not 0.0 < connectivity <= 1.0
-        ):
+        connectivity = _to_finite_float32(connectivity)
+        if connectivity is None or not 0.0 < connectivity <= 1.0:
             raise ValueError("connectivity must be in (0, 1].")
-        if (
-            not _is_finite_float32(spectral_radius)
-            or spectral_radius <= 0.0
-        ):
+        spectral_radius = _to_finite_float32(spectral_radius)
+        if spectral_radius is None or spectral_radius <= 0.0:
             raise ValueError("spectral_radius must be positive.")
+        input_scale = _to_finite_float32(input_scale)
         if (
-            not _is_finite_float32(input_scale)
+            input_scale is None
             or input_scale < 0.0
             or input_scale > _FLOAT32_UNIFORM_LIMIT
         ):
             raise ValueError(
                 "input_scale must be finite, nonnegative, and representable."
             )
+        bias_scale = _to_finite_float32(bias_scale)
         if (
-            not _is_finite_float32(bias_scale)
+            bias_scale is None
             or bias_scale < 0.0
             or bias_scale > _FLOAT32_UNIFORM_LIMIT
         ):
@@ -229,10 +230,8 @@ class AnalogReservoir(_FixedReservoirBase):
         activation: str = "tanh",
         train_reservoir: bool = False,
     ):
-        if (
-            not _is_finite_float32(leak_rate)
-            or not 0.0 < leak_rate <= 1.0
-        ):
+        leak_rate = _to_finite_float32(leak_rate)
+        if leak_rate is None or not 0.0 < leak_rate <= 1.0:
             raise ValueError("leak_rate must be in (0, 1].")
 
         try:
@@ -300,21 +299,24 @@ class LIFReservoir(_FixedReservoirBase):
         reset_mode: str = "subtract",
         train_reservoir: bool = False,
     ):
+        lif_beta_value = _to_finite_float32(lif_beta)
         if (
-            not _is_finite_float32(lif_beta)
-            or not 0.0 <= lif_beta < 1.0
+            lif_beta_value is None
+            or not 0.0 <= lif_beta_value < 1.0
         ):
             raise ValueError(f"lif_beta must be in [0, 1), got {lif_beta}.")
+        lif_threshold_value = _to_finite_float32(lif_threshold)
         if (
-            not _is_finite_float32(lif_threshold)
-            or lif_threshold <= 0.0
+            lif_threshold_value is None
+            or lif_threshold_value <= 0.0
         ):
             raise ValueError(
                 f"lif_threshold must be positive, got {lif_threshold}."
             )
+        surrogate_alpha_value = _to_finite_float32(surrogate_alpha)
         if (
-            not _is_finite_float32(surrogate_alpha)
-            or surrogate_alpha <= 0.0
+            surrogate_alpha_value is None
+            or surrogate_alpha_value <= 0.0
         ):
             raise ValueError("surrogate_alpha must be positive.")
         if reset_mode not in ("subtract", "zero"):
@@ -333,9 +335,9 @@ class LIFReservoir(_FixedReservoirBase):
 
         self.state_dim = 2 * reservoir_dim
         self.lif_neuron = LIFNeuron(
-            beta=lif_beta,
-            threshold=lif_threshold,
-            surrogate_alpha=surrogate_alpha,
+            beta=lif_beta_value,
+            threshold=lif_threshold_value,
+            surrogate_alpha=surrogate_alpha_value,
             reset_mode=reset_mode,
         )
 
