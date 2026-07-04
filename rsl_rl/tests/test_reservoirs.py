@@ -54,6 +54,57 @@ class AnalogReservoirTest(unittest.TestCase):
                 ).abs().max()
                 self.assertAlmostEqual(radius.item(), 0.9, places=5)
 
+    def test_max_float32_spectral_target_succeeds_across_seeds(self):
+        target_radius = torch.finfo(torch.float32).max
+
+        for seed in (0, 4, 16, 17):
+            with self.subTest(seed=seed):
+                torch.manual_seed(seed)
+                try:
+                    reservoir = AnalogReservoir(
+                        input_dim=3,
+                        reservoir_dim=2,
+                        connectivity=0.1,
+                        spectral_radius=target_radius,
+                    )
+                except ValueError as error:
+                    self.fail(f"Valid spectral target was rejected: {error}")
+
+                actual_radius = torch.linalg.eigvals(
+                    reservoir.w_res.to(torch.float64)
+                ).abs().max()
+                self.assertTrue(torch.isclose(
+                    actual_radius,
+                    torch.tensor(target_radius, dtype=torch.float64),
+                    rtol=1e-4,
+                    atol=0.0,
+                ))
+
+    def test_fallback_handles_min_connectivity_with_small_target(self):
+        smallest_positive_float32 = torch.nextafter(
+            torch.tensor(0.0, dtype=torch.float32),
+            torch.tensor(1.0, dtype=torch.float32),
+        ).item()
+        try:
+            reservoir = AnalogReservoir(
+                input_dim=3,
+                reservoir_dim=2,
+                connectivity=smallest_positive_float32,
+                spectral_radius=1e-20,
+            )
+        except ValueError as error:
+            self.fail(f"Valid fallback configuration was rejected: {error}")
+
+        actual_radius = torch.linalg.eigvals(
+            reservoir.w_res.to(torch.float64)
+        ).abs().max()
+        self.assertTrue(torch.isclose(
+            actual_radius,
+            torch.tensor(1e-20, dtype=torch.float64),
+            rtol=1e-4,
+            atol=0.0,
+        ))
+
     def test_rejects_single_unit_reservoir(self):
         with self.assertRaisesRegex(ValueError, "at least 2"):
             AnalogReservoir(input_dim=3, reservoir_dim=1)
@@ -89,20 +140,22 @@ class AnalogReservoirTest(unittest.TestCase):
         ))
 
     def test_rejects_spectral_target_that_underflows_scaled_matrix(self):
-        torch.manual_seed(3)
         smallest_positive_float32 = torch.nextafter(
             torch.tensor(0.0, dtype=torch.float32),
             torch.tensor(1.0, dtype=torch.float32),
         ).item()
+        matrix = torch.tensor([
+            [0.0, 2.0],
+            [0.5, 0.0],
+        ])
 
         with self.assertRaisesRegex(
             ValueError,
             "too small|unrepresentable",
         ):
-            AnalogReservoir(
-                input_dim=3,
-                reservoir_dim=8,
-                spectral_radius=smallest_positive_float32,
+            AnalogReservoir._scale_spectral_radius(
+                matrix,
+                target_radius=smallest_positive_float32,
             )
 
     def test_rejects_spectral_target_that_cannot_be_achieved_accurately(self):
@@ -110,16 +163,16 @@ class AnalogReservoirTest(unittest.TestCase):
             torch.tensor(0.0, dtype=torch.float32),
             torch.tensor(1.0, dtype=torch.float32),
         ).item()
+        matrix = torch.tensor([
+            [0.0, 1.0],
+            [2.0, 0.0],
+        ])
 
-        for seed in (5, 9):
-            with self.subTest(seed=seed):
-                torch.manual_seed(seed)
-                with self.assertRaisesRegex(ValueError, "accurately"):
-                    AnalogReservoir(
-                        input_dim=3,
-                        reservoir_dim=8,
-                        spectral_radius=smallest_positive_float32,
-                    )
+        with self.assertRaisesRegex(ValueError, "accurately"):
+            AnalogReservoir._scale_spectral_radius(
+                matrix,
+                target_radius=smallest_positive_float32,
+            )
 
     def test_rejects_invalid_observation_and_state_shapes(self):
         invalid_calls = (

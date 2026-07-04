@@ -135,16 +135,23 @@ class _FixedReservoirBase(nn.Module):
                     matrix,
                     target_radius=spectral_radius,
                 )
-            except RuntimeError:
+            except (RuntimeError, ValueError):
                 continue
 
         matrix = torch.zeros(reservoir_dim, reservoir_dim)
-        matrix[0, 1] = 1.0 / fan_in_scale
-        matrix[1, 0] = 1.0 / fan_in_scale
-        return cls._scale_spectral_radius(
-            matrix,
-            target_radius=spectral_radius,
-        )
+        matrix[0, 1] = 1.0
+        matrix[1, 0] = 1.0
+        try:
+            return cls._scale_spectral_radius(
+                matrix,
+                target_radius=spectral_radius,
+            )
+        except (RuntimeError, ValueError) as error:
+            raise ValueError(
+                "Unable to initialize the reservoir: spectral_radius "
+                "target is too small, unrepresentable, or cannot be "
+                "represented accurately by a float32 recurrent matrix."
+            ) from error
 
     @staticmethod
     @torch.no_grad()
