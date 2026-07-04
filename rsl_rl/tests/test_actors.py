@@ -1,3 +1,4 @@
+import importlib.util
 import unittest
 
 import torch
@@ -40,6 +41,28 @@ class PublicActorAPITest(unittest.TestCase):
         for name in removed_names:
             with self.subTest(name=name):
                 self.assertFalse(hasattr(public_modules, name))
+
+    def test_removed_actor_modules_cannot_be_located(self):
+        removed_module_names = (
+            "rsl_rl.modules.actor_critic_reservoir",
+            "rsl_rl.modules.actor_critic_snn_reservoir",
+            "rsl_rl.modules.actor_critic_reservoir_combinations",
+            "rsl_rl.modules.actor_critic_SNN",
+            "rsl_rl.modules.reservoir_dynamics",
+            "rsl_rl.modules.reservoir_readouts",
+            "rsl_rl.modules.reservoir_readout_actor",
+        )
+
+        for module_name in removed_module_names:
+            with self.subTest(module=module_name):
+                try:
+                    module_spec = importlib.util.find_spec(module_name)
+                except Exception as error:
+                    self.fail(
+                        f"Looking up {module_name} raised "
+                        f"{type(error).__name__}: {error}"
+                    )
+                self.assertIsNone(module_spec)
 
 
 class MLPActorTest(unittest.TestCase):
