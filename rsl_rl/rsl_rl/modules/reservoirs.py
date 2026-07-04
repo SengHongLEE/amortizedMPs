@@ -8,12 +8,19 @@ from .actors import get_activation
 from .snn import LIFNeuron
 
 
-def _is_finite_number(value) -> bool:
+_FLOAT32_MAX = torch.finfo(torch.float32).max
+_FLOAT32_UNIFORM_LIMIT = _FLOAT32_MAX / 2.0
+
+
+def _is_finite_float32(value) -> bool:
     if isinstance(value, bool):
         return False
     try:
-        return math.isfinite(value)
-    except (TypeError, ValueError):
+        if not math.isfinite(value):
+            return False
+        converted = torch.tensor(value, dtype=torch.float32).item()
+        return math.isfinite(converted)
+    except (TypeError, ValueError, RuntimeError):
         return False
 
 
@@ -44,25 +51,31 @@ class _FixedReservoirBase(nn.Module):
         ):
             raise ValueError("reservoir_dim must be an integer of at least 2.")
         if (
-            not _is_finite_number(connectivity)
+            not _is_finite_float32(connectivity)
             or not 0.0 < connectivity <= 1.0
         ):
             raise ValueError("connectivity must be in (0, 1].")
         if (
-            not _is_finite_number(spectral_radius)
+            not _is_finite_float32(spectral_radius)
             or spectral_radius <= 0.0
         ):
             raise ValueError("spectral_radius must be positive.")
         if (
-            not _is_finite_number(input_scale)
+            not _is_finite_float32(input_scale)
             or input_scale < 0.0
+            or input_scale > _FLOAT32_UNIFORM_LIMIT
         ):
-            raise ValueError("input_scale must be finite and nonnegative.")
+            raise ValueError(
+                "input_scale must be finite, nonnegative, and representable."
+            )
         if (
-            not _is_finite_number(bias_scale)
+            not _is_finite_float32(bias_scale)
             or bias_scale < 0.0
+            or bias_scale > _FLOAT32_UNIFORM_LIMIT
         ):
-            raise ValueError("bias_scale must be finite and nonnegative.")
+            raise ValueError(
+                "bias_scale must be finite, nonnegative, and representable."
+            )
         if (
             isinstance(num_reservoir_steps, bool)
             or not isinstance(num_reservoir_steps, int)
@@ -146,7 +159,12 @@ class _FixedReservoirBase(nn.Module):
                 "Try increasing connectivity or changing the random seed."
             )
         scale = target_radius / current_radius.to(matrix.dtype)
-        return matrix * scale
+        scaled_matrix = matrix * scale
+        if not torch.isfinite(scaled_matrix).all():
+            raise ValueError(
+                "spectral_radius produces non-finite float32 weights."
+            )
+        return scaled_matrix
 
     def input_projection(
         self,
@@ -212,7 +230,7 @@ class AnalogReservoir(_FixedReservoirBase):
         train_reservoir: bool = False,
     ):
         if (
-            not _is_finite_number(leak_rate)
+            not _is_finite_float32(leak_rate)
             or not 0.0 < leak_rate <= 1.0
         ):
             raise ValueError("leak_rate must be in (0, 1].")
@@ -283,19 +301,19 @@ class LIFReservoir(_FixedReservoirBase):
         train_reservoir: bool = False,
     ):
         if (
-            not _is_finite_number(lif_beta)
+            not _is_finite_float32(lif_beta)
             or not 0.0 <= lif_beta < 1.0
         ):
             raise ValueError(f"lif_beta must be in [0, 1), got {lif_beta}.")
         if (
-            not _is_finite_number(lif_threshold)
+            not _is_finite_float32(lif_threshold)
             or lif_threshold <= 0.0
         ):
             raise ValueError(
                 f"lif_threshold must be positive, got {lif_threshold}."
             )
         if (
-            not _is_finite_number(surrogate_alpha)
+            not _is_finite_float32(surrogate_alpha)
             or surrogate_alpha <= 0.0
         ):
             raise ValueError("surrogate_alpha must be positive.")
