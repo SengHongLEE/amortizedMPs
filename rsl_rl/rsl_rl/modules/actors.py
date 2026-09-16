@@ -5,6 +5,7 @@ from typing import List
 import torch
 import torch.nn as nn
 
+from .actor_critic_hdrl import SoftAttention
 
 def get_activation(name: str) -> nn.Module:
     """Return the activation module identified by ``name``."""
@@ -84,3 +85,61 @@ class MLPActor(nn.Module):
                 f"got {actual_dim}."
             )
         return self.network(observations)
+
+class MLPActor_TWIN_output_head(MLPActor):
+    """A reusable feed-forward actor with a small final-layer gain and two output head."""
+
+    def __init__(
+        self,
+        input_dim: int,
+        hidden_dims: Sequence,
+        output_dim_1: int,
+        output_dim_2: int,
+        activation: str = "elu",
+    ):
+        super().__init__(input_dim,
+                         hidden_dims[:-1],
+                         hidden_dims[-1],
+                         activation)
+        
+        self.feature_dim = hidden_dims[-1] if hidden_dims else input_dim
+        self.output_dim_1 = output_dim_1
+        self.output_dim_2 = output_dim_2
+        self.feature_extractor = self.network
+
+        self.output_head_1 = self._make_output_head(
+            self.feature_dim,
+            self.output_dim_1
+        )
+
+        self.output_head_2 = self._make_output_head(
+            self.feature_dim,
+            self.output_dim_2
+        )
+
+        self.soft_attn = SoftAttention(self.input_dim)
+
+    @staticmethod
+    def _make_output_head(
+        input_dim: int,
+        output_dim: int,
+        gain: float = 0.01,
+    ) -> nn.Linear:
+        head = nn.Linear(input_dim, output_dim)
+        nn.init.orthogonal_(head.weight, gain=gain)
+        nn.init.zeros_(head.bias)
+        return head
+
+    def forward(self, observations: torch.Tensor) -> (torch.Tensor, torch.Tensor):
+        if observations.ndim == 0 or observations.shape[-1] != self.input_dim:
+            actual_dim = None if observations.ndim == 0 else observations.shape[-1]
+            raise ValueError(
+                f"Expected observation dimension {self.input_dim}, "
+                f"got {actual_dim}."
+            )
+        obs_att = self.soft_attn(observations)
+        features = self.feature_extractor(obs_att)
+        output_1 = self.output_head_1(features)
+        output_2 = self.output_head_2(features)
+
+        return output_1, output_2

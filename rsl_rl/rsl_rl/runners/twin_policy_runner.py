@@ -1,6 +1,6 @@
 from rsl_rl.runners import OnPolicyRunner
 from rsl_rl.modules import ActorCritic, ActorCriticTwin
-from rsl_rl.algorithms import PPOtwin
+from rsl_rl.algorithms import PPOevent
 
 import time
 import os
@@ -18,7 +18,7 @@ _POLICY_CLASSES = {
     "ActorCriticTwin": ActorCriticTwin,
 }
 _ALGORITHM_CLASSES = {
-    "PPOtwin": PPOtwin,
+    "PPOevent": PPOevent,
 }
 
 
@@ -62,14 +62,14 @@ class TwinPolicyRunner(OnPolicyRunner):
                                             self.env.mu_shape,
                                             **self.policy_cfg).to(self.device)
 
-        self.mu_alg: PPOtwin = alg_class(mu_actor_critic, device=self.device, **self.alg_cfg)
+        self.mu_alg: PPOevent = alg_class(mu_actor_critic, device=self.device, **self.alg_cfg)
 
         omega_actor_critic: ActorCritic = actor_critic_class( self.env.num_obs,
                                             num_critic_obs,
                                             self.env.omega_shape,
                                             **self.policy_cfg).to(self.device)
 
-        self.omega_alg: PPOtwin = alg_class(omega_actor_critic, device=self.device, **self.alg_cfg)
+        self.omega_alg: PPOevent = alg_class(omega_actor_critic, device=self.device, **self.alg_cfg)
 
 
         self.num_steps_per_env = self.cfg["num_steps_per_env"]

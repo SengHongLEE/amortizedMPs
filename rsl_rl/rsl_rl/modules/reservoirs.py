@@ -201,7 +201,7 @@ class _FixedReservoirBase(nn.Module):
         self,
         observations: torch.Tensor,
     ) -> torch.Tensor:
-        self._validate_observations(observations)
+        # self._validate_observations(observations)
         return F.linear(
             observations,
             self.w_in,
@@ -376,11 +376,12 @@ class LIFReservoir(_FixedReservoirBase):
         observations: torch.Tensor,
         states: torch.Tensor,
     ) -> torch.Tensor:
-        self._validate_inputs(observations, states)
-        input_drive = self.input_projection(observations)
+        # self._validate_inputs(observations, states)
         membrane, spikes = states.chunk(2, dim=-1)
 
-        for _ in range(self.num_reservoir_steps):
+        T = observations.size(dim=1)
+        for t in range(T):
+            input_drive = self.input_projection(observations[:,t])
             recurrent_drive = F.linear(spikes, self.w_res)
             spikes, membrane = self.lif_neuron(
                 input_drive + recurrent_drive,

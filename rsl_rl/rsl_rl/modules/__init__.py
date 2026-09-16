@@ -27,10 +27,11 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
 # Copyright (c) 2021 ETH Zurich, Nikita Rudin
-from .actor_critic import ActorCritic, get_activation
+from .actor_critic import ActorCritic, ActorCriticDiscrete, get_activation
+from .actor_critic_hdrl import SoftAttention
 from .actor_critic_recurrent import ActorCriticRecurrent
 from .actor_critic_twin import ActorCriticTwin
-from .actors import MLPActor
+from .actors import MLPActor, MLPActor_TWIN_output_head
 from .reservoir_actors import (
     AnalogReservoirMLPReadoutActor,
     AnalogReservoirSNNReadoutActor,
@@ -38,7 +39,7 @@ from .reservoir_actors import (
     LIFReservoirSNNReadoutActor,
 )
 from .reservoirs import AnalogReservoir, LIFReservoir
-from .snn import LIFNeuron, SNNActor, SurrogateSpike
+from .snn import LIFNeuron, SNNActor, SurrogateSpike, SNNActor_TWIN_output_head
 
 
 __all__ = [
@@ -56,4 +57,8 @@ __all__ = [
     "SNNActor",
     "SurrogateSpike",
     "get_activation",
+    "MLPActor_TWIN_output_head",
+    "ActorCriticDiscrete",
+    "SoftAttention",
+    "SNNActor_TWIN_output_head"
 ]

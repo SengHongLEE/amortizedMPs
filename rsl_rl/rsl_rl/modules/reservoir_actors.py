@@ -5,7 +5,7 @@ import torch.nn as nn
 
 from .actors import MLPActor
 from .reservoirs import AnalogReservoir, LIFReservoir
-from .snn import SNNActor
+from .snn import SNNActor, SNNActor_TWIN_output_head
 
 
 class _ReservoirReadoutActor(nn.Module):
@@ -19,28 +19,13 @@ class _ReservoirReadoutActor(nn.Module):
         readout: nn.Module,
         output_dim: int,
         include_input_in_readout: bool = False,
+        is_discrete: bool = False,
     ):
         super().__init__()
-        if (
-            isinstance(output_dim, bool)
-            or not isinstance(output_dim, int)
-            or output_dim <= 0
-        ):
-            raise ValueError("output_dim must be a positive integer.")
 
         readout_input_dim = reservoir.feature_dim
         if include_input_in_readout:
             readout_input_dim += reservoir.input_dim
-        if readout.input_dim != readout_input_dim:
-            raise ValueError(
-                f"Expected readout input_dim {readout_input_dim}, "
-                f"but received {readout.input_dim}."
-            )
-        if readout.output_dim != output_dim:
-            raise ValueError(
-                f"Expected readout output_dim {output_dim}, "
-                f"but received {readout.output_dim}."
-            )
 
         self.reservoir = reservoir
         self.readout = readout
@@ -49,6 +34,7 @@ class _ReservoirReadoutActor(nn.Module):
         self.reservoir_dim = reservoir.reservoir_dim
         self.reservoir_state_dim = reservoir.state_dim
         self.include_input_in_readout = include_input_in_readout
+        self.is_discrete = is_discrete
 
     def _validate_observations(self, observations: torch.Tensor) -> None:
         if observations.ndim == 0 or observations.shape[-1] != self.input_dim:
@@ -98,15 +84,21 @@ class _ReservoirReadoutActor(nn.Module):
 
         if self.include_input_in_readout:
             features = torch.cat((flat_observations, features), dim=-1)
-        actions = self.readout(features)
-        expected_action_shape = (flat_states.shape[0], self.output_dim)
-        if actions.shape != expected_action_shape:
-            raise ValueError(
-                f"Expected readout actions with shape "
-                f"{expected_action_shape}, but received "
-                f"{tuple(actions.shape)}."
-            )
-        return actions.reshape(*leading_shape, self.output_dim)
+
+        if self.is_discrete:
+            logits_1, logits_2 = self.readout(features)
+            return logits_1, logits_2
+
+        else:
+            actions = self.readout(features)
+            expected_action_shape = (flat_states.shape[0], self.output_dim)
+            if actions.shape != expected_action_shape:
+                raise ValueError(
+                    f"Expected readout actions with shape "
+                    f"{expected_action_shape}, but received "
+                    f"{tuple(actions.shape)}."
+                )
+            return actions.reshape(*leading_shape, self.output_dim)
 
     def forward(
         self,
@@ -118,33 +110,45 @@ class _ReservoirReadoutActor(nn.Module):
         expected_state_shape = (*leading_shape, self.reservoir_state_dim)
         if reservoir_states is None:
             reservoir_states = observations.new_zeros(expected_state_shape)
-        elif reservoir_states.shape != expected_state_shape:
-            raise ValueError(
-                f"Expected reservoir_states with shape "
-                f"{expected_state_shape}, but received "
-                f"{tuple(reservoir_states.shape)}."
-            )
+        # elif reservoir_states.shape != expected_state_shape:
+        #     raise ValueError(
+        #         f"Expected reservoir_states with shape "
+        #         f"{expected_state_shape}, but received "
+        #         f"{tuple(reservoir_states.shape)}."
+        #     )
 
-        flat_observations = observations.reshape(-1, self.input_dim)
+        # flat_observations = observations.reshape(-1, self.input_dim)
         flat_states = reservoir_states.reshape(
             -1,
             self.reservoir_state_dim,
         )
         updated_states = self.reservoir.update_state(
-            flat_observations,
+            observations,
             flat_states,
         )
-        actions = self.readout_process(
-            flat_observations,
-            updated_states,
-        )
-        return (
-            actions.reshape(*leading_shape, self.output_dim),
-            updated_states.reshape(
-                *leading_shape,
-                self.reservoir_state_dim,
-            ),
-        )
+        if self.is_discrete:
+            logits_1, logits_2 = self.readout_process(
+                observations[:,-1],
+                updated_states,
+            )
+            return (
+                logits_1,
+                logits_2,
+                updated_states
+            )
+
+        else:
+            actions = self.readout_process(
+                flat_observations,
+                updated_states,
+            )
+            return (
+                actions.reshape(*leading_shape, self.output_dim),
+                updated_states.reshape(
+                    *leading_shape,
+                    self.reservoir_state_dim,
+                ),
+            )
 
 
 def _initialize_reservoir_readout_actor(
@@ -154,6 +158,8 @@ def _initialize_reservoir_readout_actor(
     *,
     input_dim: int,
     output_dim: int,
+    output_dim_1: int,
+    output_dim_2: int,
     reservoir_dim: int,
     reservoir_connectivity: float,
     spectral_radius: float,
@@ -176,6 +182,7 @@ def _initialize_reservoir_readout_actor(
     snn_reset_mode: str,
     snn_input_scale: float,
     train_reservoir: bool,
+    is_discrete: bool,
 ) -> None:
     reservoir_kwargs = {
         "input_dim": input_dim,
@@ -211,7 +218,7 @@ def _initialize_reservoir_readout_actor(
     }
     if readout_type is MLPActor:
         readout_kwargs["activation"] = readout_activation
-    else:
+    elif readout_type is SNNActor:
         readout_kwargs.update(
             num_snn_steps=num_snn_steps,
             lif_beta=snn_lif_beta,
@@ -220,6 +227,18 @@ def _initialize_reservoir_readout_actor(
             reset_mode=snn_reset_mode,
             input_scale=snn_input_scale,
         )
+    else:
+        readout_kwargs.update(
+            num_snn_steps=num_snn_steps,
+            lif_beta=snn_lif_beta,
+            lif_threshold=snn_lif_threshold,
+            surrogate_alpha=snn_surrogate_alpha,
+            reset_mode=snn_reset_mode,
+            input_scale=snn_input_scale,
+            output_dim_1 = output_dim_1,
+            output_dim_2 = output_dim_2
+        )
+        readout_kwargs.pop("output_dim")
     readout = readout_type(**readout_kwargs)
 
     _ReservoirReadoutActor.__init__(
@@ -228,6 +247,7 @@ def _initialize_reservoir_readout_actor(
         readout=readout,
         output_dim=output_dim,
         include_input_in_readout=include_input_in_readout,
+        is_discrete=is_discrete
     )
 
 
@@ -383,6 +403,21 @@ class LIFReservoirSNNReadoutActor(_ReservoirReadoutActor):
             self,
             LIFReservoir,
             SNNActor,
+            **{
+                name: value
+                for name, value in locals().items()
+                if name != "self"
+            },
+        )
+
+class LIFReservoirSNNReadoutActor_TWIN_output_head(LIFReservoirSNNReadoutActor):
+    def __init__(self, input_dim, output_dim_1, output_dim_2, reservoir_dim = 16, reservoir_connectivity = 0.5, spectral_radius = 0.9, reservoir_input_scale = 0.5, reservoir_bias_scale = 0.1, num_reservoir_steps = 3, leak_rate = 0.5, reservoir_activation = "tanh", reservoir_lif_beta = 0.9, reservoir_lif_threshold = 1, reservoir_surrogate_alpha = 5, reservoir_reset_mode = "subtract", readout_hidden_dims = (32, ), readout_activation = "elu", include_input_in_readout = False, num_snn_steps = 4, snn_lif_beta = 0.9, snn_lif_threshold = 1, snn_surrogate_alpha = 5, snn_reset_mode = "subtract", snn_input_scale = 1, train_reservoir = False):
+        output_dim = None
+        is_discrete = True
+        _initialize_reservoir_readout_actor(
+            self,
+            LIFReservoir,
+            SNNActor_TWIN_output_head,
             **{
                 name: value
                 for name, value in locals().items()

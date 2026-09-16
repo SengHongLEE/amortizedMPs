@@ -1,0 +1,6 @@
+/legged_gym/logs
+/legged_gym/legged_gym/metrics
+/legged_gym/legged_gym/test
+.vscode
+.agents
+.codex
