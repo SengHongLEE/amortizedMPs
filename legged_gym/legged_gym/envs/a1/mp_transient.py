@@ -35,7 +35,7 @@ from matplotlib.colors import Normalize
 from legged_gym.envs.base.base_task import BaseTask
 from legged_gym.utils.terrain import Terrain
 from legged_gym.envs.base.legged_robot_config import LeggedRobotCfg
-from legged_gym.utils.dynamics.a1.rhythmic_dynamics import Intrinsic_Dynamics
+from legged_gym.utils.dynamics.a1.transient_dynamics import Transient_Dynamics
 from legged_gym.utils.imitation_task import ImitationTask
 from legged_gym.utils.gait_model import GaitModel, env_cfg
 
@@ -145,12 +145,6 @@ class MotorPrimitives(BaseTask):
 
         if self.cfg.env.play:
             print(self.actions[:,:-4])
-            print(self.commands)
-            print(self.base_lin_vel)
-            print('---')
-            # print(self.actions)
-            # print(self.commands)
-            # print(self.base_lin_vel)
 
         for substep in range(decimation):        
             self.torques = self._compute_torques(self.actions).view(self.torques.shape)
@@ -247,7 +241,8 @@ class MotorPrimitives(BaseTask):
         self.reset_buf = torch.any(torch.norm(self.contact_forces[:, self.termination_contact_indices, :], dim=-1) > 1., dim=1)
         self.time_out_buf = self.episode_length_buf > self.max_episode_length # no terminal reward for time-outs
         self.reset_buf |= self.time_out_buf
-        self.reset_buf |= self.root_states[:,2] < 0.25
+        self.reset_buf |= self.root_states[:,2] < 0.
+        self.reset_buf |=  torch.all(self.contact_forces[:, self.feet_indices, 2] > 1., dim=-1) & torch.all(~self.ID.active, dim=-1)
 
     def reset(self):
         """ Reset all robots"""
@@ -284,6 +279,8 @@ class MotorPrimitives(BaseTask):
         self.last_dof_vel[env_ids] = 0.
         self.episode_length_buf[env_ids] = 0
         self.reset_buf[env_ids] = 1
+        self.prev_airborne[env_ids] = False
+        self.time_since_takeoff[env_ids] = 0.0
 
         # fill extras
         self.extras["episode"] = {}
@@ -342,12 +339,21 @@ class MotorPrimitives(BaseTask):
         high_rewards = self.cfg.rewards.high_rewards
         mu_rewards = self.cfg.rewards.mu_rewards
         omega_rewards = self.cfg.rewards.omega_rewards
-        hip_rewards = self.cfg.rewards.hip_rewards
         self.rew_buf[:] = 0.
         self.high_rew_buf[:] = 0.
         self.mu_rew_buf[:] = 0.
         self.omega_rew_buf[:] = 0.
         self.hip_rew_buf[:] = 0.
+
+        T_reward_x = 1.
+        flight_phase = torch.all(self.ID.X[:,2,:] > 1.5 * torch.pi, dim=-1)
+        airborne = torch.all(self.contact_forces[:, self.feet_indices, 2] < 1., dim=-1)
+        just_take_off = (airborne & flight_phase & ~self.prev_airborne)
+        self.time_since_takeoff[just_take_off] = 0.0
+        in_flight_window_x = airborne & flight_phase & (self.time_since_takeoff <= T_reward_x)
+        self.time_since_takeoff[in_flight_window_x] += self.dt
+        self.prev_airborne[:] = airborne
+
         for i in range(len(self.reward_functions)):
             name = self.reward_names[i]
             rew = self.reward_functions[i]() * self.reward_scales[name]
@@ -368,11 +374,6 @@ class MotorPrimitives(BaseTask):
             i = self.reward_names.index(omega_name)
             rew = self.reward_functions[i]() * self.reward_scales[omega_name]
             self.omega_rew_buf += rew
-
-        for hip_name in hip_rewards:
-            i = self.reward_names.index(hip_name)
-            rew = self.reward_functions[i]() * self.reward_scales[hip_name]
-            self.hip_rew_buf += rew
 
         if self.cfg.rewards.only_positive_rewards:
             self.rew_buf[:] = torch.clip(self.rew_buf[:], min=0.)
@@ -529,9 +530,9 @@ class MotorPrimitives(BaseTask):
 
         if self.cfg.env.play:
             if self.episode_length_buf[0] < 245:
-                self.commands[:, 0] = 1.5
+                self.commands[:, 0] = 1.2
             else:
-                self.commands[:, 0] = 2.
+                self.commands[:, 0] = 1.8
             self.commands[env_ids, 1] = -0.
         else:
             self.commands[env_ids, 0] = torch_rand_float(self.command_ranges["lin_vel_x"][0], self.command_ranges["lin_vel_x"][1], (len(env_ids), 1), device=self.device).squeeze(1)
@@ -546,7 +547,7 @@ class MotorPrimitives(BaseTask):
             if self.cfg.env.play:
                 self.commands[env_ids, 2] = 0.
             else:
-                self.commands[env_ids, 2] = torch_rand_float(self.command_ranges["ang_vel_yaw"][0], self.command_ranges["ang_vel_yaw"][1], (len(env_ids), 1), device=self.device).squeeze(1)
+                self.commands[env_ids, 2] = torch_rand_float(self.command_ranges["lin_vel_z"][0], self.command_ranges["lin_vel_z"][1], (len(env_ids), 1), device=self.device).squeeze(1)
 
         return
    
@@ -567,7 +568,7 @@ class MotorPrimitives(BaseTask):
             self.phase_history.append(self.ID.X[:, 1, :].detach().cpu().numpy())
             self.amplitude_history.append((torch.clip(self.ID.X[:, 0, :], self.ID.mu_low, self.ID.mu_up)).detach().cpu().numpy())
             self.amplitude_dot_history.append(self.ID.X_dot[:, 0, :].detach().cpu().numpy())
-            self.mu_history.append(np.sqrt(self.ID._mu.detach().cpu().numpy()))
+            self.mu_history.append(np.sqrt(self.ID._mu_x.detach().cpu().numpy()))
             self.omega_history.append(self.ID.X_dot[:, 1, :].detach().cpu().numpy())
             self.x_history.append(xs.detach().cpu().numpy())
             self.z_history.append(zs.detach().cpu().numpy())
@@ -718,7 +719,7 @@ class MotorPrimitives(BaseTask):
 
         self.rigid_body_state = gymtorch.wrap_tensor(rigid_body_state)[:self.num_envs * self.num_bodies, :]
  
-        self.ID = Intrinsic_Dynamics(time_step=self.sim_params.dt,num_envs=self.num_envs,device=self.device)
+        self.ID = Transient_Dynamics(time_step=self.sim_params.dt,num_envs=self.num_envs,device=self.device)
         self.actions_slow = torch.zeros(self.num_envs, 8, device=self.device, dtype=torch.float)
         self.last_actions_slow = torch.zeros_like(self.actions_slow)
 
@@ -756,6 +757,13 @@ class MotorPrimitives(BaseTask):
         self.substep_dof_vel = torch.zeros(self.num_envs, self.cfg.control.cycle * self.cfg.control.decimation, self.num_dof, dtype=torch.float, device=self.device, requires_grad=False)
         self.substep_exceed_dof_pos_limits = torch.zeros(self.num_envs, self.cfg.control.cycle * self.cfg.control.decimation, self.num_dof, dtype=torch.bool, device=self.device, requires_grad=False)
         self.substep_exceed_dof_pos_limit_abs = torch.zeros(self.num_envs, self.cfg.control.cycle * self.cfg.control.decimation, self.num_dof, dtype=torch.float, device=self.device, requires_grad=False)
+
+        self.prev_airborne = torch.zeros(self.num_envs, device=self.device, dtype=torch.bool)
+        self.time_since_takeoff = torch.zeros(
+            self.num_envs,
+            dtype=torch.float,
+            device=self.device
+        )
 
     def _prepare_reward_function(self):
         """ Prepares a list of reward functions, whcih will be called to compute the total reward.
@@ -959,7 +967,7 @@ class MotorPrimitives(BaseTask):
 
     #------------ reward functions---------------    
     def _reward_ang_vel_xy(self):
-        return torch.sum(torch.square(self.base_ang_vel[:, :2]), dim=1)
+        return torch.sum(torch.square(self.base_ang_vel[:, :3]), dim=1)
 
     def _reward_energy(self):
         # Penalize energy
@@ -969,17 +977,49 @@ class MotorPrimitives(BaseTask):
         ang_vel_error = torch.square(self.commands[:, 2] - self.base_ang_vel[:, 2])
         return torch.exp(-ang_vel_error/self.cfg.rewards.tracking_sigma)
 
+
     def _reward_tracking_lin_vel(self):
-        lin_vel_error = torch.sum(torch.square(self.commands[:, :2] - self.base_lin_vel[:, :2]), dim=1)
-        return torch.exp(-lin_vel_error/self.cfg.rewards.tracking_sigma)
+        T_reward_x = 1.
 
-    def _reward_tracking_lin_vel_x(self):
-        lin_vel_error = torch.sum(torch.square(self.commands[:, :1] - self.base_lin_vel[:, :1]), dim=1)
-        return torch.exp(-lin_vel_error/self.cfg.rewards.tracking_sigma)
+        flight_phase = torch.all(self.ID.X[:,2,:] > 1.5 * torch.pi, dim=-1)
+        airborne = torch.all(self.contact_forces[:, self.feet_indices, 2] < 1., dim=-1)
 
-    def _reward_tracking_lin_vel_y(self):
-        lin_vel_error = torch.sum(torch.square(self.commands[:, 1:2] - self.base_lin_vel[:, 1:2]), dim=1)
-        return torch.exp(-lin_vel_error/self.cfg.rewards.tracking_sigma)
+        in_flight_window_x = airborne & flight_phase & (self.time_since_takeoff <= T_reward_x)
+
+        progress_x = torch.clamp(
+            self.time_since_takeoff / T_reward_x,
+            0.0,
+            1.0
+        )
+        weight_x = 0.5 * (
+            1.0 + torch.cos(torch.pi * progress_x)
+        )
+
+
+        vz = torch.clamp(
+            self.base_lin_vel[:, 2],
+            min=0.0
+        )
+
+        lin_vel_x_error = torch.sum(torch.square(self.commands[:, :1] - self.base_lin_vel[:, :1]), dim=1)
+        lin_vel_z = 1.0 - torch.exp(-torch.square(vz))
+
+        rew_vel_x = in_flight_window_x * weight_x * torch.exp(-lin_vel_x_error/self.cfg.rewards.tracking_sigma)
+        rew_vel_z = in_flight_window_x * lin_vel_z
+
+        if self.cfg.env.play:
+            print(self.time_since_takeoff)
+            print(self.base_lin_vel[in_flight_window_x])
+        return rew_vel_x + 0. * rew_vel_z
+
+    def _reward_tracking_lin_vel_z(self):
+        lin_vel_error = torch.sum(torch.square(self.commands[:, 2:3] - self.base_lin_vel[:, 2:3]), dim=1)
+        airborne = torch.all(self.contact_forces[:, self.feet_indices, 2] < 1., dim=-1)
+        flight = torch.all(self.ID.X[:,2,:] > 1.5 * torch.pi, dim=-1)
+        taking_off = (airborne & flight & ~self.prev_airborne).to(torch.float)
+        self.prev_airborne[:] = airborne
+
+        return torch.exp(-lin_vel_error/self.cfg.rewards.tracking_sigma) * taking_off
     
     def _reward_torques(self):
         # Penalize torques
@@ -1022,8 +1062,10 @@ class MotorPrimitives(BaseTask):
 
     def _reward_action_rate_mu(self):
         # Penalize changes in actions
-        return torch.sum(torch.square(self.last_actions[:,:4] - self.actions[:,:4]), dim=1)
-        return (torch.square(self.actions[:,:1] - self.actions[:,1:2]) + torch.square(self.actions[:,2:3] - self.actions[:,3:4])).squeeze() + torch.sum(torch.square(self.last_actions[:,:4] - self.actions[:,:4]), dim=1)
+        # return torch.sum(torch.square(self.last_actions[:,:4] - self.actions[:,:4]), dim=1)
+        # return (torch.square(self.actions[:,:1] - self.actions[:,1:2]) + torch.square(self.actions[:,2:3] - self.actions[:,3:4])).squeeze() + torch.sum(torch.square(self.last_actions[:,:4] - self.actions[:,:4]), dim=1)
+        front_rear_error = (torch.square(self.actions[:,:1] - self.actions[:,1:2]) + torch.square(self.actions[:,2:3] - self.actions[:,3:4])).squeeze() + (torch.square(self.actions[:,4:5] - self.actions[:,5:6]) + torch.square(self.actions[:,6:7] - self.actions[:,7:8])).squeeze()
+        return front_rear_error + torch.sum(torch.square(self.last_actions[:,:8] - self.actions[:,:8]), dim=1)
 
     def _reward_ref_motion_hip(self):
         joint_ids = torch.tensor([0,3,6,9], device=self.device)
@@ -1058,3 +1100,8 @@ class MotorPrimitives(BaseTask):
         exceeded_torques[exceeded_torques < 0.] = 0.
         # sum along decimation axis and dof axis
         return torch.norm(exceeded_torques, p= 1, dim= -1).sum(dim= 1)
+
+    def _reward_orientation_yaw(self):
+        # Penalize non flat base orientation
+        # print(self.projected_gravity[:,2:3])
+        return torch.sum(torch.square(self.projected_gravity[:, 2:3]-(-1)), dim=1)

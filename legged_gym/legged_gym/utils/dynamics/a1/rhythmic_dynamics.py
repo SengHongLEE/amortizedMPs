@@ -51,6 +51,80 @@ class _DynamicsBase:
     def wrap_to_pi(self, x):
         return torch.atan2(torch.sin(x), torch.cos(x))
 
+    # def integrate_oscillator_equations(self):
+    #     dt = self._INTEGRATION_DT
+    #     steps = max(1, int(self._dt / dt))
+    #     oscillator_gain = self._OSCILLATOR_GAIN
+    #     half_dt = dt * 0.5
+    #     quarter_gain = oscillator_gain * 0.25
+
+    #     X = self.X
+    #     X_dot = self.X_dot
+    #     d2X = self.d2X
+    #     sqrt_mu = torch.sqrt(self._mu)
+
+    #     f_gait = 8.
+    #     f_modulation = 2.
+    #     omega_g = 2 * torch.pi * (f_gait + self.phases[:,:1] * f_modulation)
+    #     omega_g = torch.clamp(omega_g, 2 * torch.pi * (f_gait - f_modulation) , 2 * torch.pi * (f_gait + f_modulation))
+    #     omega_step = omega_g * dt
+
+    #     # omega_rel_max = 1.0
+    #     # omega_relative = 2 * torch.pi * omega_rel_max * self._omega_residuals[:,1:]
+    #     omega_relative = self.phases[:,1:].clone()
+
+    #     phase_residual_max = torch.pi   # ±180 deg
+    #     phase_relative = phase_residual_max * self.phases[:,1:]
+        
+
+    #     for _ in range(steps):
+    #         prev_d2X = d2X
+    #         prev_X_dot = X_dot
+    #         d2X = (oscillator_gain * (quarter_gain * (sqrt_mu - X[:, 0, :]) - prev_X_dot[:, 0, :])).unsqueeze(1)
+    #         X_dot = torch.empty_like(prev_X_dot)
+    #         X_dot[:, 0, :] = prev_X_dot[:, 0, :] + (prev_d2X[:, 0, :] + d2X[:, 0, :]) * half_dt
+
+    #         self.delta[:,0] = 0.0
+    #         # self.delta[:,1:].add_(omega_relative * dt)
+    #         self.delta[:,1:] = phase_relative
+    #         self.delta.remainder_(self._TWO_PI)
+
+    #         omega_relative_FL = torch.zeros_like(omega_g)
+    #         delta_omega = torch.cat(
+    #             [omega_relative_FL, omega_relative],
+    #             dim=-1
+    #         )
+
+    #         theta_target = self.phi + self.delta
+    #         phase_error = self.wrap_to_pi(theta_target - X[:, 1, :])
+
+    #         # delta_omega[:,1:] = phase_error[:,1:] / dt
+
+    #         omega_corr_max = 0.3 * omega_g            #2. * torch.pi * 4.
+    #         kappa = 0.6 * omega_g
+    #         phase_correction = (
+    #             omega_corr_max
+    #             * torch.tanh(
+    #                 kappa
+    #                 * phase_error
+    #                 / omega_corr_max
+    #             )
+    #         )
+    #         # X_dot[:, 1, :] = omega_g + delta_omega + kappa * torch.sin(phase_error)
+    #         X_dot[:, 1, :] = omega_g + phase_correction
+
+    #         X[:, 0, :] += (prev_X_dot[:, 0, :] + X_dot[:, 0, :]) * half_dt
+    #         X[:, 1, :] += X_dot[:, 1, :] * dt
+    #         X[:, 1, :] = torch.remainder(X[:, 1, :], self._TWO_PI)
+
+    #         # self.phi += omega_g * dt
+    #         self.phi.add_(omega_step)
+    #         self.phi.remainder_(self._TWO_PI)
+
+    #     self.X = X
+    #     self.X_dot = X_dot
+    #     self.d2X = d2X
+
     def integrate_oscillator_equations(self):
         dt = self._INTEGRATION_DT
         steps = max(1, int(self._dt / dt))
@@ -64,19 +138,33 @@ class _DynamicsBase:
         sqrt_mu = torch.sqrt(self._mu)
 
         f_gait = 8.
-        f_modulation = 6.
-        omega_base = 2 * torch.pi * f_gait
-        omega_g = omega_base + self.phases[:,:1] * f_modulation
-        omega_g = torch.clamp(omega_g, 2 * torch.pi * (f_gait - f_modulation) , 2 * torch.pi * (f_gait + f_modulation))
-        omega_step = omega_g * dt
+        f_modulation = 2.
+        # ------------------------------------------------------------
+        # FL determines the common/base instantaneous frequency
+        # self.phases[:, 0]: FL frequency modulation
+        # ------------------------------------------------------------
+        f_base = (
+            f_gait
+            + self.phases[:, 0] * f_modulation
+        )  # [num_envs]
 
-        # omega_rel_max = 1.0
-        # omega_relative = 2 * torch.pi * omega_rel_max * self._omega_residuals[:,1:]
-        omega_relative = self.phases[:,1:].clone()
+        # ------------------------------------------------------------
+        # Other legs modulate their frequency relative to FL
+        # self.phases[:, 1:]:
+        #   FR / RL / RR frequency offsets relative to FL
+        # ------------------------------------------------------------
+        f_legs = torch.cat(
+            [
+                f_base.unsqueeze(-1),
+                f_gait
+                + self.phases[:, 1:] * f_modulation,
+            ],
+            dim=-1,
+        )  # [num_envs, 4]
 
-        phase_residual_max = torch.pi   # ±180 deg
-        phase_relative = phase_residual_max * self.phases[:,1:]
-        
+        # Hz -> rad/s
+        # omega_g = 2.0 * torch.pi * f_legs
+        omega_g = 2.0 * torch.pi * self.omega
 
         for _ in range(steps):
             prev_d2X = d2X
@@ -84,43 +172,11 @@ class _DynamicsBase:
             d2X = (oscillator_gain * (quarter_gain * (sqrt_mu - X[:, 0, :]) - prev_X_dot[:, 0, :])).unsqueeze(1)
             X_dot = torch.empty_like(prev_X_dot)
             X_dot[:, 0, :] = prev_X_dot[:, 0, :] + (prev_d2X[:, 0, :] + d2X[:, 0, :]) * half_dt
-
-            self.delta[:,0] = 0.0
-            # self.delta[:,1:].add_(omega_relative * dt)
-            self.delta[:,1:] = phase_relative
-            self.delta.remainder_(self._TWO_PI)
-
-            omega_relative_FL = torch.zeros_like(omega_g)
-            delta_omega = torch.cat(
-                [omega_relative_FL, omega_relative],
-                dim=-1
-            )
-
-            theta_target = self.phi + self.delta
-            phase_error = self.wrap_to_pi(theta_target - X[:, 1, :])
-
-            # delta_omega[:,1:] = phase_error[:,1:] / dt
-
-            omega_corr_max = 0.3 * omega_g            #2. * torch.pi * 4.
-            kappa = 0.6 * omega_g
-            phase_correction = (
-                omega_corr_max
-                * torch.tanh(
-                    kappa
-                    * phase_error
-                    / omega_corr_max
-                )
-            )
-            # X_dot[:, 1, :] = omega_g + delta_omega + kappa * torch.sin(phase_error)
-            X_dot[:, 1, :] = omega_g + phase_correction
+            X_dot[:, 1, :] = omega_g
 
             X[:, 0, :] += (prev_X_dot[:, 0, :] + X_dot[:, 0, :]) * half_dt
             X[:, 1, :] += X_dot[:, 1, :] * dt
             X[:, 1, :] = torch.remainder(X[:, 1, :], self._TWO_PI)
-
-            # self.phi += omega_g * dt
-            self.phi.add_(omega_step)
-            self.phi.remainder_(self._TWO_PI)
 
         self.X = X
         self.X_dot = X_dot
@@ -153,7 +209,7 @@ class Intrinsic_Dynamics(_DynamicsBase):
 
     _MAX_STEP_LEN = 0.1
     _GROUND_CLEARANCE = 0.15
-    _GROUND_PENETRATION = 0.0
+    _GROUND_PENETRATION = 0.01       #canter train with 0.01, infer with 0.0
 
     def __init__(
         self,
@@ -184,6 +240,7 @@ class Intrinsic_Dynamics(_DynamicsBase):
 
         self._mu = torch.zeros(num_envs, 4, dtype=torch.float, device=device, requires_grad=False)
         self.phases = torch.zeros(num_envs, 4, dtype=torch.float, device=device, requires_grad=False)
+        self.omega = torch.zeros(num_envs, 4, dtype=torch.float, device=device, requires_grad=False)
 
         self.y = torch.zeros(num_envs, 4, dtype=torch.float, device=device, requires_grad=False)
         self.x = torch.zeros_like(self.y)
@@ -207,19 +264,24 @@ class Intrinsic_Dynamics(_DynamicsBase):
     def omega_upper_limit(self, command):
         return ((14 * (command - 0.2)) / 0.8 + 30).unsqueeze(-1)
 
-    def _apply_motion_group(self, indices, actions):
+    def _apply_motion_group(self, indices, actions, command):
         if indices.numel() == 0:
             return
 
         self._mu[indices, :] = self._scale_helper(actions[indices, :4], self.mu_low**2, self.mu_up**2)
         self.phases[indices, :] = actions[indices, 4:8]
+        self.omega[indices, :] = self._scale_helper(actions[indices, 4:8], 5., 10.)
+        # self.omega[indices, :] = self._scale_helper(0.25 * actions[indices, 4:8],torch.zeros_like(self.omega_upper_limit(command[indices])),self.omega_upper_limit(command[indices])) 
+        # self.phases[indices, 1] = 0.7
+        # self.phases[indices, 2] = 0.3
+        # self.phases[indices, 3] = 0.
 
     def intrinsic_dynamics(self, actions, command):
         clipped_actions = torch.clip(actions, -1, 1)
 
-        self._apply_motion_group((self.motion_label == 0).nonzero(as_tuple=True)[0], clipped_actions)
-        self._apply_motion_group((self.motion_label == 1).nonzero(as_tuple=True)[0], clipped_actions)
-        self._apply_motion_group((self.motion_label == 2).nonzero(as_tuple=True)[0], clipped_actions)
+        # self._apply_motion_group((self.motion_label == 0).nonzero(as_tuple=True)[0], clipped_actions)
+        # self._apply_motion_group((self.motion_label == 1).nonzero(as_tuple=True)[0], clipped_actions)
+        self._apply_motion_group((self.motion_label == 2).nonzero(as_tuple=True)[0], clipped_actions, command[:, 0])
 
         self.integrate_oscillator_equations()
 
@@ -229,7 +291,7 @@ class Intrinsic_Dynamics(_DynamicsBase):
         amp_norm = (amp_clip - self.mu_low) / (self.mu_up - self.mu_low)
         amp_norm = torch.clamp(amp_norm, 0.0, 1.0)
 
-        amp = self._MAX_STEP_LEN * amp_norm
+        amp_x = self._MAX_STEP_LEN * amp_norm
 
         # self.x = -self.x * torch.cos(phase)
 
@@ -262,7 +324,7 @@ class Intrinsic_Dynamics(_DynamicsBase):
 
         dir_x = vx_leg / norm_safe
         dir_y = vy_leg / norm_safe
-        stroke = -amp * torch.cos(phase)
+        stroke = -amp_x * torch.cos(phase)
 
         self.x = stroke * dir_x
         self.y = stroke * dir_y

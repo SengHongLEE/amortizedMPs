@@ -34,7 +34,7 @@ from matplotlib.collections import LineCollection
 from legged_gym.envs.base.base_task import BaseTask
 from legged_gym.utils.terrain import Terrain
 from legged_gym.envs.base.legged_robot_config import LeggedRobotCfg
-from legged_gym.utils.dynamics.a1.dynamics import Intrinsic_Dynamics
+from legged_gym.utils.dynamics.a1.rhythmic_dynamics import Intrinsic_Dynamics
 from legged_gym.utils.imitation_task import ImitationTask
 from legged_gym.utils.gait_model import GaitModel, env_cfg
 

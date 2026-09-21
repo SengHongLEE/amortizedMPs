@@ -20,6 +20,9 @@ from legged_gym.envs.a1.mp_adaptive import MotorPrimitives
 from legged_gym.envs.a1.mp_adaptive_config import MotorPrimitivesCfg, MotorPrimitivesCfgPPO
 task_registry.register( "MP_adaptive_a1", MotorPrimitives, MotorPrimitivesCfg(), MotorPrimitivesCfgPPO())
 
+from legged_gym.envs.a1.mp_transient import MotorPrimitives
+from legged_gym.envs.a1.mp_transient_config import MotorPrimitivesCfg, MotorPrimitivesCfgPPO
+task_registry.register( "MP_transient_a1", MotorPrimitives, MotorPrimitivesCfg(), MotorPrimitivesCfgPPO())
 
 from legged_gym.envs.a1.hierarchical_control import AmortizedMPs
 from legged_gym.envs.a1.hierarchical_control_config import AmortizedMPsCfg, AmortizedMPsCfgPPO

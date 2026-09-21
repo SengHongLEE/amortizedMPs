@@ -52,13 +52,14 @@ command = np.load(
 # ============================================================
 # Data processing
 # ============================================================
-max_step = 15001
+min_step = 0
+max_step = 10001
 
 # ------------------------------------------------------------
 # Velocity
 # ------------------------------------------------------------
-lin_vel_x = base_lin_vel[:max_step, 0, 0]
-cmd = command[:max_step, 0, 0]
+lin_vel_x = base_lin_vel[min_step:max_step, 0, 0]
+cmd = command[min_step:max_step, 0, 0]
 
 
 # ------------------------------------------------------------
@@ -70,7 +71,7 @@ cmd = command[:max_step, 0, 0]
 # update_freq = sum(50 / update_idx) * 4 / 12
 update_freq = (
     np.sum(
-        50.0 / update_idx[:int(max_step * 0.05), 0, :],
+        50.0 / update_idx[int(min_step * 0.05):int(max_step * 0.05), 0, :],
         axis=-1
     )
     * 4.0 / 12.0
@@ -286,7 +287,9 @@ ax.margins(x=0)
 
 plt.show()
 
-idx = np.arange(len(update_freq)) 
-print(update_freq.flatten()[idx % 50 == 0])
-print(update_freq.flatten()[idx % 50 == 0].mean())
+# idx = np.arange(len(update_freq)) 
+# print(update_freq.flatten()[idx % 50 == 0])
+# print(update_freq.flatten()[idx % 50 == 0].mean())
 print(np.mean(update_freq))
+
+print(np.sqrt(np.mean((np.square(lin_vel_x - cmd)))))

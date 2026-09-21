@@ -87,7 +87,7 @@ def play(args):
     policy = ppo_runner.get_inference_policy(device=env.device)
     if args.task == 'MP_twin_a1':
         mu_policy, omega_policy = ppo_runner.get_inference_policy(device=env.device)
-    if args.task == 'MP_adaptive_a1':
+    if args.task == 'MP_adaptive_a1' or 'MP_transient_a1':
         cycles = torch.stack((ppo_runner.mu_update_cycle, ppo_runner.omega_update_cycle),
             dim=-1) 
         cycles = cycles.unsqueeze(1).expand(
@@ -113,12 +113,11 @@ def play(args):
 
     number_of_samples = 100000
     decimation = torch.ones(env.num_envs, device=env.device, dtype=torch.int)
-
     for i in range(1*int(number_of_samples)):
 
         if args.task == 'MP_twin_a1':
             obs, _, rews, dones, infos = ppo_runner.inference_rollout(obs, mu_policy, omega_policy)
-        if args.task == 'MP_adaptive_a1':
+        if args.task == 'MP_adaptive_a1' or 'MP_transient_a1':
             obs, _, rews, dones, infos = ppo_runner.inference_rollout(obs, high_policy, mu_policy, omega_policy, hip_policy)
         else:
             actions = policy(obs.detach())

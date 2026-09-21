@@ -30,16 +30,16 @@ class MotorPrimitivesCfg(BaseConfig):
         num_envs = 4096
         num_observations = 44 + 2
         num_privileged_obs = None # if not None a priviledge_obs_buf will be returned by step() (critic obs for assymetric training). None is returned otherwise 
-        mu_shape = 4
-        omega_shape = 4
+        mu_shape = 8
+        omega_shape = 1
         num_actions = mu_shape + omega_shape + 4
 
-        mu_freq_idx_shape = 3
-        omega_freq_idx_shape = 3
+        mu_freq_idx_shape = 1
+        omega_freq_idx_shape = 1
 
         send_timeouts = True # send time out information to the algorithm
         env_spacing = 3.
-        episode_length_s = 10 # episode length in seconds
+        episode_length_s = 3 # episode length in seconds
         play = False
 
     class terrain:
@@ -60,7 +60,7 @@ class MotorPrimitivesCfg(BaseConfig):
 
     class mp_modeling:
         process_type = 'slow'       #'fast' or 'slow'
-        ref_type = 'canter'
+        ref_type = 'trot'
         ref_motion_filename = [f'{LEGGED_GYM_ROOT_DIR}/data/a1/pace.txt',
                                f'{LEGGED_GYM_ROOT_DIR}/data/a1/trot.txt',
                                f'{LEGGED_GYM_ROOT_DIR}/data/a1/canter.txt']
@@ -77,10 +77,11 @@ class MotorPrimitivesCfg(BaseConfig):
     class commands:
         num_commands = 4 # default: lin_vel_x, lin_vel_y, ang_vel_yaw, heading (in heading mode ang_vel_yaw is recomputed from heading error)
         resampling_time = 10 # time before command are changed[s]
-        heading_command = True #True # if true: compute ang vel command from heading error
+        heading_command = False #True # if true: compute ang vel command from heading error
         class ranges:
-            lin_vel_x = [.3, 2.0] # min max [m/s]
+            lin_vel_x = [0., 1.2] # min max [m/s]
             lin_vel_y = [-0., 0.0]   # min max [m/s]
+            lin_vel_z = [-0., 0.]
             ang_vel_yaw = [0.0, 0.0]    # min max [rad/s]
             heading = [-0.0, 0.0]
 
@@ -90,7 +91,7 @@ class MotorPrimitivesCfg(BaseConfig):
         lin_vel = [0.0, 0.0, 0.0]  # x,y,z [m/s]
         ang_vel = [0.0, 0.0, 0.0]  # x,y,z [rad/s]
 
-        pos = [.0, 0.0, 0.32] # x,y,z [m]
+        pos = [.0, 0.0, 0.3] # x,y,z [m]
         default_joint_angles = { # = target angles [rad] when action = 0.0
             'FL_hip_joint': 0.1,   # [rad]
             'RL_hip_joint': 0.1,   # [rad]
@@ -119,8 +120,8 @@ class MotorPrimitivesCfg(BaseConfig):
         hip_cycle = 1
         high_cycle = 50
 
-        mu_freq_idx = [10, 25, 50]
-        omega_freq_idx = [5, 10, 25]
+        mu_freq_idx = [5]
+        omega_freq_idx = [10]
 
         stiffness = {'joint': 100.}  # [N*m/rad]
         damping = {'joint': 2.0}     # [N*m*s/rad]
@@ -165,36 +166,17 @@ class MotorPrimitivesCfg(BaseConfig):
         q_bad = 0.7
         q_good = 1. - q_bad
         class scales:
-            tracking_lin_vel = 3.
-            # tracking_lin_vel_x = 3.
-            # tracking_lin_vel_y = 1.5
-            tracking_ang_vel = 1.5
-            # energy = -0.001   
-            
+            tracking_lin_vel = 30.
             ang_vel_xy = -0.5
-
-            # dof_acc = -2.5e-8
-            # torques = -0.00002
-            ref_motion = 10.        #trot 10.
-            action_rate_omega = -0.1
-            action_rate_mu = -0.1
-
-            action_rate_hip = 0.
-            dof_acc_hip = 0.
-            torques_hip = 0.
-            ref_motion_hip = 0.
-
-            mu_decision = -(tracking_lin_vel + tracking_ang_vel)
-            omega_decision = -(tracking_lin_vel + tracking_ang_vel)
-
+            # action_rate_omega = -0.1
+            orientation_yaw = -1.
+            # action_rate_mu = -0.1
             exceed_torque_limits_l1norm = -0.4
             dof_vel_limits = -0.4
 
-        high_rewards = ['tracking_lin_vel', 'tracking_ang_vel']
-        mu_rewards = ['tracking_lin_vel', 'tracking_ang_vel', 'ang_vel_xy', 'action_rate_mu', 'ref_motion', 'exceed_torque_limits_l1norm', 'dof_vel_limits']
-        omega_rewards = ['tracking_lin_vel', 'tracking_ang_vel', 'ang_vel_xy', 'action_rate_omega', 'ref_motion', 'exceed_torque_limits_l1norm', 'dof_vel_limits']
-        hip_rewards = ['tracking_lin_vel', 'tracking_ang_vel', 'ang_vel_xy', 'dof_acc_hip', 'torques_hip', 'action_rate_hip', 'ref_motion_hip']
-        hip_rewards = ['tracking_lin_vel', 'tracking_ang_vel', 'ang_vel_xy']
+        high_rewards = ['tracking_lin_vel']
+        mu_rewards = ['tracking_lin_vel', 'ang_vel_xy', 'orientation_yaw', 'exceed_torque_limits_l1norm', 'dof_vel_limits']
+        omega_rewards = ['tracking_lin_vel', 'ang_vel_xy', 'orientation_yaw', 'exceed_torque_limits_l1norm', 'dof_vel_limits']
         only_positive_rewards = True # if true negative total rewards are clipped at zero (avoids early termination problems)
         tracking_sigma = 0.25 # tracking reward = exp(-error^2/sigma)
         soft_dof_vel_limit = .9
@@ -202,8 +184,6 @@ class MotorPrimitivesCfg(BaseConfig):
         max_contact_force = 180. # forces above this value are penalized
         soft_dof_pos_limit = 0.9
         base_height_target = 0.32
-
-    rewards.scales.disturbance_penalty = - rewards.q_bad * (rewards.scales.tracking_lin_vel + rewards.scales.tracking_ang_vel)
 
     class normalization:
         class obs_scales:
@@ -327,11 +307,9 @@ class MotorPrimitivesCfgPPO(BaseConfig):
         save_interval = 50 # check for potential saves every this many iterations
         experiment_name = 'A1'
         run_name = "".join([
-            "A1MPadaptive-",
-            (MotorPrimitivesCfg.mp_modeling.ref_type + "-"),
+            "A1MPtransient-",
             (HIGH_ACTOR_TYPE + "-"),
             (LOW_ACTOR_TYPE),
-            # MotorPrimitivesCfg.mp_modeling.process_type,
             ("-highUF_" + np.format_float_scientific(1 / (MotorPrimitivesCfg.control.high_cycle * MotorPrimitivesCfg.control.cycle * MotorPrimitivesCfg.control.decimation * MotorPrimitivesCfg.sim.dt), precision= 3, trim= "-")),
             ("-MF_" + np.format_float_scientific( 1 / MotorPrimitivesCfg.sim.dt, precision= 3, trim= "-")),
             ("-noResume" if not resume else "-from" + "_".join(load_run.split("/")[-1].split("_")[:2])),

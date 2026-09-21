@@ -36,7 +36,7 @@ load_path = (
     "/home/ubuntu/amortizedMPs/legged_gym/"
     "legged_gym/metrics/EXP_MP/"
 )
-idx = '1'
+idx = '2'
 max_step = 15000
 amp_np = np.load(
     load_path + idx + "_amplitude.npy"

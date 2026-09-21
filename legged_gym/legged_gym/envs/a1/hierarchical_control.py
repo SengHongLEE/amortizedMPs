@@ -35,7 +35,7 @@ from legged_gym.utils.terrain import Terrain
 from legged_gym.utils.math_ import quat_apply_yaw, wrap_to_pi, quaternion2rpy_torch
 from legged_gym.utils.helpers import class_to_dict
 from legged_gym.envs.base.legged_robot_config import LeggedRobotCfg
-from legged_gym.utils.dynamics.a1.dynamics import Amortized_Control
+from legged_gym.utils.dynamics.a1.rhythmic_dynamics import Amortized_Control
 from legged_gym.utils.gait_model import GaitModel, env_cfg
 
 class AmortizedMPs(BaseTask):

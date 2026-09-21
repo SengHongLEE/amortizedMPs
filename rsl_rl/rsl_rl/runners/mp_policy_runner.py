@@ -218,7 +218,7 @@ class MPPolicyRunner(TwinPolicyRunner):
         else:
             mu_update_freq_idx, omega_update_freq_idx = high_policy(obs[high_update_env_ids,-1])
         mu_map = torch.tensor(
-            self.env.cfg.control.omega_freq_idx,
+            self.env.cfg.control.mu_freq_idx,
             device=mu_update_freq_idx.device,
             dtype=self.mu_update_cycle.dtype,
         )

@@ -34,9 +34,9 @@ plt.rcParams.update({
 # ============================================================
 # Load data
 # ============================================================
-load_path = "/home/ubuntu/amortizedMPs/legged_gym/legged_gym/metrics/single_speed-20s/"
-idx = '0'
-max_step = 15000
+load_path = "/home/ubuntu/amortizedMPs/legged_gym/legged_gym/metrics/EXP_MP/"
+idx = '1'
+max_step = 20000
 amp_np = np.load(load_path + idx + "_amplitude.npy")[:max_step, 0, :]
 phase_np = np.load(load_path + idx + "_phase.npy")[:max_step, 0, :]
 
