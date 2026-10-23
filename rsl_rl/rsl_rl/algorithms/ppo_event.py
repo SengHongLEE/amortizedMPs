@@ -1,5 +1,16 @@
 from rsl_rl.algorithms import PPO
 from rsl_rl.storage import RolloutStorage_event, RolloutStorage_event_discrete
+from rsl_rl.modules.reservoir_actors import (
+    AnalogReservoirMLPReadoutActor,
+    AnalogReservoirSNNReadoutActor,
+    LIFReservoirMLPReadoutActor,
+    LIFReservoirSNNReadoutActor,
+    LIFReservoirSNNReadoutActor_TWIN_output_head,
+    LIFReservoirSNNReadoutActor_SINGLE_output_head
+
+)
+from rsl_rl.modules.snn import SNNActor_SINGLE_output_head
+
 
 import torch
 import torch.nn as nn
@@ -20,7 +31,6 @@ class PPOevent(PPO):
                  schedule="fixed", 
                  desired_kl=0.01, 
                  device='cpu'):
-
         super().__init__(actor_critic,
                          num_learning_epochs,
                          num_mini_batches,
@@ -62,7 +72,10 @@ class PPOevent(PPO):
         self.start_transition.action_mean = self.actor_critic.action_mean.detach()
         self.start_transition.action_sigma = self.actor_critic.action_std.detach()
         # need to record obs and critic_obs before env.step()
-        self.start_transition.observations = obs
+        if getattr(self.actor_critic, "is_reservoir", False):
+            self.start_transition.observations = obs[:,-1]
+        else:
+            self.start_transition.observations = obs
         self.start_transition.critic_observations = critic_obs
 
         self.storage.add_start_transitions(self.start_transition)
@@ -217,6 +230,11 @@ class PPOevent(PPO):
 
 class PPOevent_discrete(PPOevent):
     def __init__(self, actor_critic, num_learning_epochs=1, num_mini_batches=1, clip_param=0.2, gamma=0.998, lam=0.95, value_loss_coef=1, entropy_coef=0, learning_rate=0.001, max_grad_norm=1, use_clipped_value_loss=True, schedule="fixed", desired_kl=0.01, device='cpu'):
+        # lam = 0.
+        # gamma = 0.
+        # num_learning_epochs = 10
+        # num_mini_batches = 2
+        # entropy_coef = 0.02
         super().__init__(actor_critic, num_learning_epochs, num_mini_batches, clip_param, gamma, lam, value_loss_coef, entropy_coef, learning_rate, max_grad_norm, use_clipped_value_loss, schedule, desired_kl, device)
 
     def init_storage(self, num_envs, num_transitions_per_env, actor_obs_shape, critic_obs_shape, actions_shape, logits_shape):
@@ -254,6 +272,7 @@ class PPOevent_discrete(PPOevent):
     def update(self):
         mean_value_loss = 0
         mean_surrogate_loss = 0
+        self.mean_entropy = 0
         if getattr(self.actor_critic, "is_reservoir", False):
             generator = self.storage.reservoir_mini_batch_generator(self.num_mini_batches, self.num_learning_epochs)
         else:
@@ -275,15 +294,22 @@ class PPOevent_discrete(PPOevent):
             # KL
             if self.desired_kl != None and self.schedule == 'adaptive':
                 with torch.inference_mode():
-                    old_dist = Categorical(logits=logits_batch[:, :self.actor_critic.num_actions_1])
-                    new_dist = self.actor_critic.distribution_1
-                    kl_mu = kl_divergence(old_dist, new_dist)
+                    if self.actor_critic.actor_class is LIFReservoirSNNReadoutActor_SINGLE_output_head or self.actor_critic.actor_class is SNNActor_SINGLE_output_head:
+                        old_dist = Categorical(logits=logits_batch[:, :self.actor_critic.num_actions_1])
+                        new_dist = self.actor_critic.distribution_1
+                        kl_mu = kl_divergence(old_dist, new_dist)
 
-                    old_dist = Categorical(logits=logits_batch[:, self.actor_critic.num_actions_1: self.actor_critic.num_actions_1 + self.actor_critic.num_actions_2])
-                    new_dist = self.actor_critic.distribution_2
-                    kl_omega = kl_divergence(old_dist, new_dist)
+                        kl_mean = (kl_mu).mean()
+                    elif self.actor_critic.actor_class is LIFReservoirSNNReadoutActor_TWIN_output_head:
+                        old_dist = Categorical(logits=logits_batch[:, :self.actor_critic.num_actions_1])
+                        new_dist = self.actor_critic.distribution_1
+                        kl_mu = kl_divergence(old_dist, new_dist)
 
-                    kl_mean = (kl_mu + kl_omega).mean()
+                        old_dist = Categorical(logits=logits_batch[:, self.actor_critic.num_actions_1: self.actor_critic.num_actions_1 + self.actor_critic.num_actions_2])
+                        new_dist = self.actor_critic.distribution_2
+                        kl_omega = kl_divergence(old_dist, new_dist)
+
+                        kl_mean = (kl_mu + kl_omega).mean()
 
                     if kl_mean > self.desired_kl * 2.0:
                         self.learning_rate = max(1e-5, self.learning_rate / 1.5)
@@ -321,10 +347,12 @@ class PPOevent_discrete(PPOevent):
 
             mean_value_loss += value_loss.item()
             mean_surrogate_loss += surrogate_loss.item()
+            self.mean_entropy += entropy_batch.mean().item()
 
         num_updates = self.num_learning_epochs * self.num_mini_batches
         mean_value_loss /= num_updates
         mean_surrogate_loss /= num_updates
+        self.mean_entropy /= num_updates
         self.storage.clear()
 
         return mean_value_loss, mean_surrogate_loss

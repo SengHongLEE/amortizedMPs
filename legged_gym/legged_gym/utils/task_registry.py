@@ -1,6 +1,7 @@
 # License: see [LICENSE, LICENSES/legged_gym/LICENSE]
 
 import os
+import re
 import sys
 import json
 import shutil
@@ -8,7 +9,7 @@ from datetime import datetime
 from typing import Tuple
 
 from rsl_rl.env import VecEnv
-from rsl_rl.runners import OnPolicyRunner, TwinPolicyRunner, MPPolicyRunner
+from rsl_rl.runners import OnPolicyRunner, TwinPolicyRunner, MPPolicyRunner, OmegaPolicyRunner, LowPolicyRunner, HighPolicyRunner, InteroceptivePolicyRunner, MultiInteroceptivePolicyRunner, FullPolicyRunner
 
 
 from legged_gym import LEGGED_GYM_ROOT_DIR
@@ -162,7 +163,17 @@ class TaskRegistry():
         resume = train_cfg.runner.resume
         if resume:
             # load previously trained model
-            resume_path = get_load_path(log_root, load_run=train_cfg.runner.load_run, checkpoint=train_cfg.runner.checkpoint)
+            if name in ('MP_interoceptive_a1', 'MP_multi_primitive_a1', 'MP_pro_terrain_a1', 'MP_pro_terrain_v2_a1', 'MP_pro_terrain_modal_a1', 'MP_full_a1'):
+                pattern = re.compile(r"^model_(\d+)_\d+\.pt$")
+            elif name == 'MP_adaptive_a1' or name == 'MP_transient_a1':
+                pattern = re.compile(r"^model_(\d+)_high-\d+_hip-\d+_mu-\d+_omega-\d+\.pt$")
+            elif name == 'MP_preset_a1' or name == 'MP_refmotion_a1':
+                pattern = re.compile(r"^model_(\d+)_high-\d+_low-\d+\.pt$")
+            elif name == 'MP_omega_a1':
+                pattern = re.compile(r"^model_(\d+)_omega-\d+\.pt$")
+            else:
+                pattern = re.compile(r"^model_(\d+)+\.pt$")
+            resume_path = get_load_path(log_root, pattern, load_run=train_cfg.runner.load_run, checkpoint=train_cfg.runner.checkpoint)
             # resume_path = f'{LEGGED_GYM_ROOT_DIR}/logs/A1/amortized-control/model_500.pt'
             print(f"Loading model from: {resume_path}")
             if save_cfg:

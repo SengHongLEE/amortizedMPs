@@ -323,3 +323,96 @@ class SNNActor_TWIN_output_head(SNNActor):
             for spike_sum in spike_sums
         ]
         return logits_1.reshape(*leading_shape, self.output_dim_1), logits_2.reshape(*leading_shape, self.output_dim_2)
+
+class SNNActor_SINGLE_output_head(SNNActor):
+    """A reusable feed-forward actor with a small final-layer gain and two output head."""
+
+    def __init__(
+        self,
+        input_dim: int,
+        hidden_dims: Sequence,
+        output_dim: int,
+        num_snn_steps: int = 4,
+        lif_beta: float = 0.9,
+        lif_threshold: float = 1.0,
+        surrogate_alpha: float = 5.0,
+        reset_mode: str = "subtract",
+        input_scale: float = 1.0,
+    ):
+        super().__init__(input_dim,
+                         hidden_dims,
+                         hidden_dims[-1],
+                         num_snn_steps,
+                         lif_beta,
+                         lif_threshold,
+                         surrogate_alpha,
+                         reset_mode,
+                         input_scale)
+    
+        self.feature_dim = hidden_dims[-1] if hidden_dims else input_dim
+        self.output_dim = output_dim
+        self.output_head = self._make_output_head(
+            self.feature_dim,
+            self.output_dim
+        )
+
+        self.soft_attn = SoftAttention(self.input_dim)
+
+    @staticmethod
+    def _make_output_head(
+        input_dim: int,
+        output_dim: int,
+        gain: float = 0.01,
+    ) -> nn.Linear:
+        head = nn.Linear(input_dim, output_dim)
+        nn.init.orthogonal_(head.weight, gain=gain)
+        nn.init.zeros_(head.bias)
+        return head
+
+    def forward(self, observations: torch.Tensor) -> (torch.Tensor):
+        if observations.ndim == 0 or observations.shape[-1] != self.input_dim:
+            actual_dim = None if observations.ndim == 0 else observations.shape[-1]
+            raise ValueError(
+                f"Expected observation dimension {self.input_dim}, "
+                f"got {actual_dim}."
+            )     
+        leading_shape = observations.shape[:-1]
+        observations = observations.reshape(-1, self.input_dim)
+        batch_size = observations.shape[0]
+        membrane_states = [
+            observations.new_zeros(batch_size, hidden_dim)
+            for hidden_dim in self.hidden_dims
+        ]
+        action_sum = observations.new_zeros(batch_size, self.output_dim)
+        spike_sums = [
+            observations.new_zeros(()) for _ in self.hidden_dims
+        ]
+        scaled_observations = observations * self.input_scale
+
+        # obs_att = self.soft_attn(scaled_observations)
+
+        for _ in range(self.num_snn_steps):
+            x = scaled_observations
+            for index, (linear_layer, lif_layer) in enumerate(
+                zip(self.linear_layers, self.lif_layers)
+            ):
+                current = linear_layer(x)
+                spike, membrane = lif_layer(
+                    current,
+                    membrane_states[index],
+                )
+                membrane_states[index] = membrane
+                if spike.numel() == 0:
+                    spike_rate = spike.detach().new_zeros(())
+                else:
+                    spike_rate = spike.detach().mean()
+                spike_sums[index] = spike_sums[index] + spike_rate
+                x = spike
+            action_sum = action_sum + self.output_head(x)
+
+        logits = action_sum / float(self.num_snn_steps)
+        self.last_spike_rates = [
+            spike_sum / float(self.num_snn_steps)
+            for spike_sum in spike_sums
+        ]
+        return logits.reshape(*leading_shape, self.output_dim)

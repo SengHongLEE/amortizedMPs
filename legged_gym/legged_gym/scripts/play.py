@@ -34,14 +34,11 @@ def play(args):
     number_of_robots = 1 #
     env_cfg.env.num_envs = min(env_cfg.env.num_envs,number_of_robots)
     env_cfg.env.play = True
-
-    env_cfg.terrain.num_rows = 10
-    env_cfg.terrain.num_cols = 1
-    env_cfg.terrain.border_size = 1.
+    # env_cfg.terrain.border_size = 1.
 
     #stiffness
-    env_cfg.terrain.terrain_length = 5.
-    env_cfg.terrain.terrain_width = 5.
+    # env_cfg.terrain.terrain_length = 5.
+    # env_cfg.terrain.terrain_width = 5.
 
     # go2
     # env_cfg.terrain.terrain_length = 5.
@@ -70,11 +67,23 @@ def play(args):
     env_cfg.commands.resampling_time = 2
     env_cfg.env.play = True 
     env_cfg.env.episode_length_s = 10
-    # env_cfg.mp_modeling.process_type = 'slow'
-    # env_cfg.mp_modeling.gait_model_filename = []
-    # env_cfg.terrain.terrain_length = 20
+
+    # This task keeps its configured terrain rows/types, including fixed evaluation levels.
+    if env_cfg.terrain.mesh_type == 'trimesh':
+        env_cfg.terrain.selected = 'stairs'
+        env_cfg.terrain.difficulty_range = [1.,1.]
+        env_cfg.terrain.num_rows = 1
+        env_cfg.terrain.num_cols = 1
+        env_cfg.env.episode_length_s = 100
+
+        number_of_robots = 1 #
+        env_cfg.env.num_envs = number_of_robots
+
     env_cfg.viewer.pos = [0., -2., 1.4]  # [m]
     env_cfg.viewer.lookat = [0., 0., .3]  # [m]
+
+    train_cfg.runner.checkpoint = -1
+    train_cfg.runner.load_run = -1
 
     # prepare environment
     env, _ = task_registry.make_env(name=args.task, args=args, env_cfg=env_cfg)
@@ -85,18 +94,43 @@ def play(args):
     train_cfg.runner.resume = True
     ppo_runner, train_cfg = task_registry.make_alg_runner(env=env, name=args.task, args=args, train_cfg=train_cfg, env_cfg=env_cfg, save_cfg= False)
     policy = ppo_runner.get_inference_policy(device=env.device)
-    if args.task == 'MP_twin_a1':
-        mu_policy, omega_policy = ppo_runner.get_inference_policy(device=env.device)
-    if args.task == 'MP_adaptive_a1' or 'MP_transient_a1':
+    if args.task == 'MP_interoceptive_a1' or args.task == 'MP_refmotion_a1':
+        policy = ppo_runner.get_inference_policy(device=env.device)
+    elif args.task in ('MP_multi_primitive_a1', 'MP_pro_terrain_a1', 'MP_pro_terrain_v2_a1', 'MP_pro_terrain_modal_a1'):
+        primitive_selection_actor, modulation_parameter_actor = ppo_runner.get_inference_policy(device=env.device)
+    elif args.task in ('MP_full_a1'):
+        primitive_selection_actor, modulation_parameter_actor, ee_equilibrium_actor = ppo_runner.get_inference_policy(device=env.device)
+    
+    elif args.task == 'MP_preset_a1' or args.task == 'MP_refmotion_a1' or args.task == 'MP_interoceptive_a1':
+        low_map = torch.tensor(
+            env.cfg.control.low_freq_idx,
+            device=ppo_runner.low_update_cycle.device,
+            dtype=ppo_runner.low_update_cycle.dtype,
+        )
+        low_update_freq_idx = (ppo_runner.low_update_cycle.unsqueeze(-1) == low_map).long().argmax(dim=-1)
+        # cycles = low_update_freq_idx.unsqueeze(-1)
+        # cycles = cycles.unsqueeze(1).expand(
+        #     -1, obs.size(1), -1
+        # )
+        # obs = torch.cat((obs, cycles), dim=-1)
+        high_policy, policy = ppo_runner.get_inference_policy(device=env.device)
+    elif args.task == 'MP_omega_a1':
         cycles = torch.stack((ppo_runner.mu_update_cycle, ppo_runner.omega_update_cycle),
             dim=-1) 
         cycles = cycles.unsqueeze(1).expand(
             -1, obs.size(1), -1
         )
-
+        obs = torch.cat((obs, cycles), dim=-1)
+        omega_policy = ppo_runner.get_inference_policy(device=env.device)
+    elif args.task == 'MP_adaptive_a1' or 'MP_transient_a1':
+        cycles = torch.stack((ppo_runner.mu_update_cycle, ppo_runner.omega_update_cycle),
+            dim=-1) 
+        cycles = cycles.unsqueeze(1).expand(
+            -1, obs.size(1), -1
+        )
         obs = torch.cat((obs, cycles), dim=-1)
         high_policy, mu_policy, omega_policy, hip_policy = ppo_runner.get_inference_policy(device=env.device)
-    
+
     # export policy as a jit module (used to run it from C++)
     if EXPORT_POLICY:
         path = os.path.join(LEGGED_GYM_ROOT_DIR, 'logs', train_cfg.runner.experiment_name, 'exported', 'policies')
@@ -111,13 +145,19 @@ def play(args):
 
 
 
-    number_of_samples = 100000
-    decimation = torch.ones(env.num_envs, device=env.device, dtype=torch.int)
+    number_of_samples = 1000000
     for i in range(1*int(number_of_samples)):
-
-        if args.task == 'MP_twin_a1':
-            obs, _, rews, dones, infos = ppo_runner.inference_rollout(obs, mu_policy, omega_policy)
-        if args.task == 'MP_adaptive_a1' or 'MP_transient_a1':
+        if args.task == 'MP_interoceptive_a1' or args.task == 'MP_refmotion_a1':
+            obs, _, rews, dones, infos = ppo_runner.inference_rollout(obs, policy)
+        elif args.task in ('MP_multi_primitive_a1', 'MP_pro_terrain_a1', 'MP_pro_terrain_v2_a1', 'MP_pro_terrain_modal_a1'):
+            obs, _, rews, dones, infos = ppo_runner.inference_rollout(obs, primitive_selection_actor, modulation_parameter_actor)
+        elif args.task in ('MP_full_a1'):
+            obs, _, rews, dones, infos = ppo_runner.inference_rollout(obs, primitive_selection_actor, modulation_parameter_actor, ee_equilibrium_actor)
+        elif args.task == 'MP_preset_a1' or args.task == 'MP_refmotion_a1' or args.task == 'MP_interoceptive_a1':
+            obs, _, rews, dones, infos = ppo_runner.inference_rollout(obs, rews, high_policy, policy)
+        elif args.task == 'MP_omega_a1':
+            obs, _, rews, dones, infos = ppo_runner.inference_rollout(obs, omega_policy)
+        elif args.task == 'MP_adaptive_a1' or 'MP_transient_a1':
             obs, _, rews, dones, infos = ppo_runner.inference_rollout(obs, high_policy, mu_policy, omega_policy, hip_policy)
         else:
             actions = policy(obs.detach())
@@ -128,7 +168,6 @@ def play(args):
                 env.gym.write_viewer_image_to_file(env.viewer, filename)
                 img_idx += 1 
         if MOVE_CAMERA:
-            
             camera_vel = np.array([1., 1., 0.]) * env.base_lin_vel[0,:].cpu().numpy()
             camera_position += camera_vel * env.dt
             env.set_camera(camera_position, camera_position + camera_direction)

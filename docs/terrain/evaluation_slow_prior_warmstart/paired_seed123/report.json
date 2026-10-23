@@ -1,0 +1,4771 @@
+{
+  "checkpoint": "/home/ubuntu/amortizedMPs/legged_gym/logs/A1/1021_modal_v3_slow_prior_smoke/warmstart.pt",
+  "sha256": "32b8d3ed283b7614a2fffb94fee75060c0e6cdde79613f2e92417566595c3802",
+  "seed": 123,
+  "terrain_seed": 1,
+  "seconds": 15.0,
+  "corridor": 1.5,
+  "initial_state_sha256": "cf1dfc837cca3c08d50526a7dc047aba3521317e21249d4851f19a9f733cfdf3",
+  "sample_low": false,
+  "constant_actions": null,
+  "effective_config": {
+    "asset": {
+      "angular_damping": 0.0,
+      "armature": 0.0,
+      "calf_link_length_a1": 0.2,
+      "collapse_fixed_joints": true,
+      "default_dof_drive_mode": 3,
+      "density": 0.001,
+      "disable_gravity": false,
+      "file": "{LEGGED_GYM_ROOT_DIR}/resources/robots/a1/urdf/a1_updated_v2.urdf",
+      "fix_base_link": false,
+      "flip_visual_attachments": true,
+      "foot_name": "foot",
+      "ground_clearance": 0.15,
+      "ground_penetration": 0.0,
+      "hip_link_length_a1": 0.0838,
+      "linear_damping": 0.0,
+      "max_angular_velocity": 1000.0,
+      "max_ground_clearance": 0.2,
+      "max_linear_velocity": 1000.0,
+      "max_step_length": 0.1,
+      "penalize_contacts_on": [
+        "thigh",
+        "calf"
+      ],
+      "replace_cylinder_with_capsule": true,
+      "self_collisions": 1,
+      "terminate_after_contacts_on": [
+        "base"
+      ],
+      "thickness": 0.01,
+      "thigh_link_length_a1": 0.2
+    },
+    "commands": {
+      "heading_command": true,
+      "max_vel_x": 1.5,
+      "num_commands": 4,
+      "ranges": {
+        "ang_vel_yaw": [
+          0.0,
+          0.0
+        ],
+        "heading": [
+          -0.0,
+          0.0
+        ],
+        "lin_vel_x": [
+          0.3,
+          1.5
+        ],
+        "lin_vel_y": [
+          -0.0,
+          0.0
+        ]
+      },
+      "resampling_time": 5
+    },
+    "control": {
+      "action_scale": 1.0,
+      "cycle": 2,
+      "damping": {
+        "joint": 2.0
+      },
+      "decimation": 10,
+      "equilibrium": {
+        "acceleration_limits": [
+          4.0,
+          3.0,
+          4.0
+        ],
+        "frequency_hz": 3.0,
+        "joint_limit_margin": 0.02,
+        "min_foot_depth": 0.06,
+        "min_sagittal_reach": 0.06,
+        "offset_limits": [
+          0.04,
+          0.025,
+          0.04
+        ],
+        "stance_velocity_limits": [
+          0.06,
+          0.04,
+          0.08
+        ],
+        "swing_velocity_limits": [
+          0.4,
+          0.25,
+          0.4
+        ]
+      },
+      "hierarchical": false,
+      "modulation_param_update_cycle": 1,
+      "oscillator_type": "phase_oscillator",
+      "primitive_selection_update_cycle": 25,
+      "stiffness": {
+        "joint": 100.0
+      },
+      "timing": {
+        "align_stroke": true,
+        "clearance_range": [
+          0.06,
+          0.2
+        ],
+        "duty_factor_range": [
+          0.3,
+          0.8
+        ],
+        "duty_offset_range": [
+          -0.15,
+          0.25
+        ],
+        "frequency_scale_range": [
+          0.35,
+          1.2
+        ],
+        "time_constant": 0.1
+      },
+      "update_quality_threshold": 0.85,
+      "varied_decimation": false
+    },
+    "domain_rand": {
+      "added_mass_range": [
+        -2.0,
+        3.0
+      ],
+      "friction_range": [
+        0.6,
+        1.0
+      ],
+      "max_push_vel_xy": 0.3,
+      "push_interval": 250.0,
+      "push_interval_s": 5,
+      "push_robots": false,
+      "randomize_base_mass": false,
+      "randomize_friction": false
+    },
+    "env": {
+      "action_space": "cpg_modal_equilibrium_v3",
+      "env_spacing": 3.0,
+      "episode_length_s": 15.0,
+      "num_actions": 23,
+      "num_controller_observations": 72,
+      "num_envs": 192,
+      "num_modulation_params": 22,
+      "num_observations": 132,
+      "num_primitives": 6,
+      "num_privileged_obs": 139,
+      "play": false,
+      "send_timeouts": true
+    },
+    "init_member_classes": {},
+    "init_state": {
+      "ang_vel": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "default_joint_angles": {
+        "FL_hip_joint": 0.1,
+        "RL_hip_joint": 0.1,
+        "FR_hip_joint": -0.1,
+        "RR_hip_joint": -0.1,
+        "FL_thigh_joint": 0.8,
+        "RL_thigh_joint": 1.0,
+        "FR_thigh_joint": 0.8,
+        "RR_thigh_joint": 1.0,
+        "FL_calf_joint": -1.5,
+        "RL_calf_joint": -1.5,
+        "FR_calf_joint": -1.5,
+        "RR_calf_joint": -1.5
+      },
+      "lin_vel": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "pos": [
+        0.0,
+        0.0,
+        0.32
+      ],
+      "rot": [
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ]
+    },
+    "noise": {
+      "add_noise": false,
+      "noise_level": 1.0,
+      "noise_scales": {
+        "ang_vel": 0.4,
+        "dof_pos": 0.5,
+        "dof_vel": 1.5,
+        "gravity": 0.1,
+        "height_measurements": 0.0,
+        "lin_vel": 0.1
+      }
+    },
+    "normalization": {
+      "clip_actions": 1.0,
+      "clip_observations": 100.0,
+      "obs_scales": {
+        "ang_vel": 0.25,
+        "dof_pos": 1.0,
+        "dof_vel": 0.05,
+        "height_measurements": 5.0,
+        "lin_vel": 2.0
+      }
+    },
+    "rewards": {
+      "base_height_target": 0.32,
+      "contact_off_force": 1.0,
+      "contact_on_force": 5.0,
+      "max_contact_force": 180.0,
+      "modulation_param_rewards": [
+        "tracking_lin_vel",
+        "tracking_ang_vel",
+        "orientation",
+        "orientation_yaw",
+        "ang_vel_xy",
+        "action_rate_mp",
+        "stance_slip",
+        "exceed_torque_limits_l1norm",
+        "dof_vel_limits"
+      ],
+      "only_positive_rewards": false,
+      "pi_g_contact_force": 1.0,
+      "pi_g_switch_cost": 2.0,
+      "pi_g_utility_weight": 0.4,
+      "primitive_selection_rewards": [
+        "tracking_lin_vel",
+        "tracking_ang_vel",
+        "orientation",
+        "orientation_yaw",
+        "ang_vel_xy",
+        "action_rate_mp",
+        "stance_slip",
+        "exceed_torque_limits_l1norm",
+        "dof_vel_limits"
+      ],
+      "primitive_selection_scales": {
+        "action_rate_mp": -0.1,
+        "ang_vel_xy": -0.1,
+        "dof_vel_limits": -0.4,
+        "exceed_torque_limits_l1norm": -0.4,
+        "orientation": -2.0,
+        "orientation_yaw": -2.0,
+        "pi_g_contact": 1.0,
+        "pi_g_cot": 1.0,
+        "pi_g_torque": 1.0,
+        "pi_g_utility": 1.0,
+        "pi_g_work": 1.0,
+        "stance_slip": -0.2,
+        "tracking_ang_vel": 1.5,
+        "tracking_lin_vel": 3.0
+      },
+      "scales": {
+        "action_rate_mp": -0.1,
+        "action_rate_ps": -0.1,
+        "ang_vel_xy": -0.1,
+        "dof_vel_limits": -0.4,
+        "exceed_torque_limits_l1norm": -0.4,
+        "orientation": -2.0,
+        "orientation_yaw": -2.0,
+        "stance_slip": -0.2,
+        "tracking_ang_vel": 1.5,
+        "tracking_lin_vel": 3.0
+      },
+      "soft_dof_pos_limit": 0.9,
+      "soft_dof_vel_limit": 0.9,
+      "soft_torque_limit": 0.9,
+      "task_rewards": [
+        "tracking_lin_vel",
+        "tracking_ang_vel"
+      ],
+      "touchdown_force_scale": 180.0,
+      "touchdown_force_weight": 0.25,
+      "touchdown_force_window": 0.02,
+      "touchdown_min_air_time": 0.02,
+      "touchdown_velocity_scale": 1.0,
+      "tracking_sigma": 0.25
+    },
+    "seed": 1,
+    "sim": {
+      "dt": 0.001,
+      "gravity": [
+        0.0,
+        0.0,
+        -9.81
+      ],
+      "physx": {
+        "bounce_threshold_velocity": 0.5,
+        "contact_collection": 2,
+        "contact_offset": 0.01,
+        "default_buffer_size_multiplier": 5,
+        "max_depenetration_velocity": 1.0,
+        "max_gpu_contact_pairs": 8388608,
+        "num_position_iterations": 4,
+        "num_threads": 10,
+        "num_velocity_iterations": 0,
+        "rest_offset": 0.0,
+        "solver_type": 1
+      },
+      "substeps": 1,
+      "up_axis": 1
+    },
+    "terrain": {
+      "border_size": 4.0,
+      "boundary_margin": 0.6,
+      "curriculum": false,
+      "curriculum_demote_ratio": 0.5,
+      "curriculum_initial_level": 1,
+      "curriculum_max_level": null,
+      "curriculum_min_level": 0,
+      "curriculum_promote_distance": 2.5,
+      "curriculum_promote_ratio": 0.8,
+      "difficulty_mode": "linear",
+      "difficulty_range": [
+        0.0,
+        1.0
+      ],
+      "dynamic_friction": 1.0,
+      "fixed_terrain_level": null,
+      "horizontal_scale": 0.1,
+      "max_init_terrain_level": null,
+      "measure_heights": false,
+      "mesh_type": "trimesh",
+      "num_cols": 4,
+      "num_rows": 2,
+      "origin_sample_size": 1.0,
+      "platform_size": 3.0,
+      "restitution": 0.0,
+      "row_difficulties": [
+        0.5,
+        1.0
+      ],
+      "seed": 1,
+      "selected": null,
+      "selected_kwargs": null,
+      "slope_threshold": 0.75,
+      "spawn_platform": false,
+      "spawn_xy_jitter": 0.1,
+      "static_friction": 1.0,
+      "terrain_columns": [
+        "flat",
+        "flat",
+        "stairs",
+        "stairs"
+      ],
+      "terrain_length": 8.0,
+      "terrain_params": {
+        "flat": {
+          "height": 0.0
+        },
+        "slope": {
+          "slope_range": [
+            0.02,
+            0.3
+          ],
+          "slope_signs": [
+            -1,
+            1
+          ]
+        },
+        "ramp": {
+          "slope_range": [
+            0.02,
+            0.3
+          ],
+          "slope_signs": [
+            -1,
+            1
+          ],
+          "center_platform": true
+        },
+        "rough_slope": {
+          "slope_range": [
+            0.02,
+            0.2
+          ],
+          "slope_signs": [
+            -1,
+            1
+          ],
+          "height_range": [
+            0.005,
+            0.025
+          ],
+          "height_step": 0.005,
+          "downsampled_scale": 0.3
+        },
+        "rough": {
+          "height_range": [
+            0.005,
+            0.04
+          ],
+          "height_step": 0.005,
+          "downsampled_scale": 0.3
+        },
+        "rubble": {
+          "height_range": [
+            0.01,
+            0.04
+          ],
+          "stone_size_range": [
+            0.6,
+            1.2
+          ],
+          "num_rects": 12
+        },
+        "stairs": {
+          "step_height_range": [
+            0.01,
+            0.08
+          ],
+          "step_width": 0.6,
+          "step_signs": [
+            -1,
+            1
+          ]
+        },
+        "stairs_linear": {
+          "step_height_range": [
+            0.01,
+            0.08
+          ],
+          "step_width": 0.4,
+          "step_signs": [
+            -1,
+            1
+          ]
+        },
+        "stepping_stones": {
+          "stone_size_range": [
+            0.8,
+            0.3
+          ],
+          "stone_distance_range": [
+            0.1,
+            0.3
+          ],
+          "height_range": [
+            0.0,
+            0.05
+          ],
+          "depth_range": [
+            0.2,
+            0.6
+          ]
+        },
+        "wave": {
+          "amplitude_range": [
+            0.01,
+            0.12
+          ],
+          "num_waves": 2
+        },
+        "gap": {
+          "width_range": [
+            0.1,
+            0.5
+          ],
+          "depth_range": [
+            0.2,
+            0.6
+          ],
+          "spacing": 1.5
+        },
+        "pit": {
+          "size_range": [
+            2.5,
+            3.0
+          ],
+          "depth_range": [
+            0.1,
+            0.5
+          ]
+        },
+        "hurdle": {
+          "width_range": [
+            0.2,
+            0.3
+          ],
+          "height_range": [
+            0.05,
+            0.2
+          ],
+          "spacing": 1.5
+        },
+        "beam": {
+          "width_range": [
+            1.0,
+            0.3
+          ],
+          "depth_range": [
+            0.2,
+            0.6
+          ]
+        }
+      },
+      "terrain_proportions": {
+        "flat": 1.0,
+        "slope": 1.0,
+        "rough_slope": 1.0,
+        "rough": 1.0,
+        "rubble": 1.0,
+        "stairs": 3.0,
+        "ramp": 1.0,
+        "stairs_linear": 0.0,
+        "stepping_stones": 0.0,
+        "wave": 1.0,
+        "gap": 0.0,
+        "pit": 0.0,
+        "hurdle": 0.0,
+        "beam": 0.0
+      },
+      "terrain_variants": {
+        "uphill": {
+          "type": "ramp",
+          "params": {
+            "slope_range": [
+              0.02,
+              0.3
+            ],
+            "slope_signs": [
+              1
+            ]
+          }
+        },
+        "downhill": {
+          "type": "ramp",
+          "params": {
+            "slope_range": [
+              0.02,
+              0.3
+            ],
+            "slope_signs": [
+              -1
+            ]
+          }
+        },
+        "side_slope": {
+          "type": "ramp",
+          "params": {
+            "slope_range": [
+              0.02,
+              0.2
+            ],
+            "axis": "y"
+          }
+        }
+      },
+      "terrain_width": 8.0,
+      "vertical_scale": 0.005
+    },
+    "viewer": {
+      "lookat": [
+        1.8,
+        0.8,
+        0.3
+      ],
+      "pos": [
+        1.8,
+        0.6,
+        0.4
+      ],
+      "ref_env": 0
+    }
+  },
+  "source_hashes": {
+    "legged_gym/legged_gym/__init__.py": "c02b8407a9c54cd8b234dfb421595183dd38e01c0d040a58b8ae4a857b2860c9",
+    "legged_gym/legged_gym/scripts/diagnose_proprio_stairs.py": "4d4433be27012aa79b6a48cc8441e2692f2ac3d0d1764f5b7eb80124e7186c3f",
+    "legged_gym/legged_gym/scripts/evaluate_proprio_terrain.py": "6a15e5250e8a8f30a703ab6764408dc9f5f4231eb882250de6556a2ef08973b6",
+    "legged_gym/legged_gym/scripts/preview_mp_terrain.py": "d99988c76de9509893ae16ac93a8280a87c0d0115b85aaeead0002b6216273ff",
+    "legged_gym/legged_gym/scripts/contact_phase_gate.py": "94da03c1f7fb5cc4bb6e38ff5e71eec835660f4f187af5081111434346bac247",
+    "legged_gym/legged_gym/scripts/audit_proprio_terrain.py": "8bf41ed74849d0a55da4b41a01973a8ce5dd3f573be8b68d11608c2fdf064b75",
+    "legged_gym/legged_gym/scripts/probe_dynamical_priors.py": "eed197fdf5dcd78f17179921a8166071499e4d900d3510d0dc8c5bf2b8243554",
+    "legged_gym/legged_gym/scripts/train.py": "c1075ef63c4e96aeffe4e7ebe80d6161051c5136c9b789824bd87026d8da715f",
+    "legged_gym/legged_gym/scripts/train_adaptive_equilibrium.py": "09b6e025cd8a907911f252ef77d25dd9085ab1c036899336bb1f2c165ba1f398",
+    "legged_gym/legged_gym/scripts/analyze_stair_trace.py": "ff040c36b554a22b89805a0c9e8c583e35ce01e62e369407830e7fc1d23e3560",
+    "legged_gym/legged_gym/scripts/play.py": "fbdcbe6d3e0aa174a2ce7fa0f6f807e51d181a47389888a1a91fdb5f2f5d964e",
+    "legged_gym/legged_gym/envs/__init__.py": "281f1d3c8c9e84cd064c045d56e1ddb015f08c1f117e5f00970f6c412da15975",
+    "legged_gym/legged_gym/envs/a1/mp_transient_config.py": "000bbc84953bb9d0c2c391a6495843ccca3f08211b6b4162b3ca7c1743b7fbf5",
+    "legged_gym/legged_gym/envs/a1/mp_interoceptive_config.py": "bdcec49f1abc8319a53f30ccb8131479a1ab6b71d6b3604b3f3a68d9a9cb4f0a",
+    "legged_gym/legged_gym/envs/a1/mp_adaptive.py": "c6b74b9d44b74a2f6523862a3931eecc05d88c7d55bb0ef4b843e5d2f50391a6",
+    "legged_gym/legged_gym/envs/a1/mp_omega_config.py": "1c754a4c1058fe35e04c4855519f245473b1db867bda011965bb3439067f555b",
+    "legged_gym/legged_gym/envs/a1/mp_adaptive_config.py": "5cb40a22c5eb467024dc524cd29372fa082d6e629d170effb15a08b3815e3f3b",
+    "legged_gym/legged_gym/envs/a1/mp_preset_config.py": "6dc3da37c24b4d366b6baeae47667d046bb9180ea4c0c6c397ce80fd2b2b1416",
+    "legged_gym/legged_gym/envs/a1/mp_proprio_terrain_config.py": "353cd3a1b2d76c6a29cacd8fe3ccc11bcbac4312ed5dcd4d63b405326a264cbd",
+    "legged_gym/legged_gym/envs/a1/mp_multi_primitive.py": "63fe92d695831f86d19cd96c10fa91151b584b5d0bc4917a598136cecc9f527c",
+    "legged_gym/legged_gym/envs/a1/mp_refmotion_config.py": "926981436ee73e99cff49a4c1c871429349903394b600dbf8a84bf1d7c5f518b",
+    "legged_gym/legged_gym/envs/a1/mp_refmotion.py": "27db3af8c3ec0a7dba84172901b1c523e1f42fb99c0763153dbdaed0c31276a3",
+    "legged_gym/legged_gym/envs/a1/mp_transient.py": "90cffab089888bead9e15b352442b6cc8f462976195ac0e17db987279b2baeb6",
+    "legged_gym/legged_gym/envs/a1/mp_interoceptive.py": "cb96fd65e0fbff9780be3ba70635f604ba23cb7e8ce8224210f145484fda5319",
+    "legged_gym/legged_gym/envs/a1/mp_proprio_terrain.py": "b16426dea5554677dfc494754138792a7c39e0021dacf0b28d7a9f4188bf1cd6",
+    "legged_gym/legged_gym/envs/a1/mp_preset.py": "091c48300322452b26faa3f4be1fec3b7de0597e8cf03271c59714ca9244b8b1",
+    "legged_gym/legged_gym/envs/a1/mp_multi_primitive_config.py": "35068d71b2be7685d26fc49f860c411ca135b0b20c1571df7b277974f3c3314c",
+    "legged_gym/legged_gym/envs/a1/mp_omega.py": "0fad7417208b46714085e5392e21dd6d1f93233e8d483c76ce904388903c1b34",
+    "legged_gym/legged_gym/envs/base/base_config.py": "0597eabb0aa9422240ea408e7bd3aa0ebc9ec36cc781d1e5fb26773ca3579362",
+    "legged_gym/legged_gym/envs/base/legged_robot_config.py": "32dfb1b442a149622beeba9fc16bce5daabc5285499184e5ebacdd9ab6241848",
+    "legged_gym/legged_gym/envs/base/base_task.py": "60c57bc907a54e4377c460a2aae46948bd8d9de43959c78db9ec13378bf17b4f",
+    "legged_gym/legged_gym/envs/base/legged_robot.py": "5008ef70d61d30f67f351059a88d339fc5cb03d0b202596e64c2f498318dbf59",
+    "legged_gym/legged_gym/envs/go2/hierarchical_control_config.py": "0725bc59e3e428380adc1bfbaa5626831ff2293af5887907bcfc9b90f06f008c",
+    "legged_gym/legged_gym/envs/go2/mp.py": "b8502bfece95d27ac3e6425ff3a68f2c2852fe973b092e029edd177484a84dd3",
+    "legged_gym/legged_gym/envs/go2/hierarchical_control.py": "78aa898d186b012c9a5dec3564acb68aba5a80ee62ef07719940a2da084b85d5",
+    "legged_gym/legged_gym/envs/go2/mp_config.py": "eaf3fc15b54b502486dd1687dbd26a3fb896d829be8c68703a795055a4a0974e",
+    "legged_gym/legged_gym/plot/intrinsic_dynamics.py": "c3c68bb50a4479c4d2c2ec14054c6d822e41b755ce260f7d7ba1fba9bf62c24e",
+    "legged_gym/legged_gym/plot/amplitude.py": "54ba51a0a399f3c5eb4fc96755a0445c46a79deda33306fabbbce37f4cff657a",
+    "legged_gym/legged_gym/plot/global_x_z.py": "78e900d93c51367019a475c7997eb64fad53a7cb174600be3fbba23664223c06",
+    "legged_gym/legged_gym/plot/oscillator.py": "98d62a1885061ef93781aa961a782ef9ba83cdcbd5f5d8c3fbb4b13be8ffa33b",
+    "legged_gym/legged_gym/plot/portrait.py": "d0f06f0bdbbd53307048db3b42e2ec7aa037e4fc5001a609b34a2fd7e5d4994b",
+    "legged_gym/legged_gym/plot/helpers.py": "443d55fb3885c790384796b082e9a0a858047594f009b8105898777207350cc5",
+    "legged_gym/legged_gym/plot/contact_boolean.py": "0771e070c06820aa29f01a37c335af32741b5d1a4190b41966d9746ac7769ee9",
+    "legged_gym/legged_gym/plot/omega.py": "e35eaaffe736789ca7eae3490d5ca0772675349c1da5fec59a10d76acd544a58",
+    "legged_gym/legged_gym/plot/phase.py": "dec4a5750f7ee2aabfa0304fc49e5571916ef6881c31a9191f217d17ee92624d",
+    "legged_gym/legged_gym/plot/lin_vel_x.py": "fc62caa83175c04bd089b354e20e11a22d669fe8bc57e969002d5461a605c731",
+    "legged_gym/legged_gym/test/gae.py": "1986775097ee27d7ea694e90c8fcabb2cdce075eef9bc52a2ae01b4194e1fa8f",
+    "legged_gym/legged_gym/test/dynamics_visual.py": "747807a38111bcd44be4f0b016eb4e95d2fbd909cea2a2363560682447c28a7d",
+    "legged_gym/legged_gym/utils/terrain.py": "46260991ad85cc3d3cc5e4a49c7b8fe7c2ae0def0bc0783096dbd1ba3cdef481",
+    "legged_gym/legged_gym/utils/math_.py": "cc7fe2568b72fb3421d2e12eb0ff869606b15f0ee8322a78c442ad101903fcc3",
+    "legged_gym/legged_gym/utils/__init__.py": "8e2c21feaf1c65c6a0e9008e30e83e63e1c479bcd863edafb7e6e6503b565f82",
+    "legged_gym/legged_gym/utils/terrain_evaluation.py": "a6a2669b0efdeb5f9719768c7853d38118f5ab6075726df642fce4873fa5340c",
+    "legged_gym/legged_gym/utils/gait_model.py": "6055796116ab9917dff074d26ee95670cc846073ae429742a25ab616799c78bd",
+    "legged_gym/legged_gym/utils/equilibrium_migration.py": "28082ea9a1e4463ad83f7ea05fb3b0badbaf6594b34a33694a73c3f8dcca1b5f",
+    "legged_gym/legged_gym/utils/logger.py": "811fcbf050db944daa68aa13f8d61ff11e2e03c68243f0d1fc6ef6998f2a9b06",
+    "legged_gym/legged_gym/utils/imitation_task.py": "e79d469c182dff89da42cceb96a5b6c9a5ddd85c5cc7764aa49304d2333d6ecc",
+    "legged_gym/legged_gym/utils/pose3d.py": "0b8bde3465ff659e1819849d2610c11308c2b2936c3d76d76a1e6421333e820e",
+    "legged_gym/legged_gym/utils/motion_data.py": "0d81cefefa3ee5e9685d394d1f779c4c424fd8f356db25c1b6834cb047b7b2f7",
+    "legged_gym/legged_gym/utils/helpers.py": "0675badcab01dfc4220bd940510da5a4dddaf05224b8140eb6d565492706aa57",
+    "legged_gym/legged_gym/utils/task_registry.py": "ea22591599c28ee2fd215cde9fd25690c9f0cd13655ac52eada043763f63e8ed",
+    "legged_gym/legged_gym/utils/load_config.py": "fc1e95a20065be5654b700f281b5ce1fd175feab914c39e1f485e860352db4b5",
+    "legged_gym/legged_gym/utils/torch_jit_utils.py": "4201a68d23f5c6f51e54d97ee92b8c72724023e7a4bfc95dc379ab20a623e720",
+    "legged_gym/legged_gym/utils/motion_util.py": "49d12eae2db0aa255e6303a059ad8baf01c815554bb1b359471f4390476fcb72",
+    "legged_gym/legged_gym/utils/dynamics/a1/equilibrium_dynamics.py": "d54703a80819a4934409e4dd908e0d1bd51535a163fac7ec348b5e9051e72e5a",
+    "legged_gym/legged_gym/utils/dynamics/a1/transient_dynamics.py": "a0d2c9f35de43125bfe11950b1a8f76b3e259e0b3cd87b3d606511867085ecd5",
+    "legged_gym/legged_gym/utils/dynamics/a1/leg_kinematics.py": "85d1a892d5d4ec0554c13a2937b74f3600e0f279275b54d5a37f435ae86eace2",
+    "legged_gym/legged_gym/utils/dynamics/a1/rhythmic_dynamics.py": "bc89530ceb5e24436e4e6bb92cc4f9a8f44ae03f917109a213f127465fc12ddb",
+    "legged_gym/legged_gym/utils/dynamics/go2/dynamics.py": "22afd416e51caab5a80a841e5b681e3bad4d1cc6c05dd50c8480b2f1228ce55f",
+    "legged_gym/legged_gym/utils/terrains/__init__.py": "eec9caf53dc614df8b2096f99034cd182c5e994d194d07431f41e3ddae534b5f",
+    "legged_gym/legged_gym/utils/terrains/terrain_curriculum.py": "7bf2578c65b484daeaff31b6744766911f94373b619ebdc32f701a835e51915f",
+    "legged_gym/legged_gym/utils/terrains/blind_terrain.py": "4db3c14b286c391b5c0c558ce2f475b6d5d1d879a12e64d7862beaf634b6dc94",
+    "rsl_rl/rsl_rl/__init__.py": "5c70c5a865ae3a49f5201bfc873678548b69f3b0ddec4d00bcf8bf28bb24f33d",
+    "rsl_rl/rsl_rl/env/__init__.py": "b4c617f8535f521496d62b4b057e6523a6d2f83520e3c0ce3a0c2ee0ef028b5c",
+    "rsl_rl/rsl_rl/env/vec_env.py": "6e8f46bec6a4081f4248f010bf5641f71b51cdbaa0282bce76e6ef5580caace7",
+    "rsl_rl/rsl_rl/storage/rollout_storage.py": "5c51e059ea7ee6b36e1ae3c1704238d992a0260ab87919e5a95f8283556c727a",
+    "rsl_rl/rsl_rl/storage/rollout_storage_event.py": "d201c6348743a6517f216f2188bd62a506b3781073bc761df55714272c2ad71b",
+    "rsl_rl/rsl_rl/storage/__init__.py": "0521166ba751053ccb958c3741c5fcae5e22ce9c11fcf0e19d0ba439428bc6e2",
+    "rsl_rl/rsl_rl/storage/rollout_storage_hdrl.py": "286d4426cbee57f82f78db27f6b439e702acbc6e826f7a0c0c58f977ac407cca",
+    "rsl_rl/rsl_rl/runners/__init__.py": "1ff2ac54e70496eaf819dfcd65c7f668d68979421dd1f912c21c1b925fba26d8",
+    "rsl_rl/rsl_rl/runners/rm_mp_policy_runner.py": "1234b942804b3bfca279a25167d60dce94de2793d8c5063363e08732f052fd5e",
+    "rsl_rl/rsl_rl/runners/interoceptive_policy_runner.py": "b76ce3d5f57489d9f9404380493e01ac19623047f97f1af5c37c5732bbfa71c5",
+    "rsl_rl/rsl_rl/runners/multi_interoceptive_policy_runner.py": "8e399b7c6e8c51aa49e7c4a38953dcb77b7059c4fea5d735fb2c4ca521e7efe2",
+    "rsl_rl/rsl_rl/runners/mp_hip_policy_runner.py": "a3e137807cd921cf6b9619d4f25e1920a12a21fd71279e76b4e6887baaa144a1",
+    "rsl_rl/rsl_rl/runners/omega_policy_runner.py": "ef8ec9ff1f73307f4640df0ef13d7d450abdcaa5ff9b08c01481655408769700",
+    "rsl_rl/rsl_rl/runners/low_policy_runner.py": "642ac3c6f92ad5ab5b4ed699365deb6816f88ebd01edbe372b97046dda199034",
+    "rsl_rl/rsl_rl/runners/on_policy_runner.py": "8edd2674a548af6b9ae907ded74a189021e798ed8324213dba83541e90e38f7d",
+    "rsl_rl/rsl_rl/runners/twin_policy_runner.py": "6d597f5895e227e3a1908904006bb2bc0c4daff540beac334246a11de8f7a2bb",
+    "rsl_rl/rsl_rl/runners/high_policy_runner.py": "dda17a6d71a50b5184d0bc27235ce219100cac1d9ca358362299f7ccfcae472a",
+    "rsl_rl/rsl_rl/runners/mp_policy_runner.py": "c23a15bef6fb6c9abf5a399e4ba775b11aa793f33d1449e0268f4c134aed1d32",
+    "rsl_rl/rsl_rl/utils/__init__.py": "6a29eb8996bfc2a2d799282851f6d23fbe446a9e743ad1aeb8031026c101183c",
+    "rsl_rl/rsl_rl/utils/utils.py": "c883c535b2a7eda3ffdc2200505a4ae36dc12cdcf9fc6d306eb2b30f64f202fc",
+    "rsl_rl/rsl_rl/algorithms/__init__.py": "1d741a5bc8ecac8932d50725306d293178453d36a2683d7a08f778fc2fe715c4",
+    "rsl_rl/rsl_rl/algorithms/ppo_hdrl.py": "cb2b164ade87444df7467d1a86603bc376746c650ce8c1a4cab71a9004e2b986",
+    "rsl_rl/rsl_rl/algorithms/ppo.py": "fbb1d33ef901dbeeeee58216626cbe2748a747709aa567c163881b28b2362273",
+    "rsl_rl/rsl_rl/algorithms/ppo_event.py": "1f3924244caf04baba22c88201565ae115952764074aee16dd4c697da01c0b7b",
+    "rsl_rl/rsl_rl/modules/actors.py": "9b4bb356cea93d6e7693c2943f3fab30e35d5d2d06b3557e209dc4bb4f6a6401",
+    "rsl_rl/rsl_rl/modules/__init__.py": "99b76546f8f8709c45258573beaec7480ec1ada444af87ff86b7d59316433070",
+    "rsl_rl/rsl_rl/modules/actor_critic_recurrent.py": "db5eeb05c963e5ab61829b076a7360ce9441deb0441cca7e08d214623cadce3c",
+    "rsl_rl/rsl_rl/modules/actor_critic_hdrl.py": "7042dc27efa77076194ef5e31233d43e594f8efe021815b5e37941800ef9da6f",
+    "rsl_rl/rsl_rl/modules/snn.py": "8dbfb62bc8c5af238f4be2223023048a2a4da82a9792d37fc8677d340cf8450d",
+    "rsl_rl/rsl_rl/modules/reservoir_actors.py": "ff1d09c053f5af101024daa0f3fabdda8851d8f8964c2259d7cdb007a4e5d8e1",
+    "rsl_rl/rsl_rl/modules/reservoirs.py": "39ff1db769c2b35c553fc1a2ba5a4d5d4727907f08edbb787972c4a2bd27fe96",
+    "rsl_rl/rsl_rl/modules/actor_critic_twin.py": "c2b2a3920c7e83814875334f0f8da2a7cd978c51d9b4db3bef8cef9a168e0c32",
+    "rsl_rl/rsl_rl/modules/actor_critic.py": "cc1ce8c83bb16e3aec5a45bb4c49b6d6d852d2fcba0286b8649a4fae08288156"
+  },
+  "groups": [
+    {
+      "terrain": "flat",
+      "column": 0,
+      "difficulty": 0.5,
+      "speed": 0.5,
+      "parameters": {
+        "height": 0.0,
+        "axis": "x",
+        "platform_size": 3.0,
+        "height_offset": 0.0,
+        "roughness": null
+      },
+      "episodes": [
+        {
+          "env": 0,
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 7.459993839263916,
+          "max_forward": 3.4096298217773438,
+          "max_lateral": 0.21674585342407227,
+          "final_forward": 3.4096298217773438,
+          "mean_speed_error": 0.0998191237449646,
+          "mean_frequency_hz": 3.9274580478668213,
+          "mean_duty_factor": 0.6121964454650879,
+          "mean_swing_amplitude_m": [
+            0.12006673961877823,
+            0.12006673961877823,
+            0.12006673961877823,
+            0.12006673961877823
+          ]
+        },
+        {
+          "env": 3,
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 7.759993553161621,
+          "max_forward": 3.409799098968506,
+          "max_lateral": 0.7255542278289795,
+          "final_forward": 3.409799098968506,
+          "mean_speed_error": 0.11917528510093689,
+          "mean_frequency_hz": 4.050625324249268,
+          "mean_duty_factor": 0.6117246747016907,
+          "mean_swing_amplitude_m": [
+            0.12006412446498871,
+            0.12006412446498871,
+            0.12006412446498871,
+            0.12006412446498871
+          ]
+        },
+        {
+          "env": 6,
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 7.019994258880615,
+          "max_forward": 3.4058074951171875,
+          "max_lateral": 0.32071590423583984,
+          "final_forward": 3.4058074951171875,
+          "mean_speed_error": 0.14304135739803314,
+          "mean_frequency_hz": 4.132961750030518,
+          "mean_duty_factor": 0.5987155437469482,
+          "mean_swing_amplitude_m": [
+            0.12007097154855728,
+            0.12007097154855728,
+            0.12007097154855728,
+            0.12007097154855728
+          ]
+        },
+        {
+          "env": 9,
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 7.799993515014648,
+          "max_forward": 3.40207576751709,
+          "max_lateral": 0.6047153472900391,
+          "final_forward": 3.40207576751709,
+          "mean_speed_error": 0.10759595036506653,
+          "mean_frequency_hz": 4.046777725219727,
+          "mean_duty_factor": 0.5988442897796631,
+          "mean_swing_amplitude_m": [
+            0.12006378918886185,
+            0.12006378918886185,
+            0.12006378918886185,
+            0.12006378918886185
+          ]
+        },
+        {
+          "env": 12,
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 7.359993934631348,
+          "max_forward": 3.405729293823242,
+          "max_lateral": 0.5224747657775879,
+          "final_forward": 3.405729293823242,
+          "mean_speed_error": 0.1114676222205162,
+          "mean_frequency_hz": 4.091419219970703,
+          "mean_duty_factor": 0.5987749099731445,
+          "mean_swing_amplitude_m": [
+            0.12006765604019165,
+            0.12006765604019165,
+            0.12006765604019165,
+            0.12006765604019165
+          ]
+        },
+        {
+          "env": 15,
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 7.659993648529053,
+          "max_forward": 3.4095520973205566,
+          "max_lateral": 0.40464210510253906,
+          "final_forward": 3.4095520973205566,
+          "mean_speed_error": 0.11621574312448502,
+          "mean_frequency_hz": 4.083403587341309,
+          "mean_duty_factor": 0.598823070526123,
+          "mean_swing_amplitude_m": [
+            0.12006497383117676,
+            0.12006497383117676,
+            0.12006497383117676,
+            0.12006497383117676
+          ]
+        },
+        {
+          "env": 18,
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 7.239994049072266,
+          "max_forward": 3.410184860229492,
+          "max_lateral": 0.49352359771728516,
+          "final_forward": 3.410184860229492,
+          "mean_speed_error": 0.115088552236557,
+          "mean_frequency_hz": 4.065108776092529,
+          "mean_duty_factor": 0.5987545251846313,
+          "mean_swing_amplitude_m": [
+            0.12006878852844238,
+            0.12006878852844238,
+            0.12006878852844238,
+            0.12006878852844238
+          ]
+        },
+        {
+          "env": 21,
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 7.119994163513184,
+          "max_forward": 3.403496265411377,
+          "max_lateral": 0.29728174209594727,
+          "final_forward": 3.403496265411377,
+          "mean_speed_error": 0.10798253864049911,
+          "mean_frequency_hz": 4.05938720703125,
+          "mean_duty_factor": 0.5987334251403809,
+          "mean_swing_amplitude_m": [
+            0.1200699657201767,
+            0.1200699657201767,
+            0.1200699657201767,
+            0.1200699657201767
+          ]
+        }
+      ],
+      "success_rate": 1.0
+    },
+    {
+      "terrain": "flat",
+      "column": 0,
+      "difficulty": 0.5,
+      "speed": 0.8,
+      "parameters": {
+        "height": 0.0,
+        "axis": "x",
+        "platform_size": 3.0,
+        "height_offset": 0.0,
+        "roughness": null
+      },
+      "episodes": [
+        {
+          "env": 1,
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 5.999995231628418,
+          "max_forward": 3.405390739440918,
+          "max_lateral": 0.7729811668395996,
+          "final_forward": 3.405390739440918,
+          "mean_speed_error": 0.22404193878173828,
+          "mean_frequency_hz": 4.192592620849609,
+          "mean_duty_factor": 0.59849613904953,
+          "mean_swing_amplitude_m": [
+            0.12008317559957504,
+            0.12008317559957504,
+            0.12008317559957504,
+            0.12008317559957504
+          ]
+        },
+        {
+          "env": 4,
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 6.419994831085205,
+          "max_forward": 3.406655788421631,
+          "max_lateral": 0.7625093460083008,
+          "final_forward": 3.406655788421631,
+          "mean_speed_error": 0.26453399658203125,
+          "mean_frequency_hz": 4.120491981506348,
+          "mean_duty_factor": 0.5985948443412781,
+          "mean_swing_amplitude_m": [
+            0.12007768452167511,
+            0.12007768452167511,
+            0.12007768452167511,
+            0.12007768452167511
+          ]
+        },
+        {
+          "env": 7,
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 5.379995822906494,
+          "max_forward": 3.412552833557129,
+          "max_lateral": 0.7430932521820068,
+          "final_forward": 3.412552833557129,
+          "mean_speed_error": 0.16898640990257263,
+          "mean_frequency_hz": 4.090984344482422,
+          "mean_duty_factor": 0.598322331905365,
+          "mean_swing_amplitude_m": [
+            0.12009286135435104,
+            0.12009286135435104,
+            0.12009286135435104,
+            0.12009286135435104
+          ]
+        },
+        {
+          "env": 10,
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 6.359994888305664,
+          "max_forward": 3.4087815284729004,
+          "max_lateral": 0.5833265781402588,
+          "final_forward": 3.4087815284729004,
+          "mean_speed_error": 0.24431192874908447,
+          "mean_frequency_hz": 4.1420674324035645,
+          "mean_duty_factor": 0.6042415499687195,
+          "mean_swing_amplitude_m": [
+            0.1200784221291542,
+            0.1200784221291542,
+            0.1200784221291542,
+            0.1200784221291542
+          ]
+        },
+        {
+          "env": 13,
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 5.679995536804199,
+          "max_forward": 3.4077329635620117,
+          "max_lateral": 0.31527042388916016,
+          "final_forward": 3.4077329635620117,
+          "mean_speed_error": 0.20886564254760742,
+          "mean_frequency_hz": 4.242971897125244,
+          "mean_duty_factor": 0.5984112620353699,
+          "mean_swing_amplitude_m": [
+            0.12008791416883469,
+            0.12008791416883469,
+            0.12008791416883469,
+            0.12008791416883469
+          ]
+        },
+        {
+          "env": 16,
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 5.079996109008789,
+          "max_forward": 3.401937484741211,
+          "max_lateral": 0.35605382919311523,
+          "final_forward": 3.401937484741211,
+          "mean_speed_error": 0.15186189115047455,
+          "mean_frequency_hz": 4.155123710632324,
+          "mean_duty_factor": 0.5883803367614746,
+          "mean_swing_amplitude_m": [
+            0.12009839713573456,
+            0.12009839713573456,
+            0.12009839713573456,
+            0.12009839713573456
+          ]
+        },
+        {
+          "env": 19,
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 5.939995288848877,
+          "max_forward": 3.402477741241455,
+          "max_lateral": 0.22126483917236328,
+          "final_forward": 3.402477741241455,
+          "mean_speed_error": 0.23721784353256226,
+          "mean_frequency_hz": 4.109011650085449,
+          "mean_duty_factor": 0.5900633335113525,
+          "mean_swing_amplitude_m": [
+            0.12008402496576309,
+            0.12008402496576309,
+            0.12008402496576309,
+            0.12008402496576309
+          ]
+        },
+        {
+          "env": 22,
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 5.879995346069336,
+          "max_forward": 3.4057440757751465,
+          "max_lateral": 0.3406383991241455,
+          "final_forward": 3.4057440757751465,
+          "mean_speed_error": 0.2221135050058365,
+          "mean_frequency_hz": 4.117264270782471,
+          "mean_duty_factor": 0.5984653830528259,
+          "mean_swing_amplitude_m": [
+            0.12008489668369293,
+            0.12008489668369293,
+            0.12008489668369293,
+            0.12008489668369293
+          ]
+        }
+      ],
+      "success_rate": 1.0
+    },
+    {
+      "terrain": "flat",
+      "column": 0,
+      "difficulty": 0.5,
+      "speed": 1.2,
+      "parameters": {
+        "height": 0.0,
+        "axis": "x",
+        "platform_size": 3.0,
+        "height_offset": 0.0,
+        "roughness": null
+      },
+      "episodes": [
+        {
+          "env": 2,
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 5.73999547958374,
+          "max_forward": 3.4187588691711426,
+          "max_lateral": 0.9286563396453857,
+          "final_forward": 3.4187588691711426,
+          "mean_speed_error": 0.5688012838363647,
+          "mean_frequency_hz": 4.087374210357666,
+          "mean_duty_factor": 0.5984278321266174,
+          "mean_swing_amplitude_m": [
+            0.12008698284626007,
+            0.12008698284626007,
+            0.12008698284626007,
+            0.12008698284626007
+          ]
+        },
+        {
+          "env": 5,
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 6.039995193481445,
+          "max_forward": 3.410353660583496,
+          "max_lateral": 0.6833131313323975,
+          "final_forward": 3.410353660583496,
+          "mean_speed_error": 0.6172884106636047,
+          "mean_frequency_hz": 4.186681747436523,
+          "mean_duty_factor": 0.5902279019355774,
+          "mean_swing_amplitude_m": [
+            0.12008262425661087,
+            0.12008262425661087,
+            0.12008262425661087,
+            0.12008262425661087
+          ]
+        },
+        {
+          "env": 8,
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 5.4199957847595215,
+          "max_forward": 3.4084339141845703,
+          "max_lateral": 0.3504605293273926,
+          "final_forward": 3.4084339141845703,
+          "mean_speed_error": 0.576331615447998,
+          "mean_frequency_hz": 4.271862030029297,
+          "mean_duty_factor": 0.5798839926719666,
+          "mean_swing_amplitude_m": [
+            0.12009216845035553,
+            0.12009216845035553,
+            0.12009216845035553,
+            0.12009216845035553
+          ]
+        },
+        {
+          "env": 11,
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 4.459996700286865,
+          "max_forward": 3.400331974029541,
+          "max_lateral": 0.6426897048950195,
+          "final_forward": 3.400331974029541,
+          "mean_speed_error": 0.42829206585884094,
+          "mean_frequency_hz": 4.244399070739746,
+          "mean_duty_factor": 0.6091853380203247,
+          "mean_swing_amplitude_m": [
+            0.12011218816041946,
+            0.12011218816041946,
+            0.12011218816041946,
+            0.12011218816041946
+          ]
+        },
+        {
+          "env": 14,
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 4.739996433258057,
+          "max_forward": 3.416029930114746,
+          "max_lateral": 0.474423885345459,
+          "final_forward": 3.416029930114746,
+          "mean_speed_error": 0.4720005393028259,
+          "mean_frequency_hz": 4.137442588806152,
+          "mean_duty_factor": 0.5875465273857117,
+          "mean_swing_amplitude_m": [
+            0.12010551244020462,
+            0.12010551244020462,
+            0.12010551244020462,
+            0.12010551244020462
+          ]
+        },
+        {
+          "env": 17,
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 4.939996242523193,
+          "max_forward": 3.412137985229492,
+          "max_lateral": 0.4988415241241455,
+          "final_forward": 3.412137985229492,
+          "mean_speed_error": 0.5080614686012268,
+          "mean_frequency_hz": 4.370856285095215,
+          "mean_duty_factor": 0.5880497097969055,
+          "mean_swing_amplitude_m": [
+            0.1201012060046196,
+            0.1201012060046196,
+            0.1201012060046196,
+            0.1201012060046196
+          ]
+        },
+        {
+          "env": 20,
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 5.159996032714844,
+          "max_forward": 3.406397819519043,
+          "max_lateral": 0.2952852249145508,
+          "final_forward": 3.406397819519043,
+          "mean_speed_error": 0.5182474851608276,
+          "mean_frequency_hz": 4.2313008308410645,
+          "mean_duty_factor": 0.5885605812072754,
+          "mean_swing_amplitude_m": [
+            0.120096854865551,
+            0.120096854865551,
+            0.120096854865551,
+            0.120096854865551
+          ]
+        },
+        {
+          "env": 23,
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 4.859996318817139,
+          "max_forward": 3.4137954711914062,
+          "max_lateral": 0.15416812896728516,
+          "final_forward": 3.4137954711914062,
+          "mean_speed_error": 0.49364173412323,
+          "mean_frequency_hz": 4.257209300994873,
+          "mean_duty_factor": 0.5878541469573975,
+          "mean_swing_amplitude_m": [
+            0.1201028823852539,
+            0.1201028823852539,
+            0.1201028823852539,
+            0.1201028823852539
+          ]
+        }
+      ],
+      "success_rate": 1.0
+    },
+    {
+      "terrain": "flat",
+      "column": 1,
+      "difficulty": 0.5,
+      "speed": 0.5,
+      "parameters": {
+        "height": 0.0,
+        "axis": "x",
+        "platform_size": 3.0,
+        "height_offset": 0.0,
+        "roughness": null
+      },
+      "episodes": [
+        {
+          "env": 24,
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 7.899993419647217,
+          "max_forward": 3.402818202972412,
+          "max_lateral": 0.8995275497436523,
+          "final_forward": 3.402818202972412,
+          "mean_speed_error": 0.10818444937467575,
+          "mean_frequency_hz": 4.023400783538818,
+          "mean_duty_factor": 0.6051881909370422,
+          "mean_swing_amplitude_m": [
+            0.12006296962499619,
+            0.12006296962499619,
+            0.12006296962499619,
+            0.12006296962499619
+          ]
+        },
+        {
+          "env": 27,
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 6.659994602203369,
+          "max_forward": 3.405513286590576,
+          "max_lateral": 0.45063209533691406,
+          "final_forward": 3.405513286590576,
+          "mean_speed_error": 0.09757668524980545,
+          "mean_frequency_hz": 4.092013835906982,
+          "mean_duty_factor": 0.6061525940895081,
+          "mean_swing_amplitude_m": [
+            0.12007485330104828,
+            0.12007485330104828,
+            0.12007485330104828,
+            0.12007485330104828
+          ]
+        },
+        {
+          "env": 30,
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 7.839993476867676,
+          "max_forward": 3.403444766998291,
+          "max_lateral": 0.2973976135253906,
+          "final_forward": 3.403444766998291,
+          "mean_speed_error": 0.10789546370506287,
+          "mean_frequency_hz": 4.020518779754639,
+          "mean_duty_factor": 0.6052278280258179,
+          "mean_swing_amplitude_m": [
+            0.12006346136331558,
+            0.12006346136331558,
+            0.12006346136331558,
+            0.12006346136331558
+          ]
+        },
+        {
+          "env": 33,
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 7.599993705749512,
+          "max_forward": 3.400918483734131,
+          "max_lateral": 0.8751077651977539,
+          "final_forward": 3.400918483734131,
+          "mean_speed_error": 0.10912732034921646,
+          "mean_frequency_hz": 4.153414249420166,
+          "mean_duty_factor": 0.59223473072052,
+          "mean_swing_amplitude_m": [
+            0.12006549537181854,
+            0.12006549537181854,
+            0.12006549537181854,
+            0.12006549537181854
+          ]
+        },
+        {
+          "env": 36,
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 7.639993667602539,
+          "max_forward": 3.4135351181030273,
+          "max_lateral": 0.28916072845458984,
+          "final_forward": 3.4135351181030273,
+          "mean_speed_error": 0.1111941710114479,
+          "mean_frequency_hz": 3.9385852813720703,
+          "mean_duty_factor": 0.6119080185890198,
+          "mean_swing_amplitude_m": [
+            0.12006514519453049,
+            0.12006514519453049,
+            0.12006514519453049,
+            0.12006514519453049
+          ]
+        },
+        {
+          "env": 39,
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 7.739993572235107,
+          "max_forward": 3.406639575958252,
+          "max_lateral": 0.8112649917602539,
+          "final_forward": 3.406639575958252,
+          "mean_speed_error": 0.10019944608211517,
+          "mean_frequency_hz": 3.981503963470459,
+          "mean_duty_factor": 0.6052953004837036,
+          "mean_swing_amplitude_m": [
+            0.12006429582834244,
+            0.12006429582834244,
+            0.12006429582834244,
+            0.12006429582834244
+          ]
+        },
+        {
+          "env": 42,
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 7.659993648529053,
+          "max_forward": 3.404069423675537,
+          "max_lateral": 0.4258432388305664,
+          "final_forward": 3.404069423675537,
+          "mean_speed_error": 0.115482859313488,
+          "mean_frequency_hz": 4.060425758361816,
+          "mean_duty_factor": 0.598823070526123,
+          "mean_swing_amplitude_m": [
+            0.12006497383117676,
+            0.12006497383117676,
+            0.12006497383117676,
+            0.12006497383117676
+          ]
+        },
+        {
+          "env": 45,
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 7.899993419647217,
+          "max_forward": 3.4026122093200684,
+          "max_lateral": 0.6407222747802734,
+          "final_forward": 3.4026122093200684,
+          "mean_speed_error": 0.13167542219161987,
+          "mean_frequency_hz": 3.9677035808563232,
+          "mean_duty_factor": 0.6051881909370422,
+          "mean_swing_amplitude_m": [
+            0.12006296962499619,
+            0.12006296962499619,
+            0.12006296962499619,
+            0.12006296962499619
+          ]
+        }
+      ],
+      "success_rate": 1.0
+    },
+    {
+      "terrain": "flat",
+      "column": 1,
+      "difficulty": 0.5,
+      "speed": 0.8,
+      "parameters": {
+        "height": 0.0,
+        "axis": "x",
+        "platform_size": 3.0,
+        "height_offset": 0.0,
+        "roughness": null
+      },
+      "episodes": [
+        {
+          "env": 25,
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 6.239995002746582,
+          "max_forward": 3.400290012359619,
+          "max_lateral": 0.26276111602783203,
+          "final_forward": 3.400290012359619,
+          "mean_speed_error": 0.2489800602197647,
+          "mean_frequency_hz": 4.200571060180664,
+          "mean_duty_factor": 0.5905413031578064,
+          "mean_swing_amplitude_m": [
+            0.12007994949817657,
+            0.12007994949817657,
+            0.12007994949817657,
+            0.12007994949817657
+          ]
+        },
+        {
+          "env": 28,
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 5.959995269775391,
+          "max_forward": 3.407214641571045,
+          "max_lateral": 0.3100156784057617,
+          "final_forward": 3.407214641571045,
+          "mean_speed_error": 0.22285982966423035,
+          "mean_frequency_hz": 4.191198825836182,
+          "mean_duty_factor": 0.5900967121124268,
+          "mean_swing_amplitude_m": [
+            0.12008374184370041,
+            0.12008374184370041,
+            0.12008374184370041,
+            0.12008374184370041
+          ]
+        },
+        {
+          "env": 31,
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 6.179995059967041,
+          "max_forward": 3.404048442840576,
+          "max_lateral": 0.3352193832397461,
+          "final_forward": 3.404048442840576,
+          "mean_speed_error": 0.2532176375389099,
+          "mean_frequency_hz": 4.166593551635742,
+          "mean_duty_factor": 0.5904493927955627,
+          "mean_swing_amplitude_m": [
+            0.12008073180913925,
+            0.12008073180913925,
+            0.12008073180913925,
+            0.12008073180913925
+          ]
+        },
+        {
+          "env": 34,
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 6.079995155334473,
+          "max_forward": 3.4039769172668457,
+          "max_lateral": 0.2588977813720703,
+          "final_forward": 3.4039769172668457,
+          "mean_speed_error": 0.22484734654426575,
+          "mean_frequency_hz": 4.104856967926025,
+          "mean_duty_factor": 0.5902922749519348,
+          "mean_swing_amplitude_m": [
+            0.1200820729136467,
+            0.1200820729136467,
+            0.1200820729136467,
+            0.1200820729136467
+          ]
+        },
+        {
+          "env": 37,
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 6.239995002746582,
+          "max_forward": 3.400015354156494,
+          "max_lateral": 0.3546476364135742,
+          "final_forward": 3.400015354156494,
+          "mean_speed_error": 0.24808305501937866,
+          "mean_frequency_hz": 4.200571060180664,
+          "mean_duty_factor": 0.5905413031578064,
+          "mean_swing_amplitude_m": [
+            0.12007994949817657,
+            0.12007994949817657,
+            0.12007994949817657,
+            0.12007994949817657
+          ]
+        },
+        {
+          "env": 40,
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 5.499995708465576,
+          "max_forward": 3.4075217247009277,
+          "max_lateral": 0.19164657592773438,
+          "final_forward": 3.4075217247009277,
+          "mean_speed_error": 0.18248210847377777,
+          "mean_frequency_hz": 4.173731327056885,
+          "mean_duty_factor": 0.5983589887619019,
+          "mean_swing_amplitude_m": [
+            0.12009081989526749,
+            0.12009081989526749,
+            0.12009081989526749,
+            0.12009081989526749
+          ]
+        },
+        {
+          "env": 43,
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 6.319994926452637,
+          "max_forward": 3.4057841300964355,
+          "max_lateral": 0.8471689224243164,
+          "final_forward": 3.4057841300964355,
+          "mean_speed_error": 0.25447097420692444,
+          "mean_frequency_hz": 4.203096389770508,
+          "mean_duty_factor": 0.5906610488891602,
+          "mean_swing_amplitude_m": [
+            0.1200789287686348,
+            0.1200789287686348,
+            0.1200789287686348,
+            0.1200789287686348
+          ]
+        },
+        {
+          "env": 46,
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 5.619995594024658,
+          "max_forward": 3.4052348136901855,
+          "max_lateral": 0.7266674041748047,
+          "final_forward": 3.4052348136901855,
+          "mean_speed_error": 0.18352167308330536,
+          "mean_frequency_hz": 4.178565502166748,
+          "mean_duty_factor": 0.607291042804718,
+          "mean_swing_amplitude_m": [
+            0.1200888603925705,
+            0.1200888603925705,
+            0.1200888603925705,
+            0.1200888603925705
+          ]
+        }
+      ],
+      "success_rate": 1.0
+    },
+    {
+      "terrain": "flat",
+      "column": 1,
+      "difficulty": 0.5,
+      "speed": 1.2,
+      "parameters": {
+        "height": 0.0,
+        "axis": "x",
+        "platform_size": 3.0,
+        "height_offset": 0.0,
+        "roughness": null
+      },
+      "episodes": [
+        {
+          "env": 26,
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 4.659996509552002,
+          "max_forward": 3.4029688835144043,
+          "max_lateral": 0.5365266799926758,
+          "final_forward": 3.4029688835144043,
+          "mean_speed_error": 0.45874249935150146,
+          "mean_frequency_hz": 4.288845062255859,
+          "mean_duty_factor": 0.5946288108825684,
+          "mean_swing_amplitude_m": [
+            0.12010733783245087,
+            0.12010733783245087,
+            0.12010733783245087,
+            0.12010733783245087
+          ]
+        },
+        {
+          "env": 29,
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 4.679996490478516,
+          "max_forward": 3.4107956886291504,
+          "max_lateral": 0.3608722686767578,
+          "final_forward": 3.4107956886291504,
+          "mean_speed_error": 0.4847864806652069,
+          "mean_frequency_hz": 4.251713752746582,
+          "mean_duty_factor": 0.5873867869377136,
+          "mean_swing_amplitude_m": [
+            0.12010687589645386,
+            0.12010687589645386,
+            0.12010687589645386,
+            0.12010687589645386
+          ]
+        },
+        {
+          "env": 32,
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 5.3599958419799805,
+          "max_forward": 3.417052745819092,
+          "max_lateral": 0.3371286392211914,
+          "final_forward": 3.417052745819092,
+          "mean_speed_error": 0.555696427822113,
+          "mean_frequency_hz": 4.2704315185546875,
+          "mean_duty_factor": 0.5889869332313538,
+          "mean_swing_amplitude_m": [
+            0.1200932115316391,
+            0.1200932115316391,
+            0.1200932115316391,
+            0.12105828523635864
+          ]
+        },
+        {
+          "env": 35,
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 5.159996032714844,
+          "max_forward": 3.403590679168701,
+          "max_lateral": 0.8141965866088867,
+          "final_forward": 3.403590679168701,
+          "mean_speed_error": 0.5297988057136536,
+          "mean_frequency_hz": 4.337891578674316,
+          "mean_duty_factor": 0.5788706541061401,
+          "mean_swing_amplitude_m": [
+            0.120096854865551,
+            0.120096854865551,
+            0.120096854865551,
+            0.120096854865551
+          ]
+        },
+        {
+          "env": 38,
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 5.019996166229248,
+          "max_forward": 3.4043068885803223,
+          "max_lateral": 0.5596790313720703,
+          "final_forward": 3.4043068885803223,
+          "mean_speed_error": 0.49929332733154297,
+          "mean_frequency_hz": 4.257267475128174,
+          "mean_duty_factor": 0.5882410407066345,
+          "mean_swing_amplitude_m": [
+            0.12009958177804947,
+            0.12009958177804947,
+            0.12009958177804947,
+            0.12009958177804947
+          ]
+        },
+        {
+          "env": 41,
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 5.4199957847595215,
+          "max_forward": 3.4027099609375,
+          "max_lateral": 1.0869417190551758,
+          "final_forward": 3.4027099609375,
+          "mean_speed_error": 0.5339100956916809,
+          "mean_frequency_hz": 4.085149765014648,
+          "mean_duty_factor": 0.5983347296714783,
+          "mean_swing_amplitude_m": [
+            0.12009216845035553,
+            0.12009216845035553,
+            0.12009216845035553,
+            0.12009216845035553
+          ]
+        },
+        {
+          "env": 44,
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 4.479996681213379,
+          "max_forward": 3.409722328186035,
+          "max_lateral": 0.38297176361083984,
+          "final_forward": 3.409722328186035,
+          "mean_speed_error": 0.45215165615081787,
+          "mean_frequency_hz": 4.244974613189697,
+          "mean_duty_factor": 0.5868234634399414,
+          "mean_swing_amplitude_m": [
+            0.12011168152093887,
+            0.12011168152093887,
+            0.12011168152093887,
+            0.12011168152093887
+          ]
+        },
+        {
+          "env": 47,
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 4.779996395111084,
+          "max_forward": 3.4073305130004883,
+          "max_lateral": 0.1496143341064453,
+          "final_forward": 3.4073305130004883,
+          "mean_speed_error": 0.4790340065956116,
+          "mean_frequency_hz": 4.254705429077148,
+          "mean_duty_factor": 0.5981103777885437,
+          "mean_swing_amplitude_m": [
+            0.12010461837053299,
+            0.12010461837053299,
+            0.12010461837053299,
+            0.12010461837053299
+          ]
+        }
+      ],
+      "success_rate": 1.0
+    },
+    {
+      "terrain": "stairs",
+      "column": 2,
+      "difficulty": 0.5,
+      "speed": 0.5,
+      "parameters": {
+        "step_height_range": 0.045,
+        "step_width": 0.6,
+        "step_signs": [
+          -1
+        ],
+        "axis": "x",
+        "platform_size": 3.0,
+        "height_offset": 0.0,
+        "roughness": null
+      },
+      "episodes": [
+        {
+          "env": 48,
+          "success": false,
+          "failed": true,
+          "timeout": false,
+          "duration": 8.099995613098145,
+          "max_forward": 2.5903191566467285,
+          "max_lateral": 0.47820472717285156,
+          "final_forward": 2.4332847595214844,
+          "mean_speed_error": 0.22086666524410248,
+          "mean_frequency_hz": 4.100604057312012,
+          "mean_duty_factor": 0.6050597429275513,
+          "mean_swing_amplitude_m": [
+            0.12006136029958725,
+            0.12006136029958725,
+            0.12250950932502747,
+            0.12292322516441345
+          ]
+        },
+        {
+          "env": 51,
+          "success": false,
+          "failed": true,
+          "timeout": false,
+          "duration": 5.999995231628418,
+          "max_forward": 2.036111831665039,
+          "max_lateral": 0.09660148620605469,
+          "final_forward": 1.8176593780517578,
+          "mean_speed_error": 0.23212294280529022,
+          "mean_frequency_hz": 4.179135322570801,
+          "mean_duty_factor": 0.59849613904953,
+          "mean_swing_amplitude_m": [
+            0.12008317559957504,
+            0.12008317559957504,
+            0.12164730578660965,
+            0.1222020834684372
+          ]
+        },
+        {
+          "env": 54,
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 8.199997901916504,
+          "max_forward": 3.409402370452881,
+          "max_lateral": 0.7878799438476562,
+          "final_forward": 3.409402370452881,
+          "mean_speed_error": 0.15979717671871185,
+          "mean_frequency_hz": 3.9701039791107178,
+          "mean_duty_factor": 0.6049981713294983,
+          "mean_swing_amplitude_m": [
+            0.12006057053804398,
+            0.12006057053804398,
+            0.12006057053804398,
+            0.12006057053804398
+          ]
+        },
+        {
+          "env": 57,
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 10.580052375793457,
+          "max_forward": 3.4122753143310547,
+          "max_lateral": 1.3875732421875,
+          "final_forward": 3.4122753143310547,
+          "mean_speed_error": 0.24716788530349731,
+          "mean_frequency_hz": 4.05849027633667,
+          "mean_duty_factor": 0.5991457104682922,
+          "mean_swing_amplitude_m": [
+            0.12004674226045609,
+            0.12004674226045609,
+            0.12160254269838333,
+            0.12291652709245682
+          ]
+        },
+        {
+          "env": 60,
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 7.419993877410889,
+          "max_forward": 3.4070096015930176,
+          "max_lateral": 0.6819362640380859,
+          "final_forward": 3.4070096015930176,
+          "mean_speed_error": 0.16311579942703247,
+          "mean_frequency_hz": 3.9990365505218506,
+          "mean_duty_factor": 0.6055234670639038,
+          "mean_swing_amplitude_m": [
+            0.12006710469722748,
+            0.12006710469722748,
+            0.12006710469722748,
+            0.12006710469722748
+          ]
+        },
+        {
+          "env": 63,
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 8.219998359680176,
+          "max_forward": 3.41068696975708,
+          "max_lateral": 0.5583648681640625,
+          "final_forward": 3.41068696975708,
+          "mean_speed_error": 0.18012577295303345,
+          "mean_frequency_hz": 3.9711503982543945,
+          "mean_duty_factor": 0.5989031791687012,
+          "mean_swing_amplitude_m": [
+            0.12006041407585144,
+            0.12006041407585144,
+            0.12078740447759628,
+            0.12099536508321762
+          ]
+        },
+        {
+          "env": 66,
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 7.119994163513184,
+          "max_forward": 3.405637264251709,
+          "max_lateral": 0.34976959228515625,
+          "final_forward": 3.405637264251709,
+          "mean_speed_error": 0.12102500349283218,
+          "mean_frequency_hz": 3.982135534286499,
+          "mean_duty_factor": 0.5987334251403809,
+          "mean_swing_amplitude_m": [
+            0.1200699657201767,
+            0.1200699657201767,
+            0.1200699657201767,
+            0.1200699657201767
+          ]
+        },
+        {
+          "env": 69,
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 8.340001106262207,
+          "max_forward": 3.413896083831787,
+          "max_lateral": 0.9842147827148438,
+          "final_forward": 3.413896083831787,
+          "mean_speed_error": 0.15740413963794708,
+          "mean_frequency_hz": 3.9773175716400146,
+          "mean_duty_factor": 0.604914128780365,
+          "mean_swing_amplitude_m": [
+            0.12005949020385742,
+            0.12005949020385742,
+            0.12005949020385742,
+            0.12035562843084335
+          ]
+        }
+      ],
+      "success_rate": 0.75
+    },
+    {
+      "terrain": "stairs",
+      "column": 2,
+      "difficulty": 0.5,
+      "speed": 0.8,
+      "parameters": {
+        "step_height_range": 0.045,
+        "step_width": 0.6,
+        "step_signs": [
+          -1
+        ],
+        "axis": "x",
+        "platform_size": 3.0,
+        "height_offset": 0.0,
+        "roughness": null
+      },
+      "episodes": [
+        {
+          "env": 49,
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 6.159995079040527,
+          "max_forward": 3.409389019012451,
+          "max_lateral": 0.41954612731933594,
+          "final_forward": 3.409389019012451,
+          "mean_speed_error": 0.2565195560455322,
+          "mean_frequency_hz": 4.287266731262207,
+          "mean_duty_factor": 0.5904184579849243,
+          "mean_swing_amplitude_m": [
+            0.12008100003004074,
+            0.12008100003004074,
+            0.12008100003004074,
+            0.12008100003004074
+          ]
+        },
+        {
+          "env": 52,
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 6.659994602203369,
+          "max_forward": 3.4045023918151855,
+          "max_lateral": 0.21739768981933594,
+          "final_forward": 3.4045023918151855,
+          "mean_speed_error": 0.3061363995075226,
+          "mean_frequency_hz": 4.186723709106445,
+          "mean_duty_factor": 0.5911380648612976,
+          "mean_swing_amplitude_m": [
+            0.12007485330104828,
+            0.12007485330104828,
+            0.12007485330104828,
+            0.12007485330104828
+          ]
+        },
+        {
+          "env": 55,
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 6.379994869232178,
+          "max_forward": 3.410179615020752,
+          "max_lateral": 0.32799530029296875,
+          "final_forward": 3.410179615020752,
+          "mean_speed_error": 0.2772512137889862,
+          "mean_frequency_hz": 4.204948425292969,
+          "mean_duty_factor": 0.5907489657402039,
+          "mean_swing_amplitude_m": [
+            0.1200781762599945,
+            0.1200781762599945,
+            0.1200781762599945,
+            0.1200781762599945
+          ]
+        },
+        {
+          "env": 58,
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 5.999995231628418,
+          "max_forward": 3.4060354232788086,
+          "max_lateral": 0.29065513610839844,
+          "final_forward": 3.4060354232788086,
+          "mean_speed_error": 0.24248218536376953,
+          "mean_frequency_hz": 4.2843523025512695,
+          "mean_duty_factor": 0.5901627540588379,
+          "mean_swing_amplitude_m": [
+            0.12008317559957504,
+            0.12008317559957504,
+            0.12008317559957504,
+            0.12008317559957504
+          ]
+        },
+        {
+          "env": 61,
+          "success": false,
+          "failed": true,
+          "timeout": false,
+          "duration": 9.560029029846191,
+          "max_forward": 3.2158617973327637,
+          "max_lateral": 1.713521957397461,
+          "final_forward": 2.9929957389831543,
+          "mean_speed_error": 0.45596885681152344,
+          "mean_frequency_hz": 4.212305068969727,
+          "mean_duty_factor": 0.5938255190849304,
+          "mean_swing_amplitude_m": [
+            0.120051808655262,
+            0.120051808655262,
+            0.12051735818386078,
+            0.120154969394207
+          ]
+        },
+        {
+          "env": 64,
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 6.659994602203369,
+          "max_forward": 3.400920867919922,
+          "max_lateral": 0.8433437347412109,
+          "final_forward": 3.400920867919922,
+          "mean_speed_error": 0.2741084396839142,
+          "mean_frequency_hz": 4.21314811706543,
+          "mean_duty_factor": 0.6061525940895081,
+          "mean_swing_amplitude_m": [
+            0.12007485330104828,
+            0.12007485330104828,
+            0.12007485330104828,
+            0.12007485330104828
+          ]
+        },
+        {
+          "env": 67,
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 6.7599945068359375,
+          "max_forward": 3.408637046813965,
+          "max_lateral": 1.1193161010742188,
+          "final_forward": 3.408637046813965,
+          "mean_speed_error": 0.28862640261650085,
+          "mean_frequency_hz": 4.215917587280273,
+          "mean_duty_factor": 0.591269314289093,
+          "mean_swing_amplitude_m": [
+            0.12007373571395874,
+            0.12007373571395874,
+            0.12007373571395874,
+            0.12007373571395874
+          ]
+        },
+        {
+          "env": 70,
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 7.399993896484375,
+          "max_forward": 3.4164910316467285,
+          "max_lateral": 0.48001670837402344,
+          "final_forward": 3.4164910316467285,
+          "mean_speed_error": 0.34604910016059875,
+          "mean_frequency_hz": 4.008864402770996,
+          "mean_duty_factor": 0.6122947931289673,
+          "mean_swing_amplitude_m": [
+            0.1200672835111618,
+            0.1200672835111618,
+            0.12055029720067978,
+            0.1200672835111618
+          ]
+        }
+      ],
+      "success_rate": 0.875
+    },
+    {
+      "terrain": "stairs",
+      "column": 2,
+      "difficulty": 0.5,
+      "speed": 1.2,
+      "parameters": {
+        "step_height_range": 0.045,
+        "step_width": 0.6,
+        "step_signs": [
+          -1
+        ],
+        "axis": "x",
+        "platform_size": 3.0,
+        "height_offset": 0.0,
+        "roughness": null
+      },
+      "episodes": [
+        {
+          "env": 50,
+          "success": false,
+          "failed": true,
+          "timeout": false,
+          "duration": 2.079998731613159,
+          "max_forward": 0.903414249420166,
+          "max_lateral": 0.5923862457275391,
+          "final_forward": 0.903414249420166,
+          "mean_speed_error": 0.8333775997161865,
+          "mean_frequency_hz": 4.372800827026367,
+          "mean_duty_factor": 0.5918106436729431,
+          "mean_swing_amplitude_m": [
+            0.12024003267288208,
+            0.12024003267288208,
+            0.12024003267288208,
+            0.12024003267288208
+          ]
+        },
+        {
+          "env": 53,
+          "success": false,
+          "failed": true,
+          "timeout": false,
+          "duration": 4.299996852874756,
+          "max_forward": 2.244494915008545,
+          "max_lateral": 0.5374259948730469,
+          "final_forward": 2.244494915008545,
+          "mean_speed_error": 0.7457797527313232,
+          "mean_frequency_hz": 4.033951759338379,
+          "mean_duty_factor": 0.6095278859138489,
+          "mean_swing_amplitude_m": [
+            0.12011639028787613,
+            0.12011639028787613,
+            0.12081698328256607,
+            0.12011639028787613
+          ]
+        },
+        {
+          "env": 56,
+          "success": false,
+          "failed": true,
+          "timeout": false,
+          "duration": 3.8199970722198486,
+          "max_forward": 1.5013375282287598,
+          "max_lateral": 0.40545082092285156,
+          "final_forward": 1.284482479095459,
+          "mean_speed_error": 0.8247700333595276,
+          "mean_frequency_hz": 4.27001428604126,
+          "mean_duty_factor": 0.592922568321228,
+          "mean_swing_amplitude_m": [
+            0.1201310008764267,
+            0.1201310008764267,
+            0.12151005864143372,
+            0.12123216688632965
+          ]
+        },
+        {
+          "env": 59,
+          "success": false,
+          "failed": true,
+          "timeout": false,
+          "duration": 4.619996547698975,
+          "max_forward": 2.0178027153015137,
+          "max_lateral": 0.23824119567871094,
+          "final_forward": 1.9647698402404785,
+          "mean_speed_error": 0.8298628926277161,
+          "mean_frequency_hz": 4.102045059204102,
+          "mean_duty_factor": 0.6088671088218689,
+          "mean_swing_amplitude_m": [
+            0.12010827660560608,
+            0.12010827660560608,
+            0.12194182723760605,
+            0.12264956533908844
+          ]
+        },
+        {
+          "env": 62,
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 6.619994640350342,
+          "max_forward": 3.4086618423461914,
+          "max_lateral": 0.2656097412109375,
+          "final_forward": 3.4086618423461914,
+          "mean_speed_error": 0.6909018158912659,
+          "mean_frequency_hz": 4.10899543762207,
+          "mean_duty_factor": 0.6061891913414001,
+          "mean_swing_amplitude_m": [
+            0.12007530778646469,
+            0.12007530778646469,
+            0.12007530778646469,
+            0.12136327475309372
+          ]
+        },
+        {
+          "env": 65,
+          "success": false,
+          "failed": true,
+          "timeout": false,
+          "duration": 2.4999983310699463,
+          "max_forward": 1.1616783142089844,
+          "max_lateral": 0.4767894744873047,
+          "final_forward": 1.1616783142089844,
+          "mean_speed_error": 0.878817081451416,
+          "mean_frequency_hz": 4.56217622756958,
+          "mean_duty_factor": 0.5763864517211914,
+          "mean_swing_amplitude_m": [
+            0.12019982188940048,
+            0.12019982188940048,
+            0.12099167704582214,
+            0.12019982188940048
+          ]
+        },
+        {
+          "env": 68,
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 6.359994888305664,
+          "max_forward": 3.406181812286377,
+          "max_lateral": 0.4187164306640625,
+          "final_forward": 3.406181812286377,
+          "mean_speed_error": 0.6644525527954102,
+          "mean_frequency_hz": 4.2043352127075195,
+          "mean_duty_factor": 0.5907197594642639,
+          "mean_swing_amplitude_m": [
+            0.1200784221291542,
+            0.1200784221291542,
+            0.1200784221291542,
+            0.1200784221291542
+          ]
+        },
+        {
+          "env": 71,
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 5.6599955558776855,
+          "max_forward": 3.407665252685547,
+          "max_lateral": 0.37096595764160156,
+          "final_forward": 3.407665252685547,
+          "mean_speed_error": 0.5934579372406006,
+          "mean_frequency_hz": 4.277307987213135,
+          "mean_duty_factor": 0.6072388291358948,
+          "mean_swing_amplitude_m": [
+            0.12008822709321976,
+            0.12008822709321976,
+            0.12008822709321976,
+            0.12008822709321976
+          ]
+        }
+      ],
+      "success_rate": 0.375
+    },
+    {
+      "terrain": "stairs",
+      "column": 3,
+      "difficulty": 0.5,
+      "speed": 0.5,
+      "parameters": {
+        "step_height_range": 0.045,
+        "step_width": 0.6,
+        "step_signs": [
+          1
+        ],
+        "axis": "x",
+        "platform_size": 3.0,
+        "height_offset": 0.0,
+        "roughness": null
+      },
+      "episodes": [
+        {
+          "env": 72,
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 7.47999382019043,
+          "max_forward": 3.4016847610473633,
+          "max_lateral": 0.4214019775390625,
+          "final_forward": 3.4016847610473633,
+          "mean_speed_error": 0.1380978226661682,
+          "mean_frequency_hz": 4.075783729553223,
+          "mean_duty_factor": 0.5987946391105652,
+          "mean_swing_amplitude_m": [
+            0.1200665533542633,
+            0.1200665533542633,
+            0.1200665533542633,
+            0.1200665533542633
+          ]
+        },
+        {
+          "env": 75,
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 7.439993858337402,
+          "max_forward": 3.4032249450683594,
+          "max_lateral": 0.4556159973144531,
+          "final_forward": 3.4032249450683594,
+          "mean_speed_error": 0.1308683156967163,
+          "mean_frequency_hz": 4.08290958404541,
+          "mean_duty_factor": 0.60550856590271,
+          "mean_swing_amplitude_m": [
+            0.12006691843271255,
+            0.12006691843271255,
+            0.12006691843271255,
+            0.12006691843271255
+          ]
+        },
+        {
+          "env": 78,
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 8.219998359680176,
+          "max_forward": 3.4062743186950684,
+          "max_lateral": 0.9319076538085938,
+          "final_forward": 3.4062743186950684,
+          "mean_speed_error": 0.15417855978012085,
+          "mean_frequency_hz": 4.1049723625183105,
+          "mean_duty_factor": 0.5989031791687012,
+          "mean_swing_amplitude_m": [
+            0.12006041407585144,
+            0.12006041407585144,
+            0.12006041407585144,
+            0.12006041407585144
+          ]
+        },
+        {
+          "env": 81,
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 8.420002937316895,
+          "max_forward": 3.4032444953918457,
+          "max_lateral": 0.25370025634765625,
+          "final_forward": 3.4032444953918457,
+          "mean_speed_error": 0.16292963922023773,
+          "mean_frequency_hz": 4.1225666999816895,
+          "mean_duty_factor": 0.5989285707473755,
+          "mean_swing_amplitude_m": [
+            0.12005891650915146,
+            0.12005891650915146,
+            0.12005891650915146,
+            0.12012103945016861
+          ]
+        },
+        {
+          "env": 84,
+          "success": false,
+          "failed": true,
+          "timeout": false,
+          "duration": 4.119997024536133,
+          "max_forward": 1.9793720245361328,
+          "max_lateral": 0.3491859436035156,
+          "final_forward": 1.9793720245361328,
+          "mean_speed_error": 0.14700232446193695,
+          "mean_frequency_hz": 4.0783257484436035,
+          "mean_duty_factor": 0.597807765007019,
+          "mean_swing_amplitude_m": [
+            0.12012150138616562,
+            0.12012150138616562,
+            0.12012150138616562,
+            0.12012150138616562
+          ]
+        },
+        {
+          "env": 87,
+          "success": false,
+          "failed": true,
+          "timeout": false,
+          "duration": 4.659996509552002,
+          "max_forward": 2.3763279914855957,
+          "max_lateral": 0.27231407165527344,
+          "final_forward": 2.3763279914855957,
+          "mean_speed_error": 0.17398320138454437,
+          "mean_frequency_hz": 3.959805965423584,
+          "mean_duty_factor": 0.6014955639839172,
+          "mean_swing_amplitude_m": [
+            0.12010733783245087,
+            0.12010733783245087,
+            0.12010733783245087,
+            0.12010733783245087
+          ]
+        },
+        {
+          "env": 90,
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 7.9199934005737305,
+          "max_forward": 3.40625,
+          "max_lateral": 0.5641326904296875,
+          "final_forward": 3.40625,
+          "mean_speed_error": 0.13256092369556427,
+          "mean_frequency_hz": 4.093797206878662,
+          "mean_duty_factor": 0.5988618731498718,
+          "mean_swing_amplitude_m": [
+            0.12006281316280365,
+            0.12006281316280365,
+            0.12006281316280365,
+            0.12006281316280365
+          ]
+        },
+        {
+          "env": 93,
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 7.899993419647217,
+          "max_forward": 3.4064102172851562,
+          "max_lateral": 0.29087257385253906,
+          "final_forward": 3.4064102172851562,
+          "mean_speed_error": 0.14188459515571594,
+          "mean_frequency_hz": 4.093090534210205,
+          "mean_duty_factor": 0.6051875948905945,
+          "mean_swing_amplitude_m": [
+            0.12006296962499619,
+            0.12006296962499619,
+            0.12006296962499619,
+            0.12006296962499619
+          ]
+        }
+      ],
+      "success_rate": 0.75
+    },
+    {
+      "terrain": "stairs",
+      "column": 3,
+      "difficulty": 0.5,
+      "speed": 0.8,
+      "parameters": {
+        "step_height_range": 0.045,
+        "step_width": 0.6,
+        "step_signs": [
+          1
+        ],
+        "axis": "x",
+        "platform_size": 3.0,
+        "height_offset": 0.0,
+        "roughness": null
+      },
+      "episodes": [
+        {
+          "env": 73,
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 5.679995536804199,
+          "max_forward": 3.412367820739746,
+          "max_lateral": 0.38850975036621094,
+          "final_forward": 3.412367820739746,
+          "mean_speed_error": 0.2047496736049652,
+          "mean_frequency_hz": 4.180903911590576,
+          "mean_duty_factor": 0.6072139739990234,
+          "mean_swing_amplitude_m": [
+            0.12008791416883469,
+            0.12008791416883469,
+            0.12008791416883469,
+            0.12008791416883469
+          ]
+        },
+        {
+          "env": 76,
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 6.039995193481445,
+          "max_forward": 3.403197765350342,
+          "max_lateral": 0.3276653289794922,
+          "final_forward": 3.403197765350342,
+          "mean_speed_error": 0.255696564912796,
+          "mean_frequency_hz": 4.193966865539551,
+          "mean_duty_factor": 0.5985060334205627,
+          "mean_swing_amplitude_m": [
+            0.12008262425661087,
+            0.12008262425661087,
+            0.12008262425661087,
+            0.12008262425661087
+          ]
+        },
+        {
+          "env": 79,
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 6.49999475479126,
+          "max_forward": 3.408752918243408,
+          "max_lateral": 0.35884666442871094,
+          "final_forward": 3.408752918243408,
+          "mean_speed_error": 0.26656484603881836,
+          "mean_frequency_hz": 4.208550930023193,
+          "mean_duty_factor": 0.5909198522567749,
+          "mean_swing_amplitude_m": [
+            0.12007671594619751,
+            0.12007671594619751,
+            0.12007671594619751,
+            0.12007671594619751
+          ]
+        },
+        {
+          "env": 82,
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 5.459995746612549,
+          "max_forward": 3.403529167175293,
+          "max_lateral": 1.126382827758789,
+          "final_forward": 3.403529167175293,
+          "mean_speed_error": 0.18236352503299713,
+          "mean_frequency_hz": 4.079397678375244,
+          "mean_duty_factor": 0.6075045466423035,
+          "mean_swing_amplitude_m": [
+            0.12009149044752121,
+            0.12009149044752121,
+            0.12009149044752121,
+            0.12009149044752121
+          ]
+        },
+        {
+          "env": 85,
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 5.879995346069336,
+          "max_forward": 3.40533447265625,
+          "max_lateral": 1.0506000518798828,
+          "final_forward": 3.40533447265625,
+          "mean_speed_error": 0.22499984502792358,
+          "mean_frequency_hz": 4.0948166847229,
+          "mean_duty_factor": 0.606968879699707,
+          "mean_swing_amplitude_m": [
+            0.12008489668369293,
+            0.12008489668369293,
+            0.12008489668369293,
+            0.12008489668369293
+          ]
+        },
+        {
+          "env": 88,
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 5.199995994567871,
+          "max_forward": 3.404595375061035,
+          "max_lateral": 0.31328392028808594,
+          "final_forward": 3.404595375061035,
+          "mean_speed_error": 0.21754297614097595,
+          "mean_frequency_hz": 4.4356770515441895,
+          "mean_duty_factor": 0.5790327191352844,
+          "mean_swing_amplitude_m": [
+            0.1200961023569107,
+            0.1200961023569107,
+            0.1200961023569107,
+            0.1200961023569107
+          ]
+        },
+        {
+          "env": 91,
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 5.959995269775391,
+          "max_forward": 3.4130678176879883,
+          "max_lateral": 0.6261825561523438,
+          "final_forward": 3.4130678176879883,
+          "mean_speed_error": 0.2595745027065277,
+          "mean_frequency_hz": 4.191198825836182,
+          "mean_duty_factor": 0.5984860062599182,
+          "mean_swing_amplitude_m": [
+            0.12008374184370041,
+            0.12008374184370041,
+            0.12008374184370041,
+            0.12008374184370041
+          ]
+        },
+        {
+          "env": 94,
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 5.319995880126953,
+          "max_forward": 3.407355308532715,
+          "max_lateral": 0.7250823974609375,
+          "final_forward": 3.407355308532715,
+          "mean_speed_error": 0.19853097200393677,
+          "mean_frequency_hz": 4.099905490875244,
+          "mean_duty_factor": 0.6077018976211548,
+          "mean_swing_amplitude_m": [
+            0.1200939193367958,
+            0.1200939193367958,
+            0.1200939193367958,
+            0.1200939193367958
+          ]
+        }
+      ],
+      "success_rate": 1.0
+    },
+    {
+      "terrain": "stairs",
+      "column": 3,
+      "difficulty": 0.5,
+      "speed": 1.2,
+      "parameters": {
+        "step_height_range": 0.045,
+        "step_width": 0.6,
+        "step_signs": [
+          1
+        ],
+        "axis": "x",
+        "platform_size": 3.0,
+        "height_offset": 0.0,
+        "roughness": null
+      },
+      "episodes": [
+        {
+          "env": 74,
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 5.13999605178833,
+          "max_forward": 3.400066375732422,
+          "max_lateral": 0.5739822387695312,
+          "final_forward": 3.400066375732422,
+          "mean_speed_error": 0.49171313643455505,
+          "mean_frequency_hz": 4.371888160705566,
+          "mean_duty_factor": 0.5885147452354431,
+          "mean_swing_amplitude_m": [
+            0.12009723484516144,
+            0.12009723484516144,
+            0.12009723484516144,
+            0.12009723484516144
+          ]
+        },
+        {
+          "env": 77,
+          "success": false,
+          "failed": true,
+          "timeout": false,
+          "duration": 3.7199971675872803,
+          "max_forward": 1.8414645195007324,
+          "max_lateral": 0.7365779876708984,
+          "final_forward": 1.7532949447631836,
+          "mean_speed_error": 0.6676298975944519,
+          "mean_frequency_hz": 4.443941116333008,
+          "mean_duty_factor": 0.5766035318374634,
+          "mean_swing_amplitude_m": [
+            0.12013450264930725,
+            0.12013450264930725,
+            0.12013450264930725,
+            0.12353277206420898
+          ]
+        },
+        {
+          "env": 80,
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 5.499995708465576,
+          "max_forward": 3.4075727462768555,
+          "max_lateral": 0.6543483734130859,
+          "final_forward": 3.4075727462768555,
+          "mean_speed_error": 0.5748836398124695,
+          "mean_frequency_hz": 4.073729991912842,
+          "mean_duty_factor": 0.6074498891830444,
+          "mean_swing_amplitude_m": [
+            0.12009081989526749,
+            0.12009081989526749,
+            0.12009081989526749,
+            0.12030936032533646
+          ]
+        },
+        {
+          "env": 83,
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 5.279995918273926,
+          "max_forward": 3.4114623069763184,
+          "max_lateral": 0.2281513214111328,
+          "final_forward": 3.4114623069763184,
+          "mean_speed_error": 0.5674159526824951,
+          "mean_frequency_hz": 4.210129261016846,
+          "mean_duty_factor": 0.5888202786445618,
+          "mean_swing_amplitude_m": [
+            0.12009463459253311,
+            0.12009463459253311,
+            0.12009463459253311,
+            0.12009463459253311
+          ]
+        },
+        {
+          "env": 86,
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 5.179996013641357,
+          "max_forward": 3.408092498779297,
+          "max_lateral": 0.6557979583740234,
+          "final_forward": 3.408092498779297,
+          "mean_speed_error": 0.5801054835319519,
+          "mean_frequency_hz": 4.4400553703308105,
+          "mean_duty_factor": 0.5692989230155945,
+          "mean_swing_amplitude_m": [
+            0.12009647488594055,
+            0.12044466286897659,
+            0.12161913514137268,
+            0.12009647488594055
+          ]
+        },
+        {
+          "env": 89,
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 5.13999605178833,
+          "max_forward": 3.4126925468444824,
+          "max_lateral": 0.1280670166015625,
+          "final_forward": 3.4126925468444824,
+          "mean_speed_error": 0.5556491017341614,
+          "mean_frequency_hz": 4.264886379241943,
+          "mean_duty_factor": 0.588516116142273,
+          "mean_swing_amplitude_m": [
+            0.1201992854475975,
+            0.12009723484516144,
+            0.12009723484516144,
+            0.12009723484516144
+          ]
+        },
+        {
+          "env": 92,
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 4.739996433258057,
+          "max_forward": 3.409198760986328,
+          "max_lateral": 0.13722991943359375,
+          "final_forward": 3.409198760986328,
+          "mean_speed_error": 0.49843886494636536,
+          "mean_frequency_hz": 4.253483772277832,
+          "mean_duty_factor": 0.5980951189994812,
+          "mean_swing_amplitude_m": [
+            0.12010551244020462,
+            0.12010551244020462,
+            0.12044712156057358,
+            0.12010551244020462
+          ]
+        },
+        {
+          "env": 95,
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 4.459996700286865,
+          "max_forward": 3.411879062652588,
+          "max_lateral": 0.3413257598876953,
+          "final_forward": 3.411879062652588,
+          "mean_speed_error": 0.42777952551841736,
+          "mean_frequency_hz": 4.244279384613037,
+          "mean_duty_factor": 0.586764395236969,
+          "mean_swing_amplitude_m": [
+            0.12011218816041946,
+            0.12011218816041946,
+            0.12011218816041946,
+            0.12011218816041946
+          ]
+        }
+      ],
+      "success_rate": 0.875
+    },
+    {
+      "terrain": "flat",
+      "column": 0,
+      "difficulty": 1.0,
+      "speed": 0.5,
+      "parameters": {
+        "height": 0.0,
+        "axis": "x",
+        "platform_size": 3.0,
+        "height_offset": 0.0,
+        "roughness": null
+      },
+      "episodes": [
+        {
+          "env": 96,
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 8.15999698638916,
+          "max_forward": 3.4033384323120117,
+          "max_lateral": 0.604238748550415,
+          "final_forward": 3.4033384323120117,
+          "mean_speed_error": 0.1439221203327179,
+          "mean_frequency_hz": 4.170267581939697,
+          "mean_duty_factor": 0.5988945960998535,
+          "mean_swing_amplitude_m": [
+            0.12006088346242905,
+            0.12006088346242905,
+            0.12006088346242905,
+            0.12006088346242905
+          ]
+        },
+        {
+          "env": 99,
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 7.219994068145752,
+          "max_forward": 3.4077892303466797,
+          "max_lateral": 0.8880250453948975,
+          "final_forward": 3.4077892303466797,
+          "mean_speed_error": 0.10047963261604309,
+          "mean_frequency_hz": 4.064107418060303,
+          "mean_duty_factor": 0.5987510681152344,
+          "mean_swing_amplitude_m": [
+            0.1200689822435379,
+            0.1200689822435379,
+            0.1200689822435379,
+            0.1200689822435379
+          ]
+        },
+        {
+          "env": 102,
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 7.219994068145752,
+          "max_forward": 3.4000587463378906,
+          "max_lateral": 0.21266937255859375,
+          "final_forward": 3.4000587463378906,
+          "mean_speed_error": 0.10618455708026886,
+          "mean_frequency_hz": 3.987921953201294,
+          "mean_duty_factor": 0.6126004457473755,
+          "mean_swing_amplitude_m": [
+            0.1200689822435379,
+            0.1200689822435379,
+            0.1200689822435379,
+            0.1200689822435379
+          ]
+        },
+        {
+          "env": 105,
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 7.539993762969971,
+          "max_forward": 3.4090003967285156,
+          "max_lateral": 0.5264871120452881,
+          "final_forward": 3.4090003967285156,
+          "mean_speed_error": 0.12918663024902344,
+          "mean_frequency_hz": 4.078360557556152,
+          "mean_duty_factor": 0.5921726822853088,
+          "mean_swing_amplitude_m": [
+            0.12006601691246033,
+            0.12006601691246033,
+            0.12006601691246033,
+            0.12006601691246033
+          ]
+        },
+        {
+          "env": 108,
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 7.119994163513184,
+          "max_forward": 3.4059877395629883,
+          "max_lateral": 0.4492027759552002,
+          "final_forward": 3.4059877395629883,
+          "mean_speed_error": 0.11832742393016815,
+          "mean_frequency_hz": 4.136636734008789,
+          "mean_duty_factor": 0.6057559251785278,
+          "mean_swing_amplitude_m": [
+            0.1200699657201767,
+            0.1200699657201767,
+            0.1200699657201767,
+            0.1200699657201767
+          ]
+        },
+        {
+          "env": 111,
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 6.679994583129883,
+          "max_forward": 3.4022722244262695,
+          "max_lateral": 0.25487232208251953,
+          "final_forward": 3.4022722244262695,
+          "mean_speed_error": 0.10855265706777573,
+          "mean_frequency_hz": 4.089642524719238,
+          "mean_duty_factor": 0.6061341762542725,
+          "mean_swing_amplitude_m": [
+            0.12007462978363037,
+            0.12007462978363037,
+            0.12007462978363037,
+            0.12007462978363037
+          ]
+        },
+        {
+          "env": 114,
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 8.38000202178955,
+          "max_forward": 3.4028587341308594,
+          "max_lateral": 0.689643144607544,
+          "final_forward": 3.4028587341308594,
+          "mean_speed_error": 0.12679927051067352,
+          "mean_frequency_hz": 4.110671043395996,
+          "mean_duty_factor": 0.5929573774337769,
+          "mean_swing_amplitude_m": [
+            0.12005919963121414,
+            0.12005919963121414,
+            0.12005919963121414,
+            0.12005919963121414
+          ]
+        },
+        {
+          "env": 117,
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 7.279994010925293,
+          "max_forward": 3.4030160903930664,
+          "max_lateral": 0.2646818161010742,
+          "final_forward": 3.4030160903930664,
+          "mean_speed_error": 0.1310185045003891,
+          "mean_frequency_hz": 4.024564743041992,
+          "mean_duty_factor": 0.605629563331604,
+          "mean_swing_amplitude_m": [
+            0.12006840854883194,
+            0.12006840854883194,
+            0.12006840854883194,
+            0.12006840854883194
+          ]
+        }
+      ],
+      "success_rate": 1.0
+    },
+    {
+      "terrain": "flat",
+      "column": 0,
+      "difficulty": 1.0,
+      "speed": 0.8,
+      "parameters": {
+        "height": 0.0,
+        "axis": "x",
+        "platform_size": 3.0,
+        "height_offset": 0.0,
+        "roughness": null
+      },
+      "episodes": [
+        {
+          "env": 97,
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 5.89999532699585,
+          "max_forward": 3.402552604675293,
+          "max_lateral": 0.641099214553833,
+          "final_forward": 3.402552604675293,
+          "mean_speed_error": 0.21244387328624725,
+          "mean_frequency_hz": 4.189074516296387,
+          "mean_duty_factor": 0.5984705686569214,
+          "mean_swing_amplitude_m": [
+            0.12008460611104965,
+            0.12008460611104965,
+            0.12008460611104965,
+            0.12008460611104965
+          ]
+        },
+        {
+          "env": 100,
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 6.379994869232178,
+          "max_forward": 3.406174659729004,
+          "max_lateral": 0.46126461029052734,
+          "final_forward": 3.406174659729004,
+          "mean_speed_error": 0.25892210006713867,
+          "mean_frequency_hz": 4.204948425292969,
+          "mean_duty_factor": 0.5985860228538513,
+          "mean_swing_amplitude_m": [
+            0.1200781762599945,
+            0.1200781762599945,
+            0.1200781762599945,
+            0.1200781762599945
+          ]
+        },
+        {
+          "env": 103,
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 5.459995746612549,
+          "max_forward": 3.4021224975585938,
+          "max_lateral": 0.2413027286529541,
+          "final_forward": 3.4021224975585938,
+          "mean_speed_error": 0.18239162862300873,
+          "mean_frequency_hz": 4.280964374542236,
+          "mean_duty_factor": 0.6075037717819214,
+          "mean_swing_amplitude_m": [
+            0.12009149044752121,
+            0.12009149044752121,
+            0.12009149044752121,
+            0.12009149044752121
+          ]
+        },
+        {
+          "env": 106,
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 6.459994792938232,
+          "max_forward": 3.413601875305176,
+          "max_lateral": 1.1223864555358887,
+          "final_forward": 3.413601875305176,
+          "mean_speed_error": 0.24953247606754303,
+          "mean_frequency_hz": 4.122220516204834,
+          "mean_duty_factor": 0.5908635854721069,
+          "mean_swing_amplitude_m": [
+            0.12007720023393631,
+            0.12007720023393631,
+            0.12015819549560547,
+            0.1204603984951973
+          ]
+        },
+        {
+          "env": 109,
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 6.479994773864746,
+          "max_forward": 3.407146453857422,
+          "max_lateral": 0.8890292644500732,
+          "final_forward": 3.407146453857422,
+          "mean_speed_error": 0.2595714330673218,
+          "mean_frequency_hz": 4.2079596519470215,
+          "mean_duty_factor": 0.5908917784690857,
+          "mean_swing_amplitude_m": [
+            0.12007695436477661,
+            0.12007695436477661,
+            0.12029412388801575,
+            0.12007695436477661
+          ]
+        },
+        {
+          "env": 112,
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 7.059994220733643,
+          "max_forward": 3.40854549407959,
+          "max_lateral": 1.3007643222808838,
+          "final_forward": 3.40854549407959,
+          "mean_speed_error": 0.2928673028945923,
+          "mean_frequency_hz": 4.301641941070557,
+          "mean_duty_factor": 0.5987218022346497,
+          "mean_swing_amplitude_m": [
+            0.12007056176662445,
+            0.12007056176662445,
+            0.12007056176662445,
+            0.12030630558729172
+          ]
+        },
+        {
+          "env": 115,
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 5.999995231628418,
+          "max_forward": 3.412057876586914,
+          "max_lateral": 0.7279055118560791,
+          "final_forward": 3.412057876586914,
+          "mean_speed_error": 0.25458911061286926,
+          "mean_frequency_hz": 4.284262180328369,
+          "mean_duty_factor": 0.5901628136634827,
+          "mean_swing_amplitude_m": [
+            0.12008317559957504,
+            0.12008317559957504,
+            0.12008317559957504,
+            0.12028555572032928
+          ]
+        },
+        {
+          "env": 118,
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 5.73999547958374,
+          "max_forward": 3.403411865234375,
+          "max_lateral": 0.623408317565918,
+          "final_forward": 3.403411865234375,
+          "mean_speed_error": 0.19584892690181732,
+          "mean_frequency_hz": 4.183196067810059,
+          "mean_duty_factor": 0.6071386933326721,
+          "mean_swing_amplitude_m": [
+            0.12008698284626007,
+            0.12008698284626007,
+            0.12008698284626007,
+            0.12008698284626007
+          ]
+        }
+      ],
+      "success_rate": 1.0
+    },
+    {
+      "terrain": "flat",
+      "column": 0,
+      "difficulty": 1.0,
+      "speed": 1.2,
+      "parameters": {
+        "height": 0.0,
+        "axis": "x",
+        "platform_size": 3.0,
+        "height_offset": 0.0,
+        "roughness": null
+      },
+      "episodes": [
+        {
+          "env": 98,
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 5.259995937347412,
+          "max_forward": 3.4027957916259766,
+          "max_lateral": 0.6678035259246826,
+          "final_forward": 3.4027957916259766,
+          "mean_speed_error": 0.5524618625640869,
+          "mean_frequency_hz": 4.213589668273926,
+          "mean_duty_factor": 0.5887777805328369,
+          "mean_swing_amplitude_m": [
+            0.12009499967098236,
+            0.12009499967098236,
+            0.12009499967098236,
+            0.12009499967098236
+          ]
+        },
+        {
+          "env": 101,
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 4.839996337890625,
+          "max_forward": 3.407827377319336,
+          "max_lateral": 0.5574040412902832,
+          "final_forward": 3.407827377319336,
+          "mean_speed_error": 0.4935864806175232,
+          "mean_frequency_hz": 4.333888530731201,
+          "mean_duty_factor": 0.5807787775993347,
+          "mean_swing_amplitude_m": [
+            0.12010331451892853,
+            0.12010331451892853,
+            0.12010331451892853,
+            0.12010331451892853
+          ]
+        },
+        {
+          "env": 104,
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 5.2999958992004395,
+          "max_forward": 3.403594970703125,
+          "max_lateral": 0.09355878829956055,
+          "final_forward": 3.403594970703125,
+          "mean_speed_error": 0.5447487831115723,
+          "mean_frequency_hz": 4.165192127227783,
+          "mean_duty_factor": 0.5982968807220459,
+          "mean_swing_amplitude_m": [
+            0.12009427696466446,
+            0.12009427696466446,
+            0.12009427696466446,
+            0.12009427696466446
+          ]
+        },
+        {
+          "env": 107,
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 5.239995956420898,
+          "max_forward": 3.400567054748535,
+          "max_lateral": 0.13206100463867188,
+          "final_forward": 3.400567054748535,
+          "mean_speed_error": 0.5431784987449646,
+          "mean_frequency_hz": 4.317846298217773,
+          "mean_duty_factor": 0.5841550230979919,
+          "mean_swing_amplitude_m": [
+            0.12009536474943161,
+            0.12009536474943161,
+            0.12009536474943161,
+            0.12009536474943161
+          ]
+        },
+        {
+          "env": 110,
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 5.159996032714844,
+          "max_forward": 3.409414291381836,
+          "max_lateral": 0.7884206771850586,
+          "final_forward": 3.409414291381836,
+          "mean_speed_error": 0.5154075622558594,
+          "mean_frequency_hz": 4.231302261352539,
+          "mean_duty_factor": 0.5982505679130554,
+          "mean_swing_amplitude_m": [
+            0.120096854865551,
+            0.120096854865551,
+            0.120096854865551,
+            0.120096854865551
+          ]
+        },
+        {
+          "env": 113,
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 5.339995861053467,
+          "max_forward": 3.407176971435547,
+          "max_lateral": 0.6990580558776855,
+          "final_forward": 3.407176971435547,
+          "mean_speed_error": 0.5260441899299622,
+          "mean_frequency_hz": 4.269949913024902,
+          "mean_duty_factor": 0.5795830488204956,
+          "mean_swing_amplitude_m": [
+            0.12009356170892715,
+            0.12009356170892715,
+            0.12009356170892715,
+            0.12009356170892715
+          ]
+        },
+        {
+          "env": 116,
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 4.75999641418457,
+          "max_forward": 3.4127273559570312,
+          "max_lateral": 0.4242572784423828,
+          "final_forward": 3.4127273559570312,
+          "mean_speed_error": 0.5017156600952148,
+          "mean_frequency_hz": 4.369643688201904,
+          "mean_duty_factor": 0.5770946741104126,
+          "mean_swing_amplitude_m": [
+            0.1201050654053688,
+            0.1201050654053688,
+            0.1201050654053688,
+            0.1201050654053688
+          ]
+        },
+        {
+          "env": 119,
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 5.3599958419799805,
+          "max_forward": 3.4120702743530273,
+          "max_lateral": 0.6753299236297607,
+          "final_forward": 3.4120702743530273,
+          "mean_speed_error": 0.5473179221153259,
+          "mean_frequency_hz": 4.24169921875,
+          "mean_duty_factor": 0.5822708606719971,
+          "mean_swing_amplitude_m": [
+            0.1200932115316391,
+            0.1200932115316391,
+            0.1200932115316391,
+            0.1200932115316391
+          ]
+        }
+      ],
+      "success_rate": 1.0
+    },
+    {
+      "terrain": "flat",
+      "column": 1,
+      "difficulty": 1.0,
+      "speed": 0.5,
+      "parameters": {
+        "height": 0.0,
+        "axis": "x",
+        "platform_size": 3.0,
+        "height_offset": 0.0,
+        "roughness": null
+      },
+      "episodes": [
+        {
+          "env": 120,
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 7.179994106292725,
+          "max_forward": 3.408083915710449,
+          "max_lateral": 0.7292623519897461,
+          "final_forward": 3.408083915710449,
+          "mean_speed_error": 0.08961601555347443,
+          "mean_frequency_hz": 4.034656047821045,
+          "mean_duty_factor": 0.5987440347671509,
+          "mean_swing_amplitude_m": [
+            0.12006936967372894,
+            0.12006936967372894,
+            0.12006936967372894,
+            0.12006936967372894
+          ]
+        },
+        {
+          "env": 123,
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 7.439993858337402,
+          "max_forward": 3.4016523361206055,
+          "max_lateral": 0.2787141799926758,
+          "final_forward": 3.4016523361206055,
+          "mean_speed_error": 0.10220874100923538,
+          "mean_frequency_hz": 4.08290958404541,
+          "mean_duty_factor": 0.6055081486701965,
+          "mean_swing_amplitude_m": [
+            0.12006691843271255,
+            0.12006691843271255,
+            0.12006691843271255,
+            0.12006691843271255
+          ]
+        },
+        {
+          "env": 126,
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 7.359993934631348,
+          "max_forward": 3.4074668884277344,
+          "max_lateral": 0.641383171081543,
+          "final_forward": 3.4074668884277344,
+          "mean_speed_error": 0.11099959164857864,
+          "mean_frequency_hz": 4.070497512817383,
+          "mean_duty_factor": 0.6055684685707092,
+          "mean_swing_amplitude_m": [
+            0.12006765604019165,
+            0.12006765604019165,
+            0.12006765604019165,
+            0.12006765604019165
+          ]
+        },
+        {
+          "env": 129,
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 8.019993782043457,
+          "max_forward": 3.400930404663086,
+          "max_lateral": 0.26101016998291016,
+          "final_forward": 3.400930404663086,
+          "mean_speed_error": 0.14120547473430634,
+          "mean_frequency_hz": 4.0290374755859375,
+          "mean_duty_factor": 0.5988761782646179,
+          "mean_swing_amplitude_m": [
+            0.12006200850009918,
+            0.12006200850009918,
+            0.12006200850009918,
+            0.12006200850009918
+          ]
+        },
+        {
+          "env": 132,
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 7.459993839263916,
+          "max_forward": 3.4083967208862305,
+          "max_lateral": 0.24495601654052734,
+          "final_forward": 3.4083967208862305,
+          "mean_speed_error": 0.13334724307060242,
+          "mean_frequency_hz": 4.074985027313232,
+          "mean_duty_factor": 0.60549396276474,
+          "mean_swing_amplitude_m": [
+            0.12006673961877823,
+            0.12006673961877823,
+            0.12006673961877823,
+            0.12006673961877823
+          ]
+        },
+        {
+          "env": 135,
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 7.219994068145752,
+          "max_forward": 3.4028682708740234,
+          "max_lateral": 0.2798957824707031,
+          "final_forward": 3.4028682708740234,
+          "mean_speed_error": 0.11115698516368866,
+          "mean_frequency_hz": 4.06410551071167,
+          "mean_duty_factor": 0.6056757569313049,
+          "mean_swing_amplitude_m": [
+            0.1200689822435379,
+            0.1200689822435379,
+            0.1200689822435379,
+            0.1200689822435379
+          ]
+        },
+        {
+          "env": 138,
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 6.6999945640563965,
+          "max_forward": 3.4026174545288086,
+          "max_lateral": 0.47835731506347656,
+          "final_forward": 3.4026174545288086,
+          "mean_speed_error": 0.10818006843328476,
+          "mean_frequency_hz": 4.038031578063965,
+          "mean_duty_factor": 0.5986537337303162,
+          "mean_swing_amplitude_m": [
+            0.12007439881563187,
+            0.12007439881563187,
+            0.12007439881563187,
+            0.12007439881563187
+          ]
+        },
+        {
+          "env": 141,
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 6.979994297027588,
+          "max_forward": 3.4093055725097656,
+          "max_lateral": 0.37650585174560547,
+          "final_forward": 3.4093055725097656,
+          "mean_speed_error": 0.10757767409086227,
+          "mean_frequency_hz": 4.052554130554199,
+          "mean_duty_factor": 0.598707914352417,
+          "mean_swing_amplitude_m": [
+            0.12007138133049011,
+            0.12007138133049011,
+            0.12007138133049011,
+            0.12007138133049011
+          ]
+        }
+      ],
+      "success_rate": 1.0
+    },
+    {
+      "terrain": "flat",
+      "column": 1,
+      "difficulty": 1.0,
+      "speed": 0.8,
+      "parameters": {
+        "height": 0.0,
+        "axis": "x",
+        "platform_size": 3.0,
+        "height_offset": 0.0,
+        "roughness": null
+      },
+      "episodes": [
+        {
+          "env": 121,
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 5.979995250701904,
+          "max_forward": 3.404294967651367,
+          "max_lateral": 0.6902751922607422,
+          "final_forward": 3.404294967651367,
+          "mean_speed_error": 0.23609018325805664,
+          "mean_frequency_hz": 4.191898822784424,
+          "mean_duty_factor": 0.6068520545959473,
+          "mean_swing_amplitude_m": [
+            0.12008345872163773,
+            0.12008345872163773,
+            0.12008345872163773,
+            0.12008345872163773
+          ]
+        },
+        {
+          "env": 124,
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 6.219995021820068,
+          "max_forward": 3.405898094177246,
+          "max_lateral": 0.6679887771606445,
+          "final_forward": 3.405898094177246,
+          "mean_speed_error": 0.2496272325515747,
+          "mean_frequency_hz": 4.1999287605285645,
+          "mean_duty_factor": 0.598548948764801,
+          "mean_swing_amplitude_m": [
+            0.12008021026849747,
+            0.12008021026849747,
+            0.12008021026849747,
+            0.12012343853712082
+          ]
+        },
+        {
+          "env": 127,
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 5.859995365142822,
+          "max_forward": 3.4004945755004883,
+          "max_lateral": 0.6268892288208008,
+          "final_forward": 3.4004945755004883,
+          "mean_speed_error": 0.23308201134204865,
+          "mean_frequency_hz": 4.281495571136475,
+          "mean_duty_factor": 0.5984601974487305,
+          "mean_swing_amplitude_m": [
+            0.12008518725633621,
+            0.12008518725633621,
+            0.12008518725633621,
+            0.12008518725633621
+          ]
+        },
+        {
+          "env": 130,
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 5.13999605178833,
+          "max_forward": 3.4016284942626953,
+          "max_lateral": 0.32483577728271484,
+          "final_forward": 3.4016284942626953,
+          "mean_speed_error": 0.14693942666053772,
+          "mean_frequency_hz": 4.127920627593994,
+          "mean_duty_factor": 0.5885160565376282,
+          "mean_swing_amplitude_m": [
+            0.12009723484516144,
+            0.12009723484516144,
+            0.12009723484516144,
+            0.12009723484516144
+          ]
+        },
+        {
+          "env": 133,
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 5.439995765686035,
+          "max_forward": 3.407276153564453,
+          "max_lateral": 0.7090044021606445,
+          "final_forward": 3.407276153564453,
+          "mean_speed_error": 0.16328489780426025,
+          "mean_frequency_hz": 4.070130348205566,
+          "mean_duty_factor": 0.5891495943069458,
+          "mean_swing_amplitude_m": [
+            0.12009182572364807,
+            0.12009182572364807,
+            0.12009182572364807,
+            0.12009182572364807
+          ]
+        },
+        {
+          "env": 136,
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 5.699995517730713,
+          "max_forward": 3.410181999206543,
+          "max_lateral": 0.12570762634277344,
+          "final_forward": 3.410181999206543,
+          "mean_speed_error": 0.21173636615276337,
+          "mean_frequency_hz": 4.239567756652832,
+          "mean_duty_factor": 0.5984167456626892,
+          "mean_swing_amplitude_m": [
+            0.12008760124444962,
+            0.12008760124444962,
+            0.12008760124444962,
+            0.12008760124444962
+          ]
+        },
+        {
+          "env": 139,
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 6.019995212554932,
+          "max_forward": 3.400968551635742,
+          "max_lateral": 0.6974315643310547,
+          "final_forward": 3.400968551635742,
+          "mean_speed_error": 0.2269248515367508,
+          "mean_frequency_hz": 4.1932806968688965,
+          "mean_duty_factor": 0.5901954174041748,
+          "mean_swing_amplitude_m": [
+            0.12008289992809296,
+            0.12008289992809296,
+            0.12008289992809296,
+            0.12008289992809296
+          ]
+        },
+        {
+          "env": 142,
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 5.399995803833008,
+          "max_forward": 3.4079198837280273,
+          "max_lateral": 0.5392274856567383,
+          "final_forward": 3.4079198837280273,
+          "mean_speed_error": 0.19049541652202606,
+          "mean_frequency_hz": 4.169539928436279,
+          "mean_duty_factor": 0.5983285307884216,
+          "mean_swing_amplitude_m": [
+            0.12009251117706299,
+            0.12009251117706299,
+            0.12009251117706299,
+            0.12009251117706299
+          ]
+        }
+      ],
+      "success_rate": 1.0
+    },
+    {
+      "terrain": "flat",
+      "column": 1,
+      "difficulty": 1.0,
+      "speed": 1.2,
+      "parameters": {
+        "height": 0.0,
+        "axis": "x",
+        "platform_size": 3.0,
+        "height_offset": 0.0,
+        "roughness": null
+      },
+      "episodes": [
+        {
+          "env": 122,
+          "success": false,
+          "failed": true,
+          "timeout": false,
+          "duration": 4.279996871948242,
+          "max_forward": 1.955068588256836,
+          "max_lateral": 0.5432310104370117,
+          "final_forward": 1.9463815689086914,
+          "mean_speed_error": 0.8263434767723083,
+          "mean_frequency_hz": 4.165764808654785,
+          "mean_duty_factor": 0.6044318079948425,
+          "mean_swing_amplitude_m": [
+            0.1201169416308403,
+            0.1201169416308403,
+            0.1201169416308403,
+            0.1201169416308403
+          ]
+        },
+        {
+          "env": 125,
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 4.779996395111084,
+          "max_forward": 3.4163084030151367,
+          "max_lateral": 0.24980831146240234,
+          "final_forward": 3.4163084030151367,
+          "mean_speed_error": 0.49385422468185425,
+          "mean_frequency_hz": 4.254708290100098,
+          "mean_duty_factor": 0.5981103181838989,
+          "mean_swing_amplitude_m": [
+            0.12010461837053299,
+            0.12010461837053299,
+            0.12010461837053299,
+            0.12010461837053299
+          ]
+        },
+        {
+          "env": 128,
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 5.6599955558776855,
+          "max_forward": 3.405453681945801,
+          "max_lateral": 0.40746116638183594,
+          "final_forward": 3.405453681945801,
+          "mean_speed_error": 0.5820611715316772,
+          "mean_frequency_hz": 4.18012809753418,
+          "mean_duty_factor": 0.5895715355873108,
+          "mean_swing_amplitude_m": [
+            0.12008822709321976,
+            0.12008822709321976,
+            0.12008822709321976,
+            0.12008822709321976
+          ]
+        },
+        {
+          "env": 131,
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 4.779996395111084,
+          "max_forward": 3.413045883178711,
+          "max_lateral": 0.12163829803466797,
+          "final_forward": 3.413045883178711,
+          "mean_speed_error": 0.5070741772651672,
+          "mean_frequency_hz": 4.139640808105469,
+          "mean_duty_factor": 0.598111093044281,
+          "mean_swing_amplitude_m": [
+            0.12010461837053299,
+            0.12010461837053299,
+            0.12010461837053299,
+            0.12010461837053299
+          ]
+        },
+        {
+          "env": 134,
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 5.2999958992004395,
+          "max_forward": 3.4000911712646484,
+          "max_lateral": 0.14208602905273438,
+          "final_forward": 3.4000911712646484,
+          "mean_speed_error": 0.5691052079200745,
+          "mean_frequency_hz": 4.1029253005981445,
+          "mean_duty_factor": 0.5982966423034668,
+          "mean_swing_amplitude_m": [
+            0.12009427696466446,
+            0.12009427696466446,
+            0.12009427696466446,
+            0.12009427696466446
+          ]
+        },
+        {
+          "env": 137,
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 4.739996433258057,
+          "max_forward": 3.4080915451049805,
+          "max_lateral": 0.4702491760253906,
+          "final_forward": 3.4080915451049805,
+          "mean_speed_error": 0.46938958764076233,
+          "mean_frequency_hz": 4.253481388092041,
+          "mean_duty_factor": 0.5875465869903564,
+          "mean_swing_amplitude_m": [
+            0.12010551244020462,
+            0.12010551244020462,
+            0.12010551244020462,
+            0.12010551244020462
+          ]
+        },
+        {
+          "env": 140,
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 5.019996166229248,
+          "max_forward": 3.406765937805176,
+          "max_lateral": 0.3504810333251953,
+          "final_forward": 3.406765937805176,
+          "mean_speed_error": 0.5395093560218811,
+          "mean_frequency_hz": 4.147708415985107,
+          "mean_duty_factor": 0.5886397957801819,
+          "mean_swing_amplitude_m": [
+            0.12009958177804947,
+            0.12009958177804947,
+            0.12009958177804947,
+            0.12009958177804947
+          ]
+        },
+        {
+          "env": 143,
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 4.979996204376221,
+          "max_forward": 3.410938262939453,
+          "max_lateral": 0.9396123886108398,
+          "final_forward": 3.410938262939453,
+          "mean_speed_error": 0.5013751983642578,
+          "mean_frequency_hz": 4.15451717376709,
+          "mean_duty_factor": 0.5981871485710144,
+          "mean_swing_amplitude_m": [
+            0.12010038644075394,
+            0.12010038644075394,
+            0.12010038644075394,
+            0.12010038644075394
+          ]
+        }
+      ],
+      "success_rate": 0.875
+    },
+    {
+      "terrain": "stairs",
+      "column": 2,
+      "difficulty": 1.0,
+      "speed": 0.5,
+      "parameters": {
+        "step_height_range": 0.08,
+        "step_width": 0.6,
+        "step_signs": [
+          -1
+        ],
+        "axis": "x",
+        "platform_size": 3.0,
+        "height_offset": 0.0,
+        "roughness": null
+      },
+      "episodes": [
+        {
+          "env": 144,
+          "success": false,
+          "failed": true,
+          "timeout": false,
+          "duration": 2.7199981212615967,
+          "max_forward": 0.9572381973266602,
+          "max_lateral": 0.5994796752929688,
+          "final_forward": 0.9546318054199219,
+          "mean_speed_error": 0.27923423051834106,
+          "mean_frequency_hz": 4.114954471588135,
+          "mean_duty_factor": 0.5966784358024597,
+          "mean_swing_amplitude_m": [
+            0.12018371373414993,
+            0.12018371373414993,
+            0.12214568257331848,
+            0.12018371373414993
+          ]
+        },
+        {
+          "env": 147,
+          "success": false,
+          "failed": true,
+          "timeout": false,
+          "duration": 5.699995517730713,
+          "max_forward": 1.1029205322265625,
+          "max_lateral": 0.2761096954345703,
+          "final_forward": 0.764643669128418,
+          "mean_speed_error": 0.36982813477516174,
+          "mean_frequency_hz": 3.9745213985443115,
+          "mean_duty_factor": 0.6159601211547852,
+          "mean_swing_amplitude_m": [
+            0.12008760124444962,
+            0.12008760124444962,
+            0.12608134746551514,
+            0.1227329820394516
+          ]
+        },
+        {
+          "env": 150,
+          "success": false,
+          "failed": true,
+          "timeout": false,
+          "duration": 2.8999979496002197,
+          "max_forward": 1.0670232772827148,
+          "max_lateral": 0.4762554168701172,
+          "final_forward": 1.0670232772827148,
+          "mean_speed_error": 0.2327050417661667,
+          "mean_frequency_hz": 4.132648468017578,
+          "mean_duty_factor": 0.5968844890594482,
+          "mean_swing_amplitude_m": [
+            0.12017235159873962,
+            0.12017235159873962,
+            0.12017235159873962,
+            0.12198904901742935
+          ]
+        },
+        {
+          "env": 153,
+          "success": false,
+          "failed": true,
+          "timeout": false,
+          "duration": 2.7799980640411377,
+          "max_forward": 0.9843692779541016,
+          "max_lateral": 0.6432571411132812,
+          "final_forward": 0.9835443496704102,
+          "mean_speed_error": 0.23249408602714539,
+          "mean_frequency_hz": 4.12110710144043,
+          "mean_duty_factor": 0.5967500805854797,
+          "mean_swing_amplitude_m": [
+            0.12017975747585297,
+            0.12017975747585297,
+            0.12017975747585297,
+            0.12017975747585297
+          ]
+        },
+        {
+          "env": 156,
+          "success": false,
+          "failed": true,
+          "timeout": false,
+          "duration": 13.020108222961426,
+          "max_forward": 2.0486745834350586,
+          "max_lateral": 1.6836891174316406,
+          "final_forward": 1.927708625793457,
+          "mean_speed_error": 0.32834646105766296,
+          "mean_frequency_hz": 3.9585838317871094,
+          "mean_duty_factor": 0.6069842576980591,
+          "mean_swing_amplitude_m": [
+            0.12041135132312775,
+            0.12014591693878174,
+            0.12316622585058212,
+            0.12216166406869888
+          ]
+        },
+        {
+          "env": 159,
+          "success": false,
+          "failed": true,
+          "timeout": false,
+          "duration": 7.959993362426758,
+          "max_forward": 2.006196975708008,
+          "max_lateral": 0.9227790832519531,
+          "final_forward": 1.9653215408325195,
+          "mean_speed_error": 0.29187652468681335,
+          "mean_frequency_hz": 4.164437770843506,
+          "mean_duty_factor": 0.5988675951957703,
+          "mean_swing_amplitude_m": [
+            0.12006249278783798,
+            0.12053629010915756,
+            0.1231364980340004,
+            0.12337776273488998
+          ]
+        },
+        {
+          "env": 162,
+          "success": false,
+          "failed": true,
+          "timeout": false,
+          "duration": 6.139995098114014,
+          "max_forward": 2.004469871520996,
+          "max_lateral": 1.34246826171875,
+          "final_forward": 1.9219675064086914,
+          "mean_speed_error": 0.2540702521800995,
+          "mean_frequency_hz": 4.094593524932861,
+          "mean_duty_factor": 0.5985305309295654,
+          "mean_swing_amplitude_m": [
+            0.12008126080036163,
+            0.12008126080036163,
+            0.12008126080036163,
+            0.12318158894777298
+          ]
+        },
+        {
+          "env": 165,
+          "success": false,
+          "failed": true,
+          "timeout": false,
+          "duration": 3.5399973392486572,
+          "max_forward": 0.7869548797607422,
+          "max_lateral": 0.1824207305908203,
+          "final_forward": 0.5224018096923828,
+          "mean_speed_error": 0.3383500874042511,
+          "mean_frequency_hz": 4.181139945983887,
+          "mean_duty_factor": 0.5974478125572205,
+          "mean_swing_amplitude_m": [
+            0.12014130502939224,
+            0.12014130502939224,
+            0.12229838222265244,
+            0.12414327263832092
+          ]
+        }
+      ],
+      "success_rate": 0.0
+    },
+    {
+      "terrain": "stairs",
+      "column": 2,
+      "difficulty": 1.0,
+      "speed": 0.8,
+      "parameters": {
+        "step_height_range": 0.08,
+        "step_width": 0.6,
+        "step_signs": [
+          -1
+        ],
+        "axis": "x",
+        "platform_size": 3.0,
+        "height_offset": 0.0,
+        "roughness": null
+      },
+      "episodes": [
+        {
+          "env": 145,
+          "success": false,
+          "failed": true,
+          "timeout": false,
+          "duration": 2.039998769760132,
+          "max_forward": 0.804631233215332,
+          "max_lateral": 0.7387809753417969,
+          "final_forward": 0.7031612396240234,
+          "mean_speed_error": 0.40118783712387085,
+          "mean_frequency_hz": 4.5987396240234375,
+          "mean_duty_factor": 0.5710620284080505,
+          "mean_swing_amplitude_m": [
+            0.12024473398923874,
+            0.12024473398923874,
+            0.12024473398923874,
+            0.12164052575826645
+          ]
+        },
+        {
+          "env": 148,
+          "success": false,
+          "failed": true,
+          "timeout": false,
+          "duration": 7.69999361038208,
+          "max_forward": 2.022836685180664,
+          "max_lateral": 2.1253719329833984,
+          "final_forward": 1.6601066589355469,
+          "mean_speed_error": 0.49761563539505005,
+          "mean_frequency_hz": 4.309820652008057,
+          "mean_duty_factor": 0.611814558506012,
+          "mean_swing_amplitude_m": [
+            0.1200646311044693,
+            0.1200646311044693,
+            0.12027449905872345,
+            0.1214277520775795
+          ]
+        },
+        {
+          "env": 151,
+          "success": false,
+          "failed": true,
+          "timeout": false,
+          "duration": 3.239997625350952,
+          "max_forward": 0.8723068237304688,
+          "max_lateral": 0.15120697021484375,
+          "final_forward": 0.7419862747192383,
+          "mean_speed_error": 0.6386902332305908,
+          "mean_frequency_hz": 4.35538387298584,
+          "mean_duty_factor": 0.5817793607711792,
+          "mean_swing_amplitude_m": [
+            0.12015432864427567,
+            0.12015432864427567,
+            0.12076150625944138,
+            0.12153121083974838
+          ]
+        },
+        {
+          "env": 154,
+          "success": false,
+          "failed": true,
+          "timeout": false,
+          "duration": 3.9399969577789307,
+          "max_forward": 1.418076515197754,
+          "max_lateral": 0.41816139221191406,
+          "final_forward": 1.4123172760009766,
+          "mean_speed_error": 0.5088546276092529,
+          "mean_frequency_hz": 4.084123134613037,
+          "mean_duty_factor": 0.5977074503898621,
+          "mean_swing_amplitude_m": [
+            0.12012702971696854,
+            0.12012702971696854,
+            0.12146895378828049,
+            0.12253444641828537
+          ]
+        },
+        {
+          "env": 157,
+          "success": false,
+          "failed": true,
+          "timeout": false,
+          "duration": 2.8999979496002197,
+          "max_forward": 0.9503135681152344,
+          "max_lateral": 0.7100391387939453,
+          "final_forward": 0.8825197219848633,
+          "mean_speed_error": 0.5040310621261597,
+          "mean_frequency_hz": 4.539807319641113,
+          "mean_duty_factor": 0.5796430706977844,
+          "mean_swing_amplitude_m": [
+            0.12230866402387619,
+            0.12017235159873962,
+            0.12279363721609116,
+            0.12017235159873962
+          ]
+        },
+        {
+          "env": 160,
+          "success": false,
+          "failed": true,
+          "timeout": false,
+          "duration": 2.819998025894165,
+          "max_forward": 0.9436178207397461,
+          "max_lateral": 0.7514667510986328,
+          "final_forward": 0.9436178207397461,
+          "mean_speed_error": 0.46981582045555115,
+          "mean_frequency_hz": 4.348734378814697,
+          "mean_duty_factor": 0.5967961549758911,
+          "mean_swing_amplitude_m": [
+            0.12017721682786942,
+            0.12017721682786942,
+            0.12017721682786942,
+            0.12209747731685638
+          ]
+        },
+        {
+          "env": 163,
+          "success": false,
+          "failed": true,
+          "timeout": false,
+          "duration": 8.139996528625488,
+          "max_forward": 1.6886749267578125,
+          "max_lateral": 0.34589195251464844,
+          "final_forward": 1.1137733459472656,
+          "mean_speed_error": 0.6180855631828308,
+          "mean_frequency_hz": 4.179562091827393,
+          "mean_duty_factor": 0.5988925695419312,
+          "mean_swing_amplitude_m": [
+            0.12064440548419952,
+            0.1207856610417366,
+            0.12490041553974152,
+            0.12385614961385727
+          ]
+        },
+        {
+          "env": 166,
+          "success": false,
+          "failed": true,
+          "timeout": false,
+          "duration": 6.599994659423828,
+          "max_forward": 1.138235092163086,
+          "max_lateral": 0.1444091796875,
+          "final_forward": 0.5142803192138672,
+          "mean_speed_error": 0.6706059575080872,
+          "mean_frequency_hz": 4.128114223480225,
+          "mean_duty_factor": 0.5910574793815613,
+          "mean_swing_amplitude_m": [
+            0.1200755387544632,
+            0.1200755387544632,
+            0.12125447392463684,
+            0.1206333115696907
+          ]
+        }
+      ],
+      "success_rate": 0.0
+    },
+    {
+      "terrain": "stairs",
+      "column": 2,
+      "difficulty": 1.0,
+      "speed": 1.2,
+      "parameters": {
+        "step_height_range": 0.08,
+        "step_width": 0.6,
+        "step_signs": [
+          -1
+        ],
+        "axis": "x",
+        "platform_size": 3.0,
+        "height_offset": 0.0,
+        "roughness": null
+      },
+      "episodes": [
+        {
+          "env": 146,
+          "success": false,
+          "failed": true,
+          "timeout": false,
+          "duration": 2.579998254776001,
+          "max_forward": 1.0022459030151367,
+          "max_lateral": 0.3707466125488281,
+          "final_forward": 1.0022459030151367,
+          "mean_speed_error": 0.839497983455658,
+          "mean_frequency_hz": 4.096675872802734,
+          "mean_duty_factor": 0.5802190899848938,
+          "mean_swing_amplitude_m": [
+            0.12019364535808563,
+            0.12019364535808563,
+            0.1204901784658432,
+            0.12357182055711746
+          ]
+        },
+        {
+          "env": 149,
+          "success": false,
+          "failed": true,
+          "timeout": false,
+          "duration": 4.739996433258057,
+          "max_forward": 1.366464614868164,
+          "max_lateral": 1.4784889221191406,
+          "final_forward": 1.2185735702514648,
+          "mean_speed_error": 0.8438073396682739,
+          "mean_frequency_hz": 4.429850101470947,
+          "mean_duty_factor": 0.5926088094711304,
+          "mean_swing_amplitude_m": [
+            0.12010551244020462,
+            0.12010551244020462,
+            0.12010551244020462,
+            0.1221034899353981
+          ]
+        },
+        {
+          "env": 152,
+          "success": false,
+          "failed": true,
+          "timeout": false,
+          "duration": 2.4199984073638916,
+          "max_forward": 0.8905153274536133,
+          "max_lateral": 0.13585662841796875,
+          "final_forward": 0.3818941116333008,
+          "mean_speed_error": 0.8721581101417542,
+          "mean_frequency_hz": 4.303901195526123,
+          "mean_duty_factor": 0.5995730757713318,
+          "mean_swing_amplitude_m": [
+            0.12042127549648285,
+            0.12020640075206757,
+            0.12020640075206757,
+            0.12144634127616882
+          ]
+        },
+        {
+          "env": 155,
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 9.360024452209473,
+          "max_forward": 3.413646697998047,
+          "max_lateral": 0.4472522735595703,
+          "final_forward": 3.413646697998047,
+          "mean_speed_error": 0.8370903134346008,
+          "mean_frequency_hz": 3.989694595336914,
+          "mean_duty_factor": 0.6204015612602234,
+          "mean_swing_amplitude_m": [
+            0.12005292624235153,
+            0.12005292624235153,
+            0.12260555475950241,
+            0.12160226702690125
+          ]
+        },
+        {
+          "env": 158,
+          "success": false,
+          "failed": true,
+          "timeout": false,
+          "duration": 3.2799975872039795,
+          "max_forward": 1.0461997985839844,
+          "max_lateral": 1.3184013366699219,
+          "final_forward": 0.9630136489868164,
+          "mean_speed_error": 0.8708000779151917,
+          "mean_frequency_hz": 4.188247203826904,
+          "mean_duty_factor": 0.6124894022941589,
+          "mean_swing_amplitude_m": [
+            0.12015245854854584,
+            0.12143470346927643,
+            0.12015245854854584,
+            0.12367119640111923
+          ]
+        },
+        {
+          "env": 161,
+          "success": false,
+          "failed": true,
+          "timeout": false,
+          "duration": 6.599994659423828,
+          "max_forward": 1.8520336151123047,
+          "max_lateral": 1.1073036193847656,
+          "final_forward": 1.8036689758300781,
+          "mean_speed_error": 0.9388779997825623,
+          "mean_frequency_hz": 3.8947670459747314,
+          "mean_duty_factor": 0.6046932935714722,
+          "mean_swing_amplitude_m": [
+            0.1200755387544632,
+            0.1200755387544632,
+            0.12119174003601074,
+            0.12214546650648117
+          ]
+        },
+        {
+          "env": 164,
+          "success": false,
+          "failed": true,
+          "timeout": false,
+          "duration": 2.459998369216919,
+          "max_forward": 0.9042472839355469,
+          "max_lateral": 0.9485340118408203,
+          "final_forward": 0.8122282028198242,
+          "mean_speed_error": 0.7087147831916809,
+          "mean_frequency_hz": 4.135538578033447,
+          "mean_duty_factor": 0.5963274836540222,
+          "mean_swing_amplitude_m": [
+            0.1204138696193695,
+            0.12020305544137955,
+            0.1226353868842125,
+            0.12020305544137955
+          ]
+        },
+        {
+          "env": 167,
+          "success": false,
+          "failed": true,
+          "timeout": false,
+          "duration": 3.5999972820281982,
+          "max_forward": 1.3280763626098633,
+          "max_lateral": 1.0599956512451172,
+          "final_forward": 1.3280763626098633,
+          "mean_speed_error": 0.8037316799163818,
+          "mean_frequency_hz": 4.3598480224609375,
+          "mean_duty_factor": 0.5836016535758972,
+          "mean_swing_amplitude_m": [
+            0.12013896554708481,
+            0.12013896554708481,
+            0.12224912643432617,
+            0.12373685091733932
+          ]
+        }
+      ],
+      "success_rate": 0.125
+    },
+    {
+      "terrain": "stairs",
+      "column": 3,
+      "difficulty": 1.0,
+      "speed": 0.5,
+      "parameters": {
+        "step_height_range": 0.08,
+        "step_width": 0.6,
+        "step_signs": [
+          1
+        ],
+        "axis": "x",
+        "platform_size": 3.0,
+        "height_offset": 0.0,
+        "roughness": null
+      },
+      "episodes": [
+        {
+          "env": 168,
+          "success": false,
+          "failed": true,
+          "timeout": false,
+          "duration": 5.179996013641357,
+          "max_forward": 2.240229606628418,
+          "max_lateral": 0.2936363220214844,
+          "final_forward": 2.240229606628418,
+          "mean_speed_error": 0.2162087857723236,
+          "mean_frequency_hz": 3.8935720920562744,
+          "mean_duty_factor": 0.6079099774360657,
+          "mean_swing_amplitude_m": [
+            0.12009647488594055,
+            0.12009647488594055,
+            0.12104649096727371,
+            0.12009647488594055
+          ]
+        },
+        {
+          "env": 171,
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 8.079995155334473,
+          "max_forward": 3.4000377655029297,
+          "max_lateral": 0.691619873046875,
+          "final_forward": 3.4000377655029297,
+          "mean_speed_error": 0.20072625577449799,
+          "mean_frequency_hz": 4.031784534454346,
+          "mean_duty_factor": 0.5988836288452148,
+          "mean_swing_amplitude_m": [
+            0.12006152421236038,
+            0.12006152421236038,
+            0.12006152421236038,
+            0.12018347531557083
+          ]
+        },
+        {
+          "env": 174,
+          "success": false,
+          "failed": true,
+          "timeout": false,
+          "duration": 4.479996681213379,
+          "max_forward": 2.531095504760742,
+          "max_lateral": 0.30114173889160156,
+          "final_forward": 2.531095504760742,
+          "mean_speed_error": 0.16535378992557526,
+          "mean_frequency_hz": 3.8635456562042236,
+          "mean_duty_factor": 0.6198577284812927,
+          "mean_swing_amplitude_m": [
+            0.12011168152093887,
+            0.12011168152093887,
+            0.12011168152093887,
+            0.12011168152093887
+          ]
+        },
+        {
+          "env": 177,
+          "success": false,
+          "failed": true,
+          "timeout": false,
+          "duration": 4.819996356964111,
+          "max_forward": 2.4469852447509766,
+          "max_lateral": 0.189208984375,
+          "final_forward": 2.4469852447509766,
+          "mean_speed_error": 0.19066938757896423,
+          "mean_frequency_hz": 3.937903881072998,
+          "mean_duty_factor": 0.6047653555870056,
+          "mean_swing_amplitude_m": [
+            0.12010374665260315,
+            0.12010374665260315,
+            0.12010374665260315,
+            0.12010374665260315
+          ]
+        },
+        {
+          "env": 180,
+          "success": false,
+          "failed": true,
+          "timeout": false,
+          "duration": 3.8399970531463623,
+          "max_forward": 2.385578155517578,
+          "max_lateral": 0.27796363830566406,
+          "final_forward": 2.385578155517578,
+          "mean_speed_error": 0.1938406378030777,
+          "mean_frequency_hz": 3.9574697017669678,
+          "mean_duty_factor": 0.6195216178894043,
+          "mean_swing_amplitude_m": [
+            0.12097965180873871,
+            0.12013032287359238,
+            0.12013032287359238,
+            0.12013032287359238
+          ]
+        },
+        {
+          "env": 183,
+          "success": false,
+          "failed": true,
+          "timeout": false,
+          "duration": 5.339995861053467,
+          "max_forward": 2.551812171936035,
+          "max_lateral": 0.23675537109375,
+          "final_forward": 2.551812171936035,
+          "mean_speed_error": 0.17135830223560333,
+          "mean_frequency_hz": 3.978793144226074,
+          "mean_duty_factor": 0.6170364022254944,
+          "mean_swing_amplitude_m": [
+            0.12049389630556107,
+            0.12009356170892715,
+            0.12009356170892715,
+            0.12009356170892715
+          ]
+        },
+        {
+          "env": 186,
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 7.779993534088135,
+          "max_forward": 3.4146547317504883,
+          "max_lateral": 0.5284156799316406,
+          "final_forward": 3.4146547317504883,
+          "mean_speed_error": 0.18159635365009308,
+          "mean_frequency_hz": 4.048697471618652,
+          "mean_duty_factor": 0.6052680611610413,
+          "mean_swing_amplitude_m": [
+            0.12006396055221558,
+            0.12006396055221558,
+            0.12006396055221558,
+            0.12006396055221558
+          ]
+        },
+        {
+          "env": 189,
+          "success": false,
+          "failed": true,
+          "timeout": false,
+          "duration": 6.199995040893555,
+          "max_forward": 2.941727638244629,
+          "max_lateral": 0.46944236755371094,
+          "final_forward": 2.941727638244629,
+          "mean_speed_error": 0.2352581024169922,
+          "mean_frequency_hz": 4.062053680419922,
+          "mean_duty_factor": 0.5904799103736877,
+          "mean_swing_amplitude_m": [
+            0.12034029513597488,
+            0.12008047103881836,
+            0.12008047103881836,
+            0.12008047103881836
+          ]
+        }
+      ],
+      "success_rate": 0.25
+    },
+    {
+      "terrain": "stairs",
+      "column": 3,
+      "difficulty": 1.0,
+      "speed": 0.8,
+      "parameters": {
+        "step_height_range": 0.08,
+        "step_width": 0.6,
+        "step_signs": [
+          1
+        ],
+        "axis": "x",
+        "platform_size": 3.0,
+        "height_offset": 0.0,
+        "roughness": null
+      },
+      "episodes": [
+        {
+          "env": 169,
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 6.219995021820068,
+          "max_forward": 3.4055099487304688,
+          "max_lateral": 1.4750003814697266,
+          "final_forward": 3.4055099487304688,
+          "mean_speed_error": 0.2564530372619629,
+          "mean_frequency_hz": 4.161020755767822,
+          "mean_duty_factor": 0.5985495448112488,
+          "mean_swing_amplitude_m": [
+            0.12008021026849747,
+            0.12008021026849747,
+            0.12008021026849747,
+            0.12008021026849747
+          ]
+        },
+        {
+          "env": 172,
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 5.399995803833008,
+          "max_forward": 3.427267074584961,
+          "max_lateral": 0.7735519409179688,
+          "final_forward": 3.427267074584961,
+          "mean_speed_error": 0.3071132004261017,
+          "mean_frequency_hz": 4.067681789398193,
+          "mean_duty_factor": 0.5890691876411438,
+          "mean_swing_amplitude_m": [
+            0.12093456089496613,
+            0.12009251117706299,
+            0.12031682580709457,
+            0.12009251117706299
+          ]
+        },
+        {
+          "env": 175,
+          "success": false,
+          "failed": true,
+          "timeout": false,
+          "duration": 2.4799983501434326,
+          "max_forward": 1.4004287719726562,
+          "max_lateral": 0.623870849609375,
+          "final_forward": 1.4004287719726562,
+          "mean_speed_error": 0.3135259449481964,
+          "mean_frequency_hz": 4.563482761383057,
+          "mean_duty_factor": 0.5761959552764893,
+          "mean_swing_amplitude_m": [
+            0.12020142376422882,
+            0.12020142376422882,
+            0.12020142376422882,
+            0.12020142376422882
+          ]
+        },
+        {
+          "env": 178,
+          "success": false,
+          "failed": true,
+          "timeout": false,
+          "duration": 2.2999985218048096,
+          "max_forward": 1.792372703552246,
+          "max_lateral": 0.5234050750732422,
+          "final_forward": 1.792372703552246,
+          "mean_speed_error": 0.30403047800064087,
+          "mean_frequency_hz": 4.43279504776001,
+          "mean_duty_factor": 0.5873764753341675,
+          "mean_swing_amplitude_m": [
+            0.12021713703870773,
+            0.12021713703870773,
+            0.12021713703870773,
+            0.12021713703870773
+          ]
+        },
+        {
+          "env": 181,
+          "success": false,
+          "failed": true,
+          "timeout": false,
+          "duration": 3.9999969005584717,
+          "max_forward": 2.2840967178344727,
+          "max_lateral": 0.7996234893798828,
+          "final_forward": 2.2840967178344727,
+          "mean_speed_error": 0.3255939781665802,
+          "mean_frequency_hz": 4.088860511779785,
+          "mean_duty_factor": 0.5977420210838318,
+          "mean_swing_amplitude_m": [
+            0.1209598109126091,
+            0.12012512981891632,
+            0.12019239366054535,
+            0.12012512981891632
+          ]
+        },
+        {
+          "env": 184,
+          "success": false,
+          "failed": true,
+          "timeout": false,
+          "duration": 4.15999698638916,
+          "max_forward": 2.4796371459960938,
+          "max_lateral": 0.2665691375732422,
+          "final_forward": 2.4796371459960938,
+          "mean_speed_error": 0.35249024629592896,
+          "mean_frequency_hz": 4.233046054840088,
+          "mean_duty_factor": 0.5858095288276672,
+          "mean_swing_amplitude_m": [
+            0.12149009853601456,
+            0.1201203390955925,
+            0.1201203390955925,
+            0.1201203390955925
+          ]
+        },
+        {
+          "env": 187,
+          "success": false,
+          "failed": true,
+          "timeout": false,
+          "duration": 3.6399972438812256,
+          "max_forward": 2.567331314086914,
+          "max_lateral": 0.20843505859375,
+          "final_forward": 2.567331314086914,
+          "mean_speed_error": 0.3334980607032776,
+          "mean_frequency_hz": 4.360288619995117,
+          "mean_duty_factor": 0.5837818384170532,
+          "mean_swing_amplitude_m": [
+            0.12013744562864304,
+            0.12068993598222733,
+            0.12013744562864304,
+            0.12013744562864304
+          ]
+        },
+        {
+          "env": 190,
+          "success": false,
+          "failed": true,
+          "timeout": false,
+          "duration": 1.6999989748001099,
+          "max_forward": 0.9802579879760742,
+          "max_lateral": 0.3009033203125,
+          "final_forward": 0.9802579879760742,
+          "mean_speed_error": 0.36030304431915283,
+          "mean_frequency_hz": 4.3149518966674805,
+          "mean_duty_factor": 0.5946865081787109,
+          "mean_swing_amplitude_m": [
+            0.12029371410608292,
+            0.12029371410608292,
+            0.12029371410608292,
+            0.12029371410608292
+          ]
+        }
+      ],
+      "success_rate": 0.25
+    },
+    {
+      "terrain": "stairs",
+      "column": 3,
+      "difficulty": 1.0,
+      "speed": 1.2,
+      "parameters": {
+        "step_height_range": 0.08,
+        "step_width": 0.6,
+        "step_signs": [
+          1
+        ],
+        "axis": "x",
+        "platform_size": 3.0,
+        "height_offset": 0.0,
+        "roughness": null
+      },
+      "episodes": [
+        {
+          "env": 170,
+          "success": false,
+          "failed": true,
+          "timeout": false,
+          "duration": 2.1199986934661865,
+          "max_forward": 2.046934127807617,
+          "max_lateral": 0.06006622314453125,
+          "final_forward": 2.046934127807617,
+          "mean_speed_error": 0.44835737347602844,
+          "mean_frequency_hz": 4.788668155670166,
+          "mean_duty_factor": 0.5485690832138062,
+          "mean_swing_amplitude_m": [
+            0.12271884083747864,
+            0.12023551762104034,
+            0.12023551762104034,
+            0.12023551762104034
+          ]
+        },
+        {
+          "env": 173,
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 6.479994773864746,
+          "max_forward": 3.401264190673828,
+          "max_lateral": 1.4587078094482422,
+          "final_forward": 3.401264190673828,
+          "mean_speed_error": 0.5617490410804749,
+          "mean_frequency_hz": 4.4625935554504395,
+          "mean_duty_factor": 0.5754587650299072,
+          "mean_swing_amplitude_m": [
+            0.12007695436477661,
+            0.12007695436477661,
+            0.12063241004943848,
+            0.12007695436477661
+          ]
+        },
+        {
+          "env": 176,
+          "success": false,
+          "failed": true,
+          "timeout": false,
+          "duration": 2.199998617172241,
+          "max_forward": 1.897761344909668,
+          "max_lateral": 0.5074272155761719,
+          "final_forward": 1.897761344909668,
+          "mean_speed_error": 0.5029964447021484,
+          "mean_frequency_hz": 4.9842915534973145,
+          "mean_duty_factor": 0.5595303177833557,
+          "mean_swing_amplitude_m": [
+            0.12022697925567627,
+            0.12119264155626297,
+            0.12022697925567627,
+            0.12022697925567627
+          ]
+        },
+        {
+          "env": 179,
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 4.899996280670166,
+          "max_forward": 3.4170217514038086,
+          "max_lateral": 0.5009746551513672,
+          "final_forward": 3.4170217514038086,
+          "mean_speed_error": 0.5225284099578857,
+          "mean_frequency_hz": 4.370515823364258,
+          "mean_duty_factor": 0.5879532098770142,
+          "mean_swing_amplitude_m": [
+            0.12010204046964645,
+            0.12010204046964645,
+            0.12010204046964645,
+            0.12010204046964645
+          ]
+        },
+        {
+          "env": 182,
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 5.159996032714844,
+          "max_forward": 3.412135124206543,
+          "max_lateral": 0.1621723175048828,
+          "final_forward": 3.412135124206543,
+          "mean_speed_error": 0.5859166979789734,
+          "mean_frequency_hz": 4.158819198608398,
+          "mean_duty_factor": 0.5982505679130554,
+          "mean_swing_amplitude_m": [
+            0.12033203989267349,
+            0.120096854865551,
+            0.12037260830402374,
+            0.120096854865551
+          ]
+        },
+        {
+          "env": 185,
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 5.259995937347412,
+          "max_forward": 3.412796974182129,
+          "max_lateral": 1.0678749084472656,
+          "final_forward": 3.412796974182129,
+          "mean_speed_error": 0.561992883682251,
+          "mean_frequency_hz": 4.109027862548828,
+          "mean_duty_factor": 0.5982832908630371,
+          "mean_swing_amplitude_m": [
+            0.12014582008123398,
+            0.12009499967098236,
+            0.12009499967098236,
+            0.12050103396177292
+          ]
+        },
+        {
+          "env": 188,
+          "success": false,
+          "failed": true,
+          "timeout": false,
+          "duration": 3.8799970149993896,
+          "max_forward": 2.336132049560547,
+          "max_lateral": 0.5088520050048828,
+          "final_forward": 2.336132049560547,
+          "mean_speed_error": 0.693906843662262,
+          "mean_frequency_hz": 4.220993995666504,
+          "mean_duty_factor": 0.5976720452308655,
+          "mean_swing_amplitude_m": [
+            0.12012898176908493,
+            0.12012898176908493,
+            0.12012898176908493,
+            0.12079829722642899
+          ]
+        },
+        {
+          "env": 191,
+          "success": false,
+          "failed": true,
+          "timeout": false,
+          "duration": 3.0999977588653564,
+          "max_forward": 2.229020118713379,
+          "max_lateral": 0.8145618438720703,
+          "final_forward": 2.229020118713379,
+          "mean_speed_error": 0.5396230220794678,
+          "mean_frequency_hz": 4.708559513092041,
+          "mean_duty_factor": 0.5486984848976135,
+          "mean_swing_amplitude_m": [
+            0.120161272585392,
+            0.120161272585392,
+            0.120161272585392,
+            0.120161272585392
+          ]
+        }
+      ],
+      "success_rate": 0.5
+    }
+  ],
+  "notes": "High actor deterministic; low actor deterministic unless sample_low. First episode only, fixed forward commands. No pushes, mass/friction randomization or observation noise; initial jitter retained. Success requires forward exit without falling or exceeding lateral corridor."
+}

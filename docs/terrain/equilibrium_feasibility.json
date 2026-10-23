@@ -1,0 +1,138 @@
+{
+  "scope": "Terrain geometry and six-gait equilibrium-box workspace, raw vs bounded IK; not certified traversal.",
+  "terrain": {
+    "flat": {
+      "tiles": 60,
+      "max_adjacent_height_m": 0.0,
+      "max_sampled_grade": 0.0,
+      "max_spawn_drop_m": 0.0
+    },
+    "slope": {
+      "tiles": 60,
+      "max_adjacent_height_m": 0.030000000000000027,
+      "max_sampled_grade": 0.325,
+      "max_spawn_drop_m": 1.0728836041806744e-08
+    },
+    "rough_slope": {
+      "tiles": 60,
+      "max_adjacent_height_m": 0.03500000000000003,
+      "max_sampled_grade": 0.3535533905932738,
+      "max_spawn_drop_m": 0.040000011920928946
+    },
+    "rough": {
+      "tiles": 60,
+      "max_adjacent_height_m": 0.030000000000000002,
+      "max_sampled_grade": 0.29261749776799056,
+      "max_spawn_drop_m": 0.06000000014901161
+    },
+    "rubble": {
+      "tiles": 60,
+      "max_adjacent_height_m": 0.08,
+      "max_sampled_grade": 0.565685424949238,
+      "max_spawn_drop_m": 0.0
+    },
+    "stairs": {
+      "tiles": 60,
+      "max_adjacent_height_m": 0.08000000000000002,
+      "max_sampled_grade": 0.5656854249492381,
+      "max_spawn_drop_m": 1.1920928966180355e-08
+    },
+    "ramp": {
+      "tiles": 60,
+      "max_adjacent_height_m": 0.030000000000000027,
+      "max_sampled_grade": 0.30000000000000027,
+      "max_spawn_drop_m": 0.0
+    },
+    "wave": {
+      "tiles": 60,
+      "max_adjacent_height_m": 0.010000000000000009,
+      "max_sampled_grade": 0.14142135623730953,
+      "max_spawn_drop_m": 0.049999998807907106
+    }
+  },
+  "kinematics": {
+    "samples": 497664,
+    "infeasible_samples": 0,
+    "requested_infeasible_samples": 45500,
+    "minimum_joint_margin_rad": 0.019999980926513672,
+    "raw_cosine_range": [
+      -0.9995624423027039,
+      0.8559920191764832
+    ],
+    "equilibrium_limits_m": [
+      0.04,
+      0.025,
+      0.04
+    ],
+    "projected_sample_fraction": 0.1071164458990097,
+    "max_projection_distance_m": 0.04056601971387863,
+    "reference_speed_limit_ratio": 5.190313339233398,
+    "reference_speed_limit_ratio_by_gait": {
+      "walk": 4.472040176391602,
+      "pace": 3.426149606704712,
+      "trot": 4.568199634552002,
+      "canter": 4.185840606689453,
+      "bound": 4.973587989807129,
+      "gallop": 5.190313339233398
+    },
+    "speed_note": "Reference-trajectory estimate at library frequency; not measured motor speed or torque feasibility."
+  },
+  "seeds": [
+    1,
+    7,
+    19
+  ],
+  "initial_terrain": {
+    "flat": {
+      "tiles": 12,
+      "max_adjacent_height_m": 0.0,
+      "max_sampled_grade": 0.0,
+      "max_spawn_drop_m": 0.0
+    },
+    "slope": {
+      "tiles": 12,
+      "max_adjacent_height_m": 0.0050000000000000044,
+      "max_sampled_grade": 0.07071067811865471,
+      "max_spawn_drop_m": 2.980232241545089e-09
+    },
+    "rough_slope": {
+      "tiles": 12,
+      "max_adjacent_height_m": 0.010000000000000002,
+      "max_sampled_grade": 0.1030776406404415,
+      "max_spawn_drop_m": 0.010000000298023226
+    },
+    "rough": {
+      "tiles": 12,
+      "max_adjacent_height_m": 0.005,
+      "max_sampled_grade": 0.07071067811865475,
+      "max_spawn_drop_m": 0.009999999888241292
+    },
+    "rubble": {
+      "tiles": 12,
+      "max_adjacent_height_m": 0.02,
+      "max_sampled_grade": 0.1414213562373095,
+      "max_spawn_drop_m": 0.0
+    },
+    "stairs": {
+      "tiles": 12,
+      "max_adjacent_height_m": 0.015,
+      "max_sampled_grade": 0.10606601717798213,
+      "max_spawn_drop_m": 2.980232241545089e-09
+    },
+    "ramp": {
+      "tiles": 12,
+      "max_adjacent_height_m": 0.009999999999999995,
+      "max_sampled_grade": 0.075,
+      "max_spawn_drop_m": 0.0
+    },
+    "wave": {
+      "tiles": 12,
+      "max_adjacent_height_m": 0.005000000000000001,
+      "max_sampled_grade": 0.055901699437494734,
+      "max_spawn_drop_m": 0.009999999664723872
+    }
+  },
+  "initial_geometry_and_position_screen_passed": true,
+  "challenge_geometry_screen_passed": true,
+  "dynamic_tracking_certified": false
+}

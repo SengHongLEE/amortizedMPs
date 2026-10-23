@@ -1,0 +1,3301 @@
+{
+  "seed": 321,
+  "repeats": 32,
+  "stance_extension": 0.02,
+  "paired_candidates": true,
+  "effective_config": {
+    "asset": {
+      "angular_damping": 0.0,
+      "armature": 0.0,
+      "calf_link_length_a1": 0.2,
+      "collapse_fixed_joints": true,
+      "default_dof_drive_mode": 3,
+      "density": 0.001,
+      "disable_gravity": false,
+      "file": "{LEGGED_GYM_ROOT_DIR}/resources/robots/a1/urdf/a1_updated_v2.urdf",
+      "fix_base_link": false,
+      "flip_visual_attachments": true,
+      "foot_name": "foot",
+      "ground_clearance": 0.15,
+      "ground_penetration": 0.0,
+      "hip_link_length_a1": 0.0838,
+      "linear_damping": 0.0,
+      "max_angular_velocity": 1000.0,
+      "max_ground_clearance": 0.2,
+      "max_linear_velocity": 1000.0,
+      "max_step_length": 0.1,
+      "penalize_contacts_on": [
+        "thigh",
+        "calf"
+      ],
+      "replace_cylinder_with_capsule": true,
+      "self_collisions": 1,
+      "terminate_after_contacts_on": [
+        "base"
+      ],
+      "thickness": 0.01,
+      "thigh_link_length_a1": 0.2
+    },
+    "commands": {
+      "heading_command": true,
+      "max_vel_x": 1.5,
+      "num_commands": 4,
+      "ranges": {
+        "ang_vel_yaw": [
+          0.0,
+          0.0
+        ],
+        "heading": [
+          -0.0,
+          0.0
+        ],
+        "lin_vel_x": [
+          0.3,
+          1.5
+        ],
+        "lin_vel_y": [
+          -0.0,
+          0.0
+        ]
+      },
+      "resampling_time": 5
+    },
+    "control": {
+      "action_scale": 1.0,
+      "cycle": 2,
+      "damping": {
+        "joint": 2.0
+      },
+      "decimation": 10,
+      "equilibrium": {
+        "acceleration_limits": [
+          4.0,
+          3.0,
+          4.0
+        ],
+        "frequency_hz": 3.0,
+        "joint_limit_margin": 0.02,
+        "min_foot_depth": 0.06,
+        "min_sagittal_reach": 0.06,
+        "offset_limits": [
+          0.04,
+          0.025,
+          0.04
+        ],
+        "stance_velocity_limits": [
+          0.06,
+          0.04,
+          0.08
+        ],
+        "swing_velocity_limits": [
+          0.4,
+          0.25,
+          0.4
+        ]
+      },
+      "hierarchical": false,
+      "modulation_param_update_cycle": 1,
+      "oscillator_type": "phase_oscillator",
+      "primitive_selection_update_cycle": 25,
+      "stiffness": {
+        "joint": 100.0
+      },
+      "timing": {
+        "align_stroke": true,
+        "clearance_range": [
+          0.06,
+          0.2
+        ],
+        "duty_factor_range": [
+          0.3,
+          0.8
+        ],
+        "duty_offset_range": [
+          -0.15,
+          0.25
+        ],
+        "frequency_scale_range": [
+          0.35,
+          1.2
+        ],
+        "time_constant": 0.1
+      },
+      "update_quality_threshold": 0.85,
+      "varied_decimation": false
+    },
+    "domain_rand": {
+      "added_mass_range": [
+        -2.0,
+        3.0
+      ],
+      "friction_range": [
+        0.6,
+        1.0
+      ],
+      "max_push_vel_xy": 0.3,
+      "push_interval": 250.0,
+      "push_interval_s": 5,
+      "push_robots": false,
+      "randomize_base_mass": false,
+      "randomize_friction": false
+    },
+    "env": {
+      "action_space": "cpg_equilibrium_v2",
+      "env_spacing": 3.0,
+      "episode_length_s": 18.0,
+      "num_actions": 23,
+      "num_controller_observations": 72,
+      "num_envs": 256,
+      "num_modulation_params": 22,
+      "num_observations": 132,
+      "num_primitives": 6,
+      "num_privileged_obs": 139,
+      "play": false,
+      "send_timeouts": true
+    },
+    "init_member_classes": {},
+    "init_state": {
+      "ang_vel": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "default_joint_angles": {
+        "FL_hip_joint": 0.1,
+        "RL_hip_joint": 0.1,
+        "FR_hip_joint": -0.1,
+        "RR_hip_joint": -0.1,
+        "FL_thigh_joint": 0.8,
+        "RL_thigh_joint": 1.0,
+        "FR_thigh_joint": 0.8,
+        "RR_thigh_joint": 1.0,
+        "FL_calf_joint": -1.5,
+        "RL_calf_joint": -1.5,
+        "FR_calf_joint": -1.5,
+        "RR_calf_joint": -1.5
+      },
+      "lin_vel": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "pos": [
+        0.0,
+        0.0,
+        0.32
+      ],
+      "rot": [
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ]
+    },
+    "noise": {
+      "add_noise": false,
+      "noise_level": 1.0,
+      "noise_scales": {
+        "ang_vel": 0.4,
+        "dof_pos": 0.5,
+        "dof_vel": 1.5,
+        "gravity": 0.1,
+        "height_measurements": 0.0,
+        "lin_vel": 0.1
+      }
+    },
+    "normalization": {
+      "clip_actions": 1.0,
+      "clip_observations": 100.0,
+      "obs_scales": {
+        "ang_vel": 0.25,
+        "dof_pos": 1.0,
+        "dof_vel": 0.05,
+        "height_measurements": 5.0,
+        "lin_vel": 2.0
+      }
+    },
+    "rewards": {
+      "base_height_target": 0.32,
+      "contact_off_force": 1.0,
+      "contact_on_force": 5.0,
+      "max_contact_force": 180.0,
+      "modulation_param_rewards": [
+        "tracking_lin_vel",
+        "tracking_ang_vel",
+        "orientation",
+        "orientation_yaw",
+        "ang_vel_xy",
+        "action_rate_mp",
+        "stance_slip",
+        "exceed_torque_limits_l1norm",
+        "dof_vel_limits"
+      ],
+      "only_positive_rewards": false,
+      "pi_g_contact_force": 1.0,
+      "pi_g_switch_cost": 2.0,
+      "pi_g_utility_weight": 0.4,
+      "primitive_selection_rewards": [
+        "pi_g_utility",
+        "pi_g_cot",
+        "pi_g_torque",
+        "pi_g_contact",
+        "pi_g_work"
+      ],
+      "primitive_selection_scales": {
+        "pi_g_contact": 1.0,
+        "pi_g_cot": 1.0,
+        "pi_g_torque": 1.0,
+        "pi_g_utility": 1.0,
+        "pi_g_work": 1.0
+      },
+      "scales": {
+        "action_rate_mp": -0.1,
+        "action_rate_ps": -0.1,
+        "ang_vel_xy": -0.1,
+        "dof_vel_limits": -0.4,
+        "exceed_torque_limits_l1norm": -0.4,
+        "orientation": -2.0,
+        "orientation_yaw": -2.0,
+        "stance_slip": -0.2,
+        "tracking_ang_vel": 1.5,
+        "tracking_lin_vel": 3.0
+      },
+      "soft_dof_pos_limit": 0.9,
+      "soft_dof_vel_limit": 0.9,
+      "soft_torque_limit": 0.9,
+      "task_rewards": [
+        "tracking_lin_vel",
+        "tracking_ang_vel"
+      ],
+      "touchdown_force_scale": 180.0,
+      "touchdown_force_weight": 0.25,
+      "touchdown_force_window": 0.02,
+      "touchdown_min_air_time": 0.02,
+      "touchdown_velocity_scale": 1.0,
+      "tracking_sigma": 0.25
+    },
+    "seed": 1,
+    "sim": {
+      "dt": 0.001,
+      "gravity": [
+        0.0,
+        0.0,
+        -9.81
+      ],
+      "physx": {
+        "bounce_threshold_velocity": 0.5,
+        "contact_collection": 2,
+        "contact_offset": 0.01,
+        "default_buffer_size_multiplier": 5,
+        "max_depenetration_velocity": 1.0,
+        "max_gpu_contact_pairs": 8388608,
+        "num_position_iterations": 4,
+        "num_threads": 10,
+        "num_velocity_iterations": 0,
+        "rest_offset": 0.0,
+        "solver_type": 1
+      },
+      "substeps": 1,
+      "up_axis": 1
+    },
+    "terrain": {
+      "border_size": 4.0,
+      "boundary_margin": 0.6,
+      "curriculum": false,
+      "curriculum_demote_ratio": 0.5,
+      "curriculum_initial_level": 5,
+      "curriculum_max_level": null,
+      "curriculum_min_level": 0,
+      "curriculum_promote_distance": 2.5,
+      "curriculum_promote_ratio": 0.8,
+      "difficulty_mode": "linear",
+      "difficulty_range": [
+        0.0,
+        1.0
+      ],
+      "dynamic_friction": 1.0,
+      "fixed_terrain_level": null,
+      "horizontal_scale": 0.1,
+      "max_init_terrain_level": null,
+      "measure_heights": false,
+      "mesh_type": "trimesh",
+      "num_cols": 1,
+      "num_rows": 2,
+      "origin_sample_size": 1.0,
+      "platform_size": 3.0,
+      "restitution": 0.0,
+      "row_difficulties": [
+        0.0,
+        1.0
+      ],
+      "seed": 1,
+      "selected": "stairs",
+      "selected_kwargs": null,
+      "slope_threshold": 0.75,
+      "spawn_platform": false,
+      "spawn_xy_jitter": 0.1,
+      "static_friction": 1.0,
+      "terrain_columns": null,
+      "terrain_length": 8.0,
+      "terrain_params": {
+        "flat": {
+          "height": 0.0
+        },
+        "slope": {
+          "slope_range": [
+            0.02,
+            0.3
+          ],
+          "slope_signs": [
+            -1,
+            1
+          ]
+        },
+        "ramp": {
+          "slope_range": [
+            0.02,
+            0.3
+          ],
+          "slope_signs": [
+            -1,
+            1
+          ],
+          "center_platform": true
+        },
+        "rough_slope": {
+          "slope_range": [
+            0.02,
+            0.2
+          ],
+          "slope_signs": [
+            -1,
+            1
+          ],
+          "height_range": [
+            0.005,
+            0.025
+          ],
+          "height_step": 0.005,
+          "downsampled_scale": 0.3
+        },
+        "rough": {
+          "height_range": [
+            0.005,
+            0.04
+          ],
+          "height_step": 0.005,
+          "downsampled_scale": 0.3
+        },
+        "rubble": {
+          "height_range": [
+            0.01,
+            0.04
+          ],
+          "stone_size_range": [
+            0.6,
+            1.2
+          ],
+          "num_rects": 12
+        },
+        "stairs": {
+          "step_height_range": [
+            0.0,
+            0.08
+          ],
+          "step_width": 0.6,
+          "step_signs": [
+            -1
+          ]
+        },
+        "stairs_linear": {
+          "step_height_range": [
+            0.01,
+            0.08
+          ],
+          "step_width": 0.4,
+          "step_signs": [
+            -1,
+            1
+          ]
+        },
+        "stepping_stones": {
+          "stone_size_range": [
+            0.8,
+            0.3
+          ],
+          "stone_distance_range": [
+            0.1,
+            0.3
+          ],
+          "height_range": [
+            0.0,
+            0.05
+          ],
+          "depth_range": [
+            0.2,
+            0.6
+          ]
+        },
+        "wave": {
+          "amplitude_range": [
+            0.01,
+            0.12
+          ],
+          "num_waves": 2
+        },
+        "gap": {
+          "width_range": [
+            0.1,
+            0.5
+          ],
+          "depth_range": [
+            0.2,
+            0.6
+          ],
+          "spacing": 1.5
+        },
+        "pit": {
+          "size_range": [
+            2.5,
+            3.0
+          ],
+          "depth_range": [
+            0.1,
+            0.5
+          ]
+        },
+        "hurdle": {
+          "width_range": [
+            0.2,
+            0.3
+          ],
+          "height_range": [
+            0.05,
+            0.2
+          ],
+          "spacing": 1.5
+        },
+        "beam": {
+          "width_range": [
+            1.0,
+            0.3
+          ],
+          "depth_range": [
+            0.2,
+            0.6
+          ]
+        }
+      },
+      "terrain_proportions": {
+        "flat": 1.0,
+        "slope": 1.0,
+        "rough_slope": 1.0,
+        "rough": 1.0,
+        "rubble": 1.0,
+        "stairs": 1.0,
+        "ramp": 1.0,
+        "stairs_linear": 0.0,
+        "stepping_stones": 0.0,
+        "wave": 1.0,
+        "gap": 0.0,
+        "pit": 0.0,
+        "hurdle": 0.0,
+        "beam": 0.0
+      },
+      "terrain_variants": {
+        "uphill": {
+          "type": "ramp",
+          "params": {
+            "slope_range": [
+              0.02,
+              0.3
+            ],
+            "slope_signs": [
+              1
+            ]
+          }
+        },
+        "downhill": {
+          "type": "ramp",
+          "params": {
+            "slope_range": [
+              0.02,
+              0.3
+            ],
+            "slope_signs": [
+              -1
+            ]
+          }
+        },
+        "side_slope": {
+          "type": "ramp",
+          "params": {
+            "slope_range": [
+              0.02,
+              0.2
+            ],
+            "axis": "y"
+          }
+        }
+      },
+      "terrain_width": 8.0,
+      "vertical_scale": 0.005
+    },
+    "viewer": {
+      "lookat": [
+        1.8,
+        0.8,
+        0.3
+      ],
+      "pos": [
+        1.8,
+        0.6,
+        0.4
+      ],
+      "ref_env": 0
+    }
+  },
+  "notes": "Constant nominal actions with optional proprioceptive posture feedback; diagnostic capacity search, not a trained RL policy or validation set.",
+  "candidates": [
+    {
+      "parameters": {
+        "gait": 2,
+        "scale": 0.55,
+        "duty": 0.1,
+        "lift": 0.14,
+        "amplitude": 0.8,
+        "bx": -0.02,
+        "bz": 0.02,
+        "posture_gain": 4.0,
+        "stance_z_speed": 0.08,
+        "equilibrium_frequency": 3.0
+      },
+      "actions": [
+        2.0,
+        0.2800000011920929,
+        0.2800000011920929,
+        0.2800000011920929,
+        0.2800000011920929,
+        -0.5,
+        -0.5,
+        -0.5,
+        -0.5,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.5,
+        0.5,
+        0.5,
+        0.5,
+        -0.1111111119389534,
+        -0.1111111119389534,
+        -0.1111111119389534,
+        -0.1111111119389534,
+        -0.692307710647583,
+        0.4000000059604645
+      ],
+      "flat": [
+        {
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 4.879996299743652,
+          "max_forward": 3.4086852073669434,
+          "max_lateral": 0.5290279388427734,
+          "final_forward": 3.4086852073669434,
+          "mean_speed_error": 0.29021549224853516
+        },
+        {
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 4.75999641418457,
+          "max_forward": 3.409423828125,
+          "max_lateral": 0.23134756088256836,
+          "final_forward": 3.409423828125,
+          "mean_speed_error": 0.30529099702835083
+        },
+        {
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 5.499995708465576,
+          "max_forward": 3.405302047729492,
+          "max_lateral": 0.3185548782348633,
+          "final_forward": 3.405302047729492,
+          "mean_speed_error": 0.19561351835727692
+        },
+        {
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 5.4199957847595215,
+          "max_forward": 3.4061264991760254,
+          "max_lateral": 0.4869389533996582,
+          "final_forward": 3.4061264991760254,
+          "mean_speed_error": 0.2044740915298462
+        },
+        {
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 4.719996452331543,
+          "max_forward": 3.409435749053955,
+          "max_lateral": 0.38332223892211914,
+          "final_forward": 3.409435749053955,
+          "mean_speed_error": 0.22488071024417877
+        },
+        {
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 5.499995708465576,
+          "max_forward": 3.4035911560058594,
+          "max_lateral": 0.18950843811035156,
+          "final_forward": 3.4035911560058594,
+          "mean_speed_error": 0.29521316289901733
+        },
+        {
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 4.679996490478516,
+          "max_forward": 3.4106521606445312,
+          "max_lateral": 0.3168296813964844,
+          "final_forward": 3.4106521606445312,
+          "mean_speed_error": 0.34002262353897095
+        },
+        {
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 4.599996566772461,
+          "max_forward": 3.408013343811035,
+          "max_lateral": 0.2933173179626465,
+          "final_forward": 3.408013343811035,
+          "mean_speed_error": 0.3180444538593292
+        },
+        {
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 4.679996490478516,
+          "max_forward": 3.410017967224121,
+          "max_lateral": 0.21621990203857422,
+          "final_forward": 3.410017967224121,
+          "mean_speed_error": 0.22847381234169006
+        },
+        {
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 4.899996280670166,
+          "max_forward": 3.4014482498168945,
+          "max_lateral": 0.2598128318786621,
+          "final_forward": 3.4014482498168945,
+          "mean_speed_error": 0.2752176821231842
+        },
+        {
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 4.839996337890625,
+          "max_forward": 3.410855770111084,
+          "max_lateral": 0.19814491271972656,
+          "final_forward": 3.410855770111084,
+          "mean_speed_error": 0.23058906197547913
+        },
+        {
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 5.159996032714844,
+          "max_forward": 3.409266471862793,
+          "max_lateral": 0.41255903244018555,
+          "final_forward": 3.409266471862793,
+          "mean_speed_error": 0.334668904542923
+        },
+        {
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 5.759995460510254,
+          "max_forward": 3.4061713218688965,
+          "max_lateral": 0.3605308532714844,
+          "final_forward": 3.4061713218688965,
+          "mean_speed_error": 0.268190860748291
+        },
+        {
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 5.159996032714844,
+          "max_forward": 3.413020133972168,
+          "max_lateral": 0.220062255859375,
+          "final_forward": 3.413020133972168,
+          "mean_speed_error": 0.20638322830200195
+        },
+        {
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 4.599996566772461,
+          "max_forward": 3.400416851043701,
+          "max_lateral": 0.1709744930267334,
+          "final_forward": 3.400416851043701,
+          "mean_speed_error": 0.30514833331108093
+        },
+        {
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 4.879996299743652,
+          "max_forward": 3.410020351409912,
+          "max_lateral": 0.3006172180175781,
+          "final_forward": 3.410020351409912,
+          "mean_speed_error": 0.3132815659046173
+        },
+        {
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 5.019996166229248,
+          "max_forward": 3.401871681213379,
+          "max_lateral": 0.4398493766784668,
+          "final_forward": 3.401871681213379,
+          "mean_speed_error": 0.2749209702014923
+        },
+        {
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 4.75999641418457,
+          "max_forward": 3.412540912628174,
+          "max_lateral": 0.45500946044921875,
+          "final_forward": 3.412540912628174,
+          "mean_speed_error": 0.3650813400745392
+        },
+        {
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 4.859996318817139,
+          "max_forward": 3.405428886413574,
+          "max_lateral": 0.10705184936523438,
+          "final_forward": 3.405428886413574,
+          "mean_speed_error": 0.2755138874053955
+        },
+        {
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 5.119996070861816,
+          "max_forward": 3.4103856086730957,
+          "max_lateral": 0.10086536407470703,
+          "final_forward": 3.4103856086730957,
+          "mean_speed_error": 0.17382602393627167
+        },
+        {
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 5.099996089935303,
+          "max_forward": 3.400653839111328,
+          "max_lateral": 0.5680818557739258,
+          "final_forward": 3.400653839111328,
+          "mean_speed_error": 0.28372079133987427
+        },
+        {
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 5.079996109008789,
+          "max_forward": 3.405071258544922,
+          "max_lateral": 0.3427901268005371,
+          "final_forward": 3.405071258544922,
+          "mean_speed_error": 0.24596375226974487
+        },
+        {
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 4.859996318817139,
+          "max_forward": 3.402890682220459,
+          "max_lateral": 0.07992744445800781,
+          "final_forward": 3.402890682220459,
+          "mean_speed_error": 0.26322707533836365
+        },
+        {
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 5.4799957275390625,
+          "max_forward": 3.404771327972412,
+          "max_lateral": 0.3994174003601074,
+          "final_forward": 3.404771327972412,
+          "mean_speed_error": 0.2766297161579132
+        },
+        {
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 4.91999626159668,
+          "max_forward": 3.416654109954834,
+          "max_lateral": 0.1848921775817871,
+          "final_forward": 3.416654109954834,
+          "mean_speed_error": 0.29093992710113525
+        },
+        {
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 4.799996376037598,
+          "max_forward": 3.407742500305176,
+          "max_lateral": 0.32093238830566406,
+          "final_forward": 3.407742500305176,
+          "mean_speed_error": 0.3152267634868622
+        },
+        {
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 4.399996757507324,
+          "max_forward": 3.400237560272217,
+          "max_lateral": 0.37412595748901367,
+          "final_forward": 3.400237560272217,
+          "mean_speed_error": 0.3242019712924957
+        },
+        {
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 4.91999626159668,
+          "max_forward": 3.4044785499572754,
+          "max_lateral": 0.40818071365356445,
+          "final_forward": 3.4044785499572754,
+          "mean_speed_error": 0.2416694462299347
+        },
+        {
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 5.13999605178833,
+          "max_forward": 3.415748119354248,
+          "max_lateral": 0.33131885528564453,
+          "final_forward": 3.415748119354248,
+          "mean_speed_error": 0.2690584063529968
+        },
+        {
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 4.579996585845947,
+          "max_forward": 3.414773941040039,
+          "max_lateral": 0.0822286605834961,
+          "final_forward": 3.414773941040039,
+          "mean_speed_error": 0.2657960057258606
+        },
+        {
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 5.4799957275390625,
+          "max_forward": 3.406026840209961,
+          "max_lateral": 0.10961771011352539,
+          "final_forward": 3.406026840209961,
+          "mean_speed_error": 0.15287481248378754
+        },
+        {
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 4.939996242523193,
+          "max_forward": 3.4160313606262207,
+          "max_lateral": 0.15551185607910156,
+          "final_forward": 3.4160313606262207,
+          "mean_speed_error": 0.23032492399215698
+        }
+      ],
+      "stairs": [
+        {
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 9.140019416809082,
+          "max_forward": 3.403531074523926,
+          "max_lateral": 0.39533185958862305,
+          "final_forward": 3.403531074523926,
+          "mean_speed_error": 0.23673464357852936
+        },
+        {
+          "success": false,
+          "failed": true,
+          "timeout": false,
+          "duration": 2.159998655319214,
+          "max_forward": 0.8330173492431641,
+          "max_lateral": 0.7011072635650635,
+          "final_forward": 0.6789054870605469,
+          "mean_speed_error": 0.30060717463493347
+        },
+        {
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 7.8599934577941895,
+          "max_forward": 3.400998115539551,
+          "max_lateral": 0.6421833038330078,
+          "final_forward": 3.400998115539551,
+          "mean_speed_error": 0.2257341742515564
+        },
+        {
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 8.139996528625488,
+          "max_forward": 3.4117345809936523,
+          "max_lateral": 0.44034337997436523,
+          "final_forward": 3.4117345809936523,
+          "mean_speed_error": 0.20224913954734802
+        },
+        {
+          "success": false,
+          "failed": true,
+          "timeout": false,
+          "duration": 2.9799978733062744,
+          "max_forward": 1.0144577026367188,
+          "max_lateral": 0.9185409545898438,
+          "final_forward": 0.8370943069458008,
+          "mean_speed_error": 0.3325362801551819
+        },
+        {
+          "success": false,
+          "failed": true,
+          "timeout": false,
+          "duration": 4.239996910095215,
+          "max_forward": 2.03096866607666,
+          "max_lateral": 0.978156566619873,
+          "final_forward": 1.8339481353759766,
+          "mean_speed_error": 0.2396344095468521
+        },
+        {
+          "success": false,
+          "failed": true,
+          "timeout": false,
+          "duration": 2.5599982738494873,
+          "max_forward": 0.7915725708007812,
+          "max_lateral": 0.35480809211730957,
+          "final_forward": 0.5059032440185547,
+          "mean_speed_error": 0.41739219427108765
+        },
+        {
+          "success": false,
+          "failed": true,
+          "timeout": false,
+          "duration": 5.639995574951172,
+          "max_forward": 2.003382682800293,
+          "max_lateral": 0.5688047409057617,
+          "final_forward": 1.5141716003417969,
+          "mean_speed_error": 0.3138542175292969
+        },
+        {
+          "success": false,
+          "failed": true,
+          "timeout": false,
+          "duration": 2.759998083114624,
+          "max_forward": 1.0167837142944336,
+          "max_lateral": 0.723076343536377,
+          "final_forward": 0.7856311798095703,
+          "mean_speed_error": 0.26380035281181335
+        },
+        {
+          "success": false,
+          "failed": true,
+          "timeout": false,
+          "duration": 4.479996681213379,
+          "max_forward": 1.2820730209350586,
+          "max_lateral": 0.30274057388305664,
+          "final_forward": 1.2820730209350586,
+          "mean_speed_error": 0.29342448711395264
+        },
+        {
+          "success": false,
+          "failed": true,
+          "timeout": false,
+          "duration": 8.239998817443848,
+          "max_forward": 3.0841150283813477,
+          "max_lateral": 0.7809538841247559,
+          "final_forward": 3.0841150283813477,
+          "mean_speed_error": 0.2362566739320755
+        },
+        {
+          "success": false,
+          "failed": true,
+          "timeout": false,
+          "duration": 9.900036811828613,
+          "max_forward": 2.7445878982543945,
+          "max_lateral": 0.597999095916748,
+          "final_forward": 2.511488914489746,
+          "mean_speed_error": 0.3107996881008148
+        },
+        {
+          "success": false,
+          "failed": true,
+          "timeout": false,
+          "duration": 4.739996433258057,
+          "max_forward": 1.395669937133789,
+          "max_lateral": 0.47225522994995117,
+          "final_forward": 1.3604497909545898,
+          "mean_speed_error": 0.32661497592926025
+        },
+        {
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 6.959994316101074,
+          "max_forward": 3.400212287902832,
+          "max_lateral": 0.3141021728515625,
+          "final_forward": 3.400212287902832,
+          "mean_speed_error": 0.1649547517299652
+        },
+        {
+          "success": false,
+          "failed": true,
+          "timeout": false,
+          "duration": 2.099998712539673,
+          "max_forward": 0.9383220672607422,
+          "max_lateral": 0.3804750442504883,
+          "final_forward": 0.9227628707885742,
+          "mean_speed_error": 0.2964737117290497
+        },
+        {
+          "success": false,
+          "failed": true,
+          "timeout": false,
+          "duration": 4.3199968338012695,
+          "max_forward": 1.4231986999511719,
+          "max_lateral": 0.3139328956604004,
+          "final_forward": 1.1219186782836914,
+          "mean_speed_error": 0.31654152274131775
+        },
+        {
+          "success": false,
+          "failed": true,
+          "timeout": false,
+          "duration": 2.7199981212615967,
+          "max_forward": 0.9412517547607422,
+          "max_lateral": 0.8487753868103027,
+          "final_forward": 0.9373912811279297,
+          "mean_speed_error": 0.38922521471977234
+        },
+        {
+          "success": false,
+          "failed": true,
+          "timeout": false,
+          "duration": 8.740010261535645,
+          "max_forward": 2.597423553466797,
+          "max_lateral": 0.5139491558074951,
+          "final_forward": 1.7873249053955078,
+          "mean_speed_error": 0.29621201753616333
+        },
+        {
+          "success": false,
+          "failed": true,
+          "timeout": false,
+          "duration": 3.619997262954712,
+          "max_forward": 1.1921577453613281,
+          "max_lateral": 0.5739331245422363,
+          "final_forward": 1.1921577453613281,
+          "mean_speed_error": 0.406016081571579
+        },
+        {
+          "success": false,
+          "failed": true,
+          "timeout": false,
+          "duration": 3.7199971675872803,
+          "max_forward": 1.0987462997436523,
+          "max_lateral": 0.8625025749206543,
+          "final_forward": 0.7765178680419922,
+          "mean_speed_error": 0.46140217781066895
+        },
+        {
+          "success": false,
+          "failed": true,
+          "timeout": false,
+          "duration": 6.899994373321533,
+          "max_forward": 2.9497900009155273,
+          "max_lateral": 0.6350202560424805,
+          "final_forward": 2.9497900009155273,
+          "mean_speed_error": 0.24273042380809784
+        },
+        {
+          "success": false,
+          "failed": true,
+          "timeout": false,
+          "duration": 4.1999969482421875,
+          "max_forward": 1.1058979034423828,
+          "max_lateral": 0.15923261642456055,
+          "final_forward": 1.1058979034423828,
+          "mean_speed_error": 0.4061272442340851
+        },
+        {
+          "success": false,
+          "failed": true,
+          "timeout": false,
+          "duration": 2.4199984073638916,
+          "max_forward": 0.9081544876098633,
+          "max_lateral": 0.5372037887573242,
+          "final_forward": 0.8877191543579102,
+          "mean_speed_error": 0.2889155447483063
+        },
+        {
+          "success": false,
+          "failed": true,
+          "timeout": false,
+          "duration": 2.6799981594085693,
+          "max_forward": 1.0284900665283203,
+          "max_lateral": 0.9509644508361816,
+          "final_forward": 0.8715019226074219,
+          "mean_speed_error": 0.26242825388908386
+        },
+        {
+          "success": false,
+          "failed": true,
+          "timeout": false,
+          "duration": 6.779994487762451,
+          "max_forward": 1.3705778121948242,
+          "max_lateral": 0.8600082397460938,
+          "final_forward": 1.0495405197143555,
+          "mean_speed_error": 0.4320236146450043
+        },
+        {
+          "success": false,
+          "failed": true,
+          "timeout": false,
+          "duration": 2.3799984455108643,
+          "max_forward": 0.8476629257202148,
+          "max_lateral": 0.3170475959777832,
+          "final_forward": 0.797637939453125,
+          "mean_speed_error": 0.3376518189907074
+        },
+        {
+          "success": false,
+          "failed": true,
+          "timeout": false,
+          "duration": 6.49999475479126,
+          "max_forward": 2.019087791442871,
+          "max_lateral": 0.44343090057373047,
+          "final_forward": 2.019087791442871,
+          "mean_speed_error": 0.3275041878223419
+        },
+        {
+          "success": false,
+          "failed": true,
+          "timeout": false,
+          "duration": 3.419997453689575,
+          "max_forward": 1.1083707809448242,
+          "max_lateral": 0.3908815383911133,
+          "final_forward": 1.1083707809448242,
+          "mean_speed_error": 0.40243250131607056
+        },
+        {
+          "success": false,
+          "failed": true,
+          "timeout": false,
+          "duration": 4.819996356964111,
+          "max_forward": 1.3950119018554688,
+          "max_lateral": 0.8912200927734375,
+          "final_forward": 0.9471731185913086,
+          "mean_speed_error": 0.4108036458492279
+        },
+        {
+          "success": false,
+          "failed": true,
+          "timeout": false,
+          "duration": 3.6599972248077393,
+          "max_forward": 1.383803367614746,
+          "max_lateral": 0.4799492359161377,
+          "final_forward": 1.1003313064575195,
+          "mean_speed_error": 0.2795889675617218
+        },
+        {
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 8.660008430480957,
+          "max_forward": 3.40377140045166,
+          "max_lateral": 0.36684465408325195,
+          "final_forward": 3.40377140045166,
+          "mean_speed_error": 0.24596422910690308
+        },
+        {
+          "success": false,
+          "failed": true,
+          "timeout": false,
+          "duration": 2.759998083114624,
+          "max_forward": 0.8154134750366211,
+          "max_lateral": 0.6658754348754883,
+          "final_forward": 0.36029624938964844,
+          "mean_speed_error": 0.31601908802986145
+        }
+      ],
+      "flat_success": 32,
+      "stair_success": 5
+    },
+    {
+      "parameters": {
+        "gait": 2,
+        "scale": 0.55,
+        "duty": 0.1,
+        "lift": 0.14,
+        "amplitude": 0.8,
+        "bx": -0.02,
+        "bz": 0.02,
+        "posture_gain": 2.0,
+        "stance_z_speed": 0.08,
+        "equilibrium_frequency": 3.0
+      },
+      "actions": [
+        2.0,
+        0.2800000011920929,
+        0.2800000011920929,
+        0.2800000011920929,
+        0.2800000011920929,
+        -0.5,
+        -0.5,
+        -0.5,
+        -0.5,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.5,
+        0.5,
+        0.5,
+        0.5,
+        -0.1111111119389534,
+        -0.1111111119389534,
+        -0.1111111119389534,
+        -0.1111111119389534,
+        -0.692307710647583,
+        0.4000000059604645
+      ],
+      "flat": [
+        {
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 4.739996433258057,
+          "max_forward": 3.4023709297180176,
+          "max_lateral": 0.45830535888671875,
+          "final_forward": 3.4023709297180176,
+          "mean_speed_error": 0.2958051562309265
+        },
+        {
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 4.899996280670166,
+          "max_forward": 3.4116625785827637,
+          "max_lateral": 0.19887924194335938,
+          "final_forward": 3.4116625785827637,
+          "mean_speed_error": 0.2812107503414154
+        },
+        {
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 4.999996185302734,
+          "max_forward": 3.4137401580810547,
+          "max_lateral": 0.3245687484741211,
+          "final_forward": 3.4137401580810547,
+          "mean_speed_error": 0.2606064975261688
+        },
+        {
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 5.039996147155762,
+          "max_forward": 3.4020891189575195,
+          "max_lateral": 0.4276871681213379,
+          "final_forward": 3.4020891189575195,
+          "mean_speed_error": 0.2554020881652832
+        },
+        {
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 4.3799967765808105,
+          "max_forward": 3.415600299835205,
+          "max_lateral": 0.32491517066955566,
+          "final_forward": 3.415600299835205,
+          "mean_speed_error": 0.27155014872550964
+        },
+        {
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 5.379995822906494,
+          "max_forward": 3.4073781967163086,
+          "max_lateral": 0.18947672843933105,
+          "final_forward": 3.4073781967163086,
+          "mean_speed_error": 0.27913790941238403
+        },
+        {
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 5.059996128082275,
+          "max_forward": 3.414912700653076,
+          "max_lateral": 0.3416619300842285,
+          "final_forward": 3.414912700653076,
+          "mean_speed_error": 0.2758542001247406
+        },
+        {
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 4.779996395111084,
+          "max_forward": 3.4102087020874023,
+          "max_lateral": 0.25932741165161133,
+          "final_forward": 3.4102087020874023,
+          "mean_speed_error": 0.2848910689353943
+        },
+        {
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 4.519996643066406,
+          "max_forward": 3.4104671478271484,
+          "max_lateral": 0.16063308715820312,
+          "final_forward": 3.4104671478271484,
+          "mean_speed_error": 0.24280571937561035
+        },
+        {
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 5.099996089935303,
+          "max_forward": 3.4133825302124023,
+          "max_lateral": 0.1680278778076172,
+          "final_forward": 3.4133825302124023,
+          "mean_speed_error": 0.24233685433864594
+        },
+        {
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 4.639996528625488,
+          "max_forward": 3.4016027450561523,
+          "max_lateral": 0.11997413635253906,
+          "final_forward": 3.4016027450561523,
+          "mean_speed_error": 0.25818097591400146
+        },
+        {
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 5.279995918273926,
+          "max_forward": 3.4129796028137207,
+          "max_lateral": 0.3987140655517578,
+          "final_forward": 3.4129796028137207,
+          "mean_speed_error": 0.3073704242706299
+        },
+        {
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 5.379995822906494,
+          "max_forward": 3.4143543243408203,
+          "max_lateral": 0.48859119415283203,
+          "final_forward": 3.4143543243408203,
+          "mean_speed_error": 0.3106374442577362
+        },
+        {
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 4.719996452331543,
+          "max_forward": 3.403201103210449,
+          "max_lateral": 0.32300424575805664,
+          "final_forward": 3.403201103210449,
+          "mean_speed_error": 0.25677981972694397
+        },
+        {
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 4.779996395111084,
+          "max_forward": 3.403611183166504,
+          "max_lateral": 0.10594344139099121,
+          "final_forward": 3.403611183166504,
+          "mean_speed_error": 0.2617603838443756
+        },
+        {
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 4.839996337890625,
+          "max_forward": 3.4053544998168945,
+          "max_lateral": 0.3302488327026367,
+          "final_forward": 3.4053544998168945,
+          "mean_speed_error": 0.29874688386917114
+        },
+        {
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 5.219995975494385,
+          "max_forward": 3.412047863006592,
+          "max_lateral": 0.4834308624267578,
+          "final_forward": 3.412047863006592,
+          "mean_speed_error": 0.2645849585533142
+        },
+        {
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 5.179996013641357,
+          "max_forward": 3.401721477508545,
+          "max_lateral": 0.4997549057006836,
+          "final_forward": 3.401721477508545,
+          "mean_speed_error": 0.31308576464653015
+        },
+        {
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 4.839996337890625,
+          "max_forward": 3.415310859680176,
+          "max_lateral": 0.08449697494506836,
+          "final_forward": 3.415310859680176,
+          "mean_speed_error": 0.25484776496887207
+        },
+        {
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 4.3199968338012695,
+          "max_forward": 3.4079689979553223,
+          "max_lateral": 0.09006309509277344,
+          "final_forward": 3.4079689979553223,
+          "mean_speed_error": 0.2811160087585449
+        },
+        {
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 5.099996089935303,
+          "max_forward": 3.412374973297119,
+          "max_lateral": 0.5456986427307129,
+          "final_forward": 3.412374973297119,
+          "mean_speed_error": 0.2970506548881531
+        },
+        {
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 4.799996376037598,
+          "max_forward": 3.4078588485717773,
+          "max_lateral": 0.25781822204589844,
+          "final_forward": 3.4078588485717773,
+          "mean_speed_error": 0.27923402190208435
+        },
+        {
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 4.799996376037598,
+          "max_forward": 3.416443347930908,
+          "max_lateral": 0.13579273223876953,
+          "final_forward": 3.416443347930908,
+          "mean_speed_error": 0.2652650475502014
+        },
+        {
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 5.51999568939209,
+          "max_forward": 3.410785675048828,
+          "max_lateral": 0.5395135879516602,
+          "final_forward": 3.410785675048828,
+          "mean_speed_error": 0.26452508568763733
+        },
+        {
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 5.3599958419799805,
+          "max_forward": 3.4110984802246094,
+          "max_lateral": 0.3604702949523926,
+          "final_forward": 3.4110984802246094,
+          "mean_speed_error": 0.23261430859565735
+        },
+        {
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 4.75999641418457,
+          "max_forward": 3.4158201217651367,
+          "max_lateral": 0.2533273696899414,
+          "final_forward": 3.4158201217651367,
+          "mean_speed_error": 0.3088865280151367
+        },
+        {
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 4.619996547698975,
+          "max_forward": 3.4116039276123047,
+          "max_lateral": 0.38028478622436523,
+          "final_forward": 3.4116039276123047,
+          "mean_speed_error": 0.27962103486061096
+        },
+        {
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 4.779996395111084,
+          "max_forward": 3.403946876525879,
+          "max_lateral": 0.3702106475830078,
+          "final_forward": 3.403946876525879,
+          "mean_speed_error": 0.26546716690063477
+        },
+        {
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 4.959996223449707,
+          "max_forward": 3.412649631500244,
+          "max_lateral": 0.06982421875,
+          "final_forward": 3.412649631500244,
+          "mean_speed_error": 0.2716342806816101
+        },
+        {
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 4.819996356964111,
+          "max_forward": 3.4152321815490723,
+          "max_lateral": 0.08241462707519531,
+          "final_forward": 3.4152321815490723,
+          "mean_speed_error": 0.2176693081855774
+        },
+        {
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 4.599996566772461,
+          "max_forward": 3.411121368408203,
+          "max_lateral": 0.0947871208190918,
+          "final_forward": 3.411121368408203,
+          "mean_speed_error": 0.2650720477104187
+        },
+        {
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 4.719996452331543,
+          "max_forward": 3.4045233726501465,
+          "max_lateral": 0.12325429916381836,
+          "final_forward": 3.4045233726501465,
+          "mean_speed_error": 0.25067752599716187
+        }
+      ],
+      "stairs": [
+        {
+          "success": false,
+          "failed": true,
+          "timeout": false,
+          "duration": 6.039995193481445,
+          "max_forward": 2.8218650817871094,
+          "max_lateral": 0.43976902961730957,
+          "final_forward": 2.8218650817871094,
+          "mean_speed_error": 0.22225946187973022
+        },
+        {
+          "success": false,
+          "failed": true,
+          "timeout": false,
+          "duration": 8.960015296936035,
+          "max_forward": 2.2682247161865234,
+          "max_lateral": 0.8410820960998535,
+          "final_forward": 1.9950284957885742,
+          "mean_speed_error": 0.3317866325378418
+        },
+        {
+          "success": false,
+          "failed": true,
+          "timeout": false,
+          "duration": 5.819995403289795,
+          "max_forward": 1.9982852935791016,
+          "max_lateral": 0.17349839210510254,
+          "final_forward": 1.6779470443725586,
+          "mean_speed_error": 0.2825830280780792
+        },
+        {
+          "success": false,
+          "failed": true,
+          "timeout": false,
+          "duration": 2.4399983882904053,
+          "max_forward": 0.8293600082397461,
+          "max_lateral": 0.48035573959350586,
+          "final_forward": 0.7776756286621094,
+          "mean_speed_error": 0.2723090946674347
+        },
+        {
+          "success": false,
+          "failed": true,
+          "timeout": false,
+          "duration": 5.879995346069336,
+          "max_forward": 2.2637691497802734,
+          "max_lateral": 0.31218528747558594,
+          "final_forward": 2.2637691497802734,
+          "mean_speed_error": 0.23712734878063202
+        },
+        {
+          "success": false,
+          "failed": true,
+          "timeout": false,
+          "duration": 1.9799987077713013,
+          "max_forward": 0.8230504989624023,
+          "max_lateral": 0.7052264213562012,
+          "final_forward": 0.767939567565918,
+          "mean_speed_error": 0.31701961159706116
+        },
+        {
+          "success": false,
+          "failed": true,
+          "timeout": false,
+          "duration": 2.639998197555542,
+          "max_forward": 0.8417015075683594,
+          "max_lateral": 0.11801528930664062,
+          "final_forward": 0.5972929000854492,
+          "mean_speed_error": 0.3708406388759613
+        },
+        {
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 10.980061531066895,
+          "max_forward": 3.412367820739746,
+          "max_lateral": 0.3405184745788574,
+          "final_forward": 3.412367820739746,
+          "mean_speed_error": 0.2843502163887024
+        },
+        {
+          "success": false,
+          "failed": true,
+          "timeout": false,
+          "duration": 5.939995288848877,
+          "max_forward": 0.8297061920166016,
+          "max_lateral": 0.3484988212585449,
+          "final_forward": 0.3598756790161133,
+          "mean_speed_error": 0.4244740605354309
+        },
+        {
+          "success": false,
+          "failed": true,
+          "timeout": false,
+          "duration": 1.999998688697815,
+          "max_forward": 0.8866367340087891,
+          "max_lateral": 0.4427957534790039,
+          "final_forward": 0.8794431686401367,
+          "mean_speed_error": 0.24675004184246063
+        },
+        {
+          "success": false,
+          "failed": true,
+          "timeout": false,
+          "duration": 3.139997720718384,
+          "max_forward": 0.837681770324707,
+          "max_lateral": 0.9201045036315918,
+          "final_forward": 0.5833959579467773,
+          "mean_speed_error": 0.35516124963760376
+        },
+        {
+          "success": false,
+          "failed": true,
+          "timeout": false,
+          "duration": 6.159995079040527,
+          "max_forward": 2.027979850769043,
+          "max_lateral": 0.5955922603607178,
+          "final_forward": 2.017831802368164,
+          "mean_speed_error": 0.2619797885417938
+        },
+        {
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 8.219998359680176,
+          "max_forward": 3.400461196899414,
+          "max_lateral": 0.40230417251586914,
+          "final_forward": 3.400461196899414,
+          "mean_speed_error": 0.1961255818605423
+        },
+        {
+          "success": false,
+          "failed": true,
+          "timeout": false,
+          "duration": 2.7199981212615967,
+          "max_forward": 0.8710603713989258,
+          "max_lateral": 0.6782786846160889,
+          "final_forward": 0.7677507400512695,
+          "mean_speed_error": 0.32490023970603943
+        },
+        {
+          "success": false,
+          "failed": true,
+          "timeout": false,
+          "duration": 2.4399983882904053,
+          "max_forward": 0.8094768524169922,
+          "max_lateral": 0.5325312614440918,
+          "final_forward": 0.7907896041870117,
+          "mean_speed_error": 0.3170487582683563
+        },
+        {
+          "success": false,
+          "failed": true,
+          "timeout": false,
+          "duration": 2.219998598098755,
+          "max_forward": 1.009730339050293,
+          "max_lateral": 0.545687198638916,
+          "final_forward": 1.009730339050293,
+          "mean_speed_error": 0.25872352719306946
+        },
+        {
+          "success": false,
+          "failed": true,
+          "timeout": false,
+          "duration": 5.179996013641357,
+          "max_forward": 1.4437761306762695,
+          "max_lateral": 0.5748095512390137,
+          "final_forward": 1.1483535766601562,
+          "mean_speed_error": 0.3056131899356842
+        },
+        {
+          "success": false,
+          "failed": true,
+          "timeout": false,
+          "duration": 6.8199944496154785,
+          "max_forward": 1.9835376739501953,
+          "max_lateral": 0.7596173286437988,
+          "final_forward": 1.754892349243164,
+          "mean_speed_error": 0.30265969038009644
+        },
+        {
+          "success": false,
+          "failed": true,
+          "timeout": false,
+          "duration": 3.7599971294403076,
+          "max_forward": 1.2035694122314453,
+          "max_lateral": 0.3117828369140625,
+          "final_forward": 1.2035694122314453,
+          "mean_speed_error": 0.34712928533554077
+        },
+        {
+          "success": false,
+          "failed": true,
+          "timeout": false,
+          "duration": 8.740010261535645,
+          "max_forward": 3.198366165161133,
+          "max_lateral": 0.32046031951904297,
+          "final_forward": 2.9784412384033203,
+          "mean_speed_error": 0.2478148192167282
+        },
+        {
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 7.939993381500244,
+          "max_forward": 3.401926040649414,
+          "max_lateral": 0.7556881904602051,
+          "final_forward": 3.401926040649414,
+          "mean_speed_error": 0.20523713529109955
+        },
+        {
+          "success": false,
+          "failed": true,
+          "timeout": false,
+          "duration": 3.0199978351593018,
+          "max_forward": 0.8223628997802734,
+          "max_lateral": 0.4185171127319336,
+          "final_forward": 0.5274133682250977,
+          "mean_speed_error": 0.4657665491104126
+        },
+        {
+          "success": false,
+          "failed": true,
+          "timeout": false,
+          "duration": 5.3599958419799805,
+          "max_forward": 1.482278823852539,
+          "max_lateral": 0.7040047645568848,
+          "final_forward": 1.119241714477539,
+          "mean_speed_error": 0.29083916544914246
+        },
+        {
+          "success": false,
+          "failed": true,
+          "timeout": false,
+          "duration": 2.939997911453247,
+          "max_forward": 0.8393983840942383,
+          "max_lateral": 0.9193077087402344,
+          "final_forward": 0.5253124237060547,
+          "mean_speed_error": 0.3173302710056305
+        },
+        {
+          "success": false,
+          "failed": true,
+          "timeout": false,
+          "duration": 2.4199984073638916,
+          "max_forward": 0.8458452224731445,
+          "max_lateral": 0.8956480026245117,
+          "final_forward": 0.7316837310791016,
+          "mean_speed_error": 0.37501975893974304
+        },
+        {
+          "success": false,
+          "failed": true,
+          "timeout": false,
+          "duration": 4.3199968338012695,
+          "max_forward": 0.9924297332763672,
+          "max_lateral": 0.436798095703125,
+          "final_forward": 0.9924297332763672,
+          "mean_speed_error": 0.3474575877189636
+        },
+        {
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 8.680008888244629,
+          "max_forward": 3.4086647033691406,
+          "max_lateral": 0.44812488555908203,
+          "final_forward": 3.4086647033691406,
+          "mean_speed_error": 0.21360734105110168
+        },
+        {
+          "success": false,
+          "failed": true,
+          "timeout": false,
+          "duration": 4.059997081756592,
+          "max_forward": 1.4721136093139648,
+          "max_lateral": 0.5683636665344238,
+          "final_forward": 1.3419227600097656,
+          "mean_speed_error": 0.31583914160728455
+        },
+        {
+          "success": false,
+          "failed": true,
+          "timeout": false,
+          "duration": 5.73999547958374,
+          "max_forward": 1.4110937118530273,
+          "max_lateral": 1.0225284099578857,
+          "final_forward": 0.7862958908081055,
+          "mean_speed_error": 0.3876088261604309
+        },
+        {
+          "success": false,
+          "failed": true,
+          "timeout": false,
+          "duration": 5.4199957847595215,
+          "max_forward": 2.004016876220703,
+          "max_lateral": 0.2923545837402344,
+          "final_forward": 1.7075996398925781,
+          "mean_speed_error": 0.26291194558143616
+        },
+        {
+          "success": false,
+          "failed": true,
+          "timeout": false,
+          "duration": 11.2600679397583,
+          "max_forward": 1.9959897994995117,
+          "max_lateral": 0.873445987701416,
+          "final_forward": 0.6066398620605469,
+          "mean_speed_error": 0.41046851873397827
+        },
+        {
+          "success": false,
+          "failed": true,
+          "timeout": false,
+          "duration": 2.7399981021881104,
+          "max_forward": 0.7902498245239258,
+          "max_lateral": 0.10271024703979492,
+          "final_forward": 0.4848165512084961,
+          "mean_speed_error": 0.3470909297466278
+        }
+      ],
+      "flat_success": 32,
+      "stair_success": 4
+    },
+    {
+      "parameters": {
+        "gait": 2,
+        "scale": 0.55,
+        "duty": 0.1,
+        "lift": 0.14,
+        "amplitude": 0.8,
+        "bx": -0.02,
+        "bz": 0.02,
+        "posture_gain": 1.0,
+        "stance_z_speed": 0.08,
+        "equilibrium_frequency": 3.0
+      },
+      "actions": [
+        2.0,
+        0.2800000011920929,
+        0.2800000011920929,
+        0.2800000011920929,
+        0.2800000011920929,
+        -0.5,
+        -0.5,
+        -0.5,
+        -0.5,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.5,
+        0.5,
+        0.5,
+        0.5,
+        -0.1111111119389534,
+        -0.1111111119389534,
+        -0.1111111119389534,
+        -0.1111111119389534,
+        -0.692307710647583,
+        0.4000000059604645
+      ],
+      "flat": [
+        {
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 4.899996280670166,
+          "max_forward": 3.412917137145996,
+          "max_lateral": 0.5484161376953125,
+          "final_forward": 3.412917137145996,
+          "mean_speed_error": 0.2710231840610504
+        },
+        {
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 5.3599958419799805,
+          "max_forward": 3.406623363494873,
+          "max_lateral": 0.24774932861328125,
+          "final_forward": 3.406623363494873,
+          "mean_speed_error": 0.22629351913928986
+        },
+        {
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 5.019996166229248,
+          "max_forward": 3.4023795127868652,
+          "max_lateral": 0.28980398178100586,
+          "final_forward": 3.4023795127868652,
+          "mean_speed_error": 0.2473698854446411
+        },
+        {
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 5.159996032714844,
+          "max_forward": 3.406431198120117,
+          "max_lateral": 0.41564464569091797,
+          "final_forward": 3.406431198120117,
+          "mean_speed_error": 0.2337103635072708
+        },
+        {
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 4.499996662139893,
+          "max_forward": 3.406700611114502,
+          "max_lateral": 0.23376774787902832,
+          "final_forward": 3.406700611114502,
+          "mean_speed_error": 0.24740804731845856
+        },
+        {
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 4.779996395111084,
+          "max_forward": 3.4019994735717773,
+          "max_lateral": 0.18944072723388672,
+          "final_forward": 3.4019994735717773,
+          "mean_speed_error": 0.2997857332229614
+        },
+        {
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 4.979996204376221,
+          "max_forward": 3.4161500930786133,
+          "max_lateral": 0.23117876052856445,
+          "final_forward": 3.4161500930786133,
+          "mean_speed_error": 0.24708391726016998
+        },
+        {
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 4.899996280670166,
+          "max_forward": 3.406648635864258,
+          "max_lateral": 0.18952560424804688,
+          "final_forward": 3.406648635864258,
+          "mean_speed_error": 0.26734137535095215
+        },
+        {
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 4.299996852874756,
+          "max_forward": 3.415968894958496,
+          "max_lateral": 0.1401205062866211,
+          "final_forward": 3.415968894958496,
+          "mean_speed_error": 0.2800217270851135
+        },
+        {
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 4.91999626159668,
+          "max_forward": 3.403000831604004,
+          "max_lateral": 0.1507582664489746,
+          "final_forward": 3.403000831604004,
+          "mean_speed_error": 0.2380751669406891
+        },
+        {
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 4.599996566772461,
+          "max_forward": 3.4046711921691895,
+          "max_lateral": 0.07456159591674805,
+          "final_forward": 3.4046711921691895,
+          "mean_speed_error": 0.2523593604564667
+        },
+        {
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 5.639995574951172,
+          "max_forward": 3.410614490509033,
+          "max_lateral": 0.32451725006103516,
+          "final_forward": 3.410614490509033,
+          "mean_speed_error": 0.2374669760465622
+        },
+        {
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 5.6599955558776855,
+          "max_forward": 3.409806251525879,
+          "max_lateral": 0.4087200164794922,
+          "final_forward": 3.409806251525879,
+          "mean_speed_error": 0.24851538240909576
+        },
+        {
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 4.619996547698975,
+          "max_forward": 3.4152283668518066,
+          "max_lateral": 0.2431488037109375,
+          "final_forward": 3.4152283668518066,
+          "mean_speed_error": 0.2725084722042084
+        },
+        {
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 4.679996490478516,
+          "max_forward": 3.4010424613952637,
+          "max_lateral": 0.09311985969543457,
+          "final_forward": 3.4010424613952637,
+          "mean_speed_error": 0.2661522626876831
+        },
+        {
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 4.939996242523193,
+          "max_forward": 3.4152183532714844,
+          "max_lateral": 0.37035512924194336,
+          "final_forward": 3.4152183532714844,
+          "mean_speed_error": 0.2805941104888916
+        },
+        {
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 5.4199957847595215,
+          "max_forward": 3.4045424461364746,
+          "max_lateral": 0.35243797302246094,
+          "final_forward": 3.4045424461364746,
+          "mean_speed_error": 0.21774785220623016
+        },
+        {
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 5.219995975494385,
+          "max_forward": 3.402425765991211,
+          "max_lateral": 0.45813560485839844,
+          "final_forward": 3.402425765991211,
+          "mean_speed_error": 0.28159961104393005
+        },
+        {
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 4.699996471405029,
+          "max_forward": 3.410533905029297,
+          "max_lateral": 0.08994317054748535,
+          "final_forward": 3.410533905029297,
+          "mean_speed_error": 0.27083107829093933
+        },
+        {
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 4.499996662139893,
+          "max_forward": 3.4095163345336914,
+          "max_lateral": 0.12402200698852539,
+          "final_forward": 3.4095163345336914,
+          "mean_speed_error": 0.25285130739212036
+        },
+        {
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 5.259995937347412,
+          "max_forward": 3.40706205368042,
+          "max_lateral": 0.4998331069946289,
+          "final_forward": 3.40706205368042,
+          "mean_speed_error": 0.27881327271461487
+        },
+        {
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 5.039996147155762,
+          "max_forward": 3.403811454772949,
+          "max_lateral": 0.27768611907958984,
+          "final_forward": 3.403811454772949,
+          "mean_speed_error": 0.2371271550655365
+        },
+        {
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 4.719996452331543,
+          "max_forward": 3.411968231201172,
+          "max_lateral": 0.09934186935424805,
+          "final_forward": 3.411968231201172,
+          "mean_speed_error": 0.27275124192237854
+        },
+        {
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 5.579995632171631,
+          "max_forward": 3.4156675338745117,
+          "max_lateral": 0.5453600883483887,
+          "final_forward": 3.4156675338745117,
+          "mean_speed_error": 0.2295224964618683
+        },
+        {
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 4.91999626159668,
+          "max_forward": 3.4110007286071777,
+          "max_lateral": 0.24030685424804688,
+          "final_forward": 3.4110007286071777,
+          "mean_speed_error": 0.2751384377479553
+        },
+        {
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 5.019996166229248,
+          "max_forward": 3.413273334503174,
+          "max_lateral": 0.40025997161865234,
+          "final_forward": 3.413273334503174,
+          "mean_speed_error": 0.2604551315307617
+        },
+        {
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 4.579996585845947,
+          "max_forward": 3.4113268852233887,
+          "max_lateral": 0.28403425216674805,
+          "final_forward": 3.4113268852233887,
+          "mean_speed_error": 0.2875484824180603
+        },
+        {
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 4.75999641418457,
+          "max_forward": 3.4028210639953613,
+          "max_lateral": 0.23375654220581055,
+          "final_forward": 3.4028210639953613,
+          "mean_speed_error": 0.2534947097301483
+        },
+        {
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 4.959996223449707,
+          "max_forward": 3.4120917320251465,
+          "max_lateral": 0.06002926826477051,
+          "final_forward": 3.4120917320251465,
+          "mean_speed_error": 0.25331956148147583
+        },
+        {
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 4.799996376037598,
+          "max_forward": 3.4146461486816406,
+          "max_lateral": 0.13773846626281738,
+          "final_forward": 3.4146461486816406,
+          "mean_speed_error": 0.21747153997421265
+        },
+        {
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 4.579996585845947,
+          "max_forward": 3.405679225921631,
+          "max_lateral": 0.0866246223449707,
+          "final_forward": 3.405679225921631,
+          "mean_speed_error": 0.25522953271865845
+        },
+        {
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 4.959996223449707,
+          "max_forward": 3.4123268127441406,
+          "max_lateral": 0.14280223846435547,
+          "final_forward": 3.4123268127441406,
+          "mean_speed_error": 0.21432097256183624
+        }
+      ],
+      "stairs": [
+        {
+          "success": false,
+          "failed": true,
+          "timeout": false,
+          "duration": 3.2799975872039795,
+          "max_forward": 0.807713508605957,
+          "max_lateral": 0.46064329147338867,
+          "final_forward": 0.5800056457519531,
+          "mean_speed_error": 0.4795739948749542
+        },
+        {
+          "success": false,
+          "failed": true,
+          "timeout": false,
+          "duration": 7.47999382019043,
+          "max_forward": 3.3747901916503906,
+          "max_lateral": 0.9614746570587158,
+          "final_forward": 3.3747901916503906,
+          "mean_speed_error": 0.2180527299642563
+        },
+        {
+          "success": false,
+          "failed": true,
+          "timeout": false,
+          "duration": 6.459994792938232,
+          "max_forward": 1.5506296157836914,
+          "max_lateral": 1.2675995826721191,
+          "final_forward": 1.2361459732055664,
+          "mean_speed_error": 0.40061482787132263
+        },
+        {
+          "success": false,
+          "failed": true,
+          "timeout": false,
+          "duration": 4.699996471405029,
+          "max_forward": 1.3827362060546875,
+          "max_lateral": 0.7250404357910156,
+          "final_forward": 1.2596864700317383,
+          "mean_speed_error": 0.344035804271698
+        },
+        {
+          "success": false,
+          "failed": true,
+          "timeout": false,
+          "duration": 2.2599985599517822,
+          "max_forward": 0.8169536590576172,
+          "max_lateral": 0.3900127410888672,
+          "final_forward": 0.634099006652832,
+          "mean_speed_error": 0.3232935965061188
+        },
+        {
+          "success": false,
+          "failed": true,
+          "timeout": false,
+          "duration": 3.0999977588653564,
+          "max_forward": 1.4766063690185547,
+          "max_lateral": 0.33120250701904297,
+          "final_forward": 1.4766063690185547,
+          "mean_speed_error": 0.27210742235183716
+        },
+        {
+          "success": false,
+          "failed": true,
+          "timeout": false,
+          "duration": 3.0999977588653564,
+          "max_forward": 1.4843454360961914,
+          "max_lateral": 0.27914953231811523,
+          "final_forward": 1.4843454360961914,
+          "mean_speed_error": 0.28911006450653076
+        },
+        {
+          "success": false,
+          "failed": true,
+          "timeout": false,
+          "duration": 3.5399973392486572,
+          "max_forward": 0.8062782287597656,
+          "max_lateral": 0.5610637664794922,
+          "final_forward": 0.4428262710571289,
+          "mean_speed_error": 0.4500432014465332
+        },
+        {
+          "success": false,
+          "failed": true,
+          "timeout": false,
+          "duration": 3.3399975299835205,
+          "max_forward": 1.4922895431518555,
+          "max_lateral": 0.373291015625,
+          "final_forward": 1.4156131744384766,
+          "mean_speed_error": 0.29555705189704895
+        },
+        {
+          "success": false,
+          "failed": true,
+          "timeout": false,
+          "duration": 15.980175971984863,
+          "max_forward": 2.749126434326172,
+          "max_lateral": 1.5469365119934082,
+          "final_forward": 2.400308609008789,
+          "mean_speed_error": 0.32325485348701477
+        },
+        {
+          "success": false,
+          "failed": true,
+          "timeout": false,
+          "duration": 5.759995460510254,
+          "max_forward": 0.9909076690673828,
+          "max_lateral": 0.768132209777832,
+          "final_forward": 0.43572330474853516,
+          "mean_speed_error": 0.41600486636161804
+        },
+        {
+          "success": false,
+          "failed": true,
+          "timeout": false,
+          "duration": 1.9599987268447876,
+          "max_forward": 0.8925008773803711,
+          "max_lateral": 0.3692502975463867,
+          "final_forward": 0.8742465972900391,
+          "mean_speed_error": 0.32281091809272766
+        },
+        {
+          "success": false,
+          "failed": true,
+          "timeout": false,
+          "duration": 3.799997091293335,
+          "max_forward": 1.6201505661010742,
+          "max_lateral": 0.6048741340637207,
+          "final_forward": 1.6201505661010742,
+          "mean_speed_error": 0.32189440727233887
+        },
+        {
+          "success": false,
+          "failed": true,
+          "timeout": false,
+          "duration": 9.560029029846191,
+          "max_forward": 3.1743431091308594,
+          "max_lateral": 0.17644882202148438,
+          "final_forward": 2.946260452270508,
+          "mean_speed_error": 0.29495367407798767
+        },
+        {
+          "success": false,
+          "failed": true,
+          "timeout": false,
+          "duration": 2.019998788833618,
+          "max_forward": 0.8231868743896484,
+          "max_lateral": 0.2848663330078125,
+          "final_forward": 0.643467903137207,
+          "mean_speed_error": 0.3249686062335968
+        },
+        {
+          "success": false,
+          "failed": true,
+          "timeout": false,
+          "duration": 7.559993743896484,
+          "max_forward": 2.6155195236206055,
+          "max_lateral": 1.090329885482788,
+          "final_forward": 2.5376949310302734,
+          "mean_speed_error": 0.2732253074645996
+        },
+        {
+          "success": false,
+          "failed": true,
+          "timeout": false,
+          "duration": 3.299997568130493,
+          "max_forward": 0.9333610534667969,
+          "max_lateral": 0.42618656158447266,
+          "final_forward": 0.8691501617431641,
+          "mean_speed_error": 0.31772565841674805
+        },
+        {
+          "success": false,
+          "failed": true,
+          "timeout": false,
+          "duration": 3.4599974155426025,
+          "max_forward": 0.817378044128418,
+          "max_lateral": 1.2029304504394531,
+          "final_forward": 0.4004077911376953,
+          "mean_speed_error": 0.4041079878807068
+        },
+        {
+          "success": false,
+          "failed": true,
+          "timeout": false,
+          "duration": 3.799997091293335,
+          "max_forward": 1.4132957458496094,
+          "max_lateral": 0.7025623321533203,
+          "final_forward": 1.2439212799072266,
+          "mean_speed_error": 0.302063524723053
+        },
+        {
+          "success": false,
+          "failed": true,
+          "timeout": false,
+          "duration": 7.299993991851807,
+          "max_forward": 1.4631567001342773,
+          "max_lateral": 0.6507153511047363,
+          "final_forward": 1.1598196029663086,
+          "mean_speed_error": 0.38326752185821533
+        },
+        {
+          "success": false,
+          "failed": true,
+          "timeout": false,
+          "duration": 3.199997663497925,
+          "max_forward": 0.8655061721801758,
+          "max_lateral": 1.0701937675476074,
+          "final_forward": 0.6429462432861328,
+          "mean_speed_error": 0.41115376353263855
+        },
+        {
+          "success": false,
+          "failed": true,
+          "timeout": false,
+          "duration": 4.0199971199035645,
+          "max_forward": 1.4168453216552734,
+          "max_lateral": 0.6675686836242676,
+          "final_forward": 1.3176345825195312,
+          "mean_speed_error": 0.28557494282722473
+        },
+        {
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 12.800103187561035,
+          "max_forward": 3.4088869094848633,
+          "max_lateral": 0.9076902866363525,
+          "final_forward": 3.4088869094848633,
+          "mean_speed_error": 0.29644668102264404
+        },
+        {
+          "success": false,
+          "failed": true,
+          "timeout": false,
+          "duration": 3.379997491836548,
+          "max_forward": 1.4210567474365234,
+          "max_lateral": 0.5404987335205078,
+          "final_forward": 1.3850297927856445,
+          "mean_speed_error": 0.3059026598930359
+        },
+        {
+          "success": false,
+          "failed": true,
+          "timeout": false,
+          "duration": 6.159995079040527,
+          "max_forward": 2.173752784729004,
+          "max_lateral": 0.46610260009765625,
+          "final_forward": 2.1019067764282227,
+          "mean_speed_error": 0.27508866786956787
+        },
+        {
+          "success": false,
+          "failed": true,
+          "timeout": false,
+          "duration": 3.679997205734253,
+          "max_forward": 0.8437137603759766,
+          "max_lateral": 0.3008441925048828,
+          "final_forward": 0.6462507247924805,
+          "mean_speed_error": 0.3698735237121582
+        },
+        {
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 8.199997901916504,
+          "max_forward": 3.4063282012939453,
+          "max_lateral": 0.5682501792907715,
+          "final_forward": 3.4063282012939453,
+          "mean_speed_error": 0.22735466063022614
+        },
+        {
+          "success": false,
+          "failed": true,
+          "timeout": false,
+          "duration": 1.9599987268447876,
+          "max_forward": 0.9932184219360352,
+          "max_lateral": 0.36289501190185547,
+          "final_forward": 0.9932184219360352,
+          "mean_speed_error": 0.33673548698425293
+        },
+        {
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 9.44002628326416,
+          "max_forward": 3.40054988861084,
+          "max_lateral": 0.8555698394775391,
+          "final_forward": 3.40054988861084,
+          "mean_speed_error": 0.2340310961008072
+        },
+        {
+          "success": false,
+          "failed": true,
+          "timeout": false,
+          "duration": 5.259995937347412,
+          "max_forward": 1.1518239974975586,
+          "max_lateral": 1.3478727340698242,
+          "final_forward": 0.03277015686035156,
+          "mean_speed_error": 0.49043264985084534
+        },
+        {
+          "success": false,
+          "failed": true,
+          "timeout": false,
+          "duration": 8.860013008117676,
+          "max_forward": 3.4058094024658203,
+          "max_lateral": 0.7804141044616699,
+          "final_forward": 3.4058094024658203,
+          "mean_speed_error": 0.24477729201316833
+        },
+        {
+          "success": false,
+          "failed": true,
+          "timeout": false,
+          "duration": 1.9199987649917603,
+          "max_forward": 0.8233528137207031,
+          "max_lateral": 0.4751253128051758,
+          "final_forward": 0.7355098724365234,
+          "mean_speed_error": 0.2830154001712799
+        }
+      ],
+      "flat_success": 32,
+      "stair_success": 3
+    },
+    {
+      "parameters": {
+        "gait": 2,
+        "scale": 0.55,
+        "duty": 0.1,
+        "lift": 0.14,
+        "amplitude": 0.8,
+        "bx": -0.02,
+        "bz": 0.02,
+        "posture_gain": 0.0,
+        "stance_z_speed": 0.08,
+        "equilibrium_frequency": 3.0
+      },
+      "actions": [
+        2.0,
+        0.2800000011920929,
+        0.2800000011920929,
+        0.2800000011920929,
+        0.2800000011920929,
+        -0.5,
+        -0.5,
+        -0.5,
+        -0.5,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.5,
+        0.5,
+        0.5,
+        0.5,
+        -0.1111111119389534,
+        -0.1111111119389534,
+        -0.1111111119389534,
+        -0.1111111119389534,
+        -0.692307710647583,
+        0.4000000059604645
+      ],
+      "flat": [
+        {
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 4.279996871948242,
+          "max_forward": 3.4117846488952637,
+          "max_lateral": 0.572117805480957,
+          "final_forward": 3.4117846488952637,
+          "mean_speed_error": 0.3937974274158478
+        },
+        {
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 4.3799967765808105,
+          "max_forward": 3.4075703620910645,
+          "max_lateral": 0.2129831314086914,
+          "final_forward": 3.4075703620910645,
+          "mean_speed_error": 0.3688989579677582
+        },
+        {
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 4.2599968910217285,
+          "max_forward": 3.4012770652770996,
+          "max_lateral": 0.227935791015625,
+          "final_forward": 3.4012770652770996,
+          "mean_speed_error": 0.351843923330307
+        },
+        {
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 4.3199968338012695,
+          "max_forward": 3.411196231842041,
+          "max_lateral": 0.3800220489501953,
+          "final_forward": 3.411196231842041,
+          "mean_speed_error": 0.35710668563842773
+        },
+        {
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 4.1399970054626465,
+          "max_forward": 3.4082555770874023,
+          "max_lateral": 0.2605166435241699,
+          "final_forward": 3.4082555770874023,
+          "mean_speed_error": 0.32659605145454407
+        },
+        {
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 4.579996585845947,
+          "max_forward": 3.4057421684265137,
+          "max_lateral": 0.3780972957611084,
+          "final_forward": 3.4057421684265137,
+          "mean_speed_error": 0.3477783203125
+        },
+        {
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 4.1999969482421875,
+          "max_forward": 3.4067254066467285,
+          "max_lateral": 0.16842889785766602,
+          "final_forward": 3.4067254066467285,
+          "mean_speed_error": 0.36956384778022766
+        },
+        {
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 4.359996795654297,
+          "max_forward": 3.407710075378418,
+          "max_lateral": 0.28194618225097656,
+          "final_forward": 3.407710075378418,
+          "mean_speed_error": 0.3575432002544403
+        },
+        {
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 4.0199971199035645,
+          "max_forward": 3.4114131927490234,
+          "max_lateral": 0.22392511367797852,
+          "final_forward": 3.4114131927490234,
+          "mean_speed_error": 0.3423106074333191
+        },
+        {
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 4.099997043609619,
+          "max_forward": 3.400134563446045,
+          "max_lateral": 0.07712793350219727,
+          "final_forward": 3.400134563446045,
+          "mean_speed_error": 0.3883917033672333
+        },
+        {
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 4.119997024536133,
+          "max_forward": 3.4005184173583984,
+          "max_lateral": 0.14140939712524414,
+          "final_forward": 3.4005184173583984,
+          "mean_speed_error": 0.347763329744339
+        },
+        {
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 4.559996604919434,
+          "max_forward": 3.4046096801757812,
+          "max_lateral": 0.0765388011932373,
+          "final_forward": 3.4046096801757812,
+          "mean_speed_error": 0.36926406621932983
+        },
+        {
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 4.479996681213379,
+          "max_forward": 3.4090890884399414,
+          "max_lateral": 0.06337976455688477,
+          "final_forward": 3.4090890884399414,
+          "mean_speed_error": 0.39507001638412476
+        },
+        {
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 4.1999969482421875,
+          "max_forward": 3.411104679107666,
+          "max_lateral": 0.25432682037353516,
+          "final_forward": 3.411104679107666,
+          "mean_speed_error": 0.3552730977535248
+        },
+        {
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 4.239996910095215,
+          "max_forward": 3.403043746948242,
+          "max_lateral": 0.1082315444946289,
+          "final_forward": 3.403043746948242,
+          "mean_speed_error": 0.35317227244377136
+        },
+        {
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 4.419996738433838,
+          "max_forward": 3.4013404846191406,
+          "max_lateral": 0.4794135093688965,
+          "final_forward": 3.4013404846191406,
+          "mean_speed_error": 0.38882893323898315
+        },
+        {
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 4.279996871948242,
+          "max_forward": 3.411937713623047,
+          "max_lateral": 0.3018631935119629,
+          "final_forward": 3.411937713623047,
+          "mean_speed_error": 0.37163957953453064
+        },
+        {
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 4.3799967765808105,
+          "max_forward": 3.4111270904541016,
+          "max_lateral": 0.2272663116455078,
+          "final_forward": 3.4111270904541016,
+          "mean_speed_error": 0.3900116980075836
+        },
+        {
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 4.279996871948242,
+          "max_forward": 3.4108266830444336,
+          "max_lateral": 0.25903940200805664,
+          "final_forward": 3.4108266830444336,
+          "mean_speed_error": 0.36018893122673035
+        },
+        {
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 3.9599969387054443,
+          "max_forward": 3.417545795440674,
+          "max_lateral": 0.1926131248474121,
+          "final_forward": 3.417545795440674,
+          "mean_speed_error": 0.3701571524143219
+        },
+        {
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 4.299996852874756,
+          "max_forward": 3.403148651123047,
+          "max_lateral": 0.4229917526245117,
+          "final_forward": 3.403148651123047,
+          "mean_speed_error": 0.3753107786178589
+        },
+        {
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 4.059997081756592,
+          "max_forward": 3.4157519340515137,
+          "max_lateral": 0.2069993019104004,
+          "final_forward": 3.4157519340515137,
+          "mean_speed_error": 0.4062913656234741
+        },
+        {
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 4.3199968338012695,
+          "max_forward": 3.4008073806762695,
+          "max_lateral": 0.1506505012512207,
+          "final_forward": 3.4008073806762695,
+          "mean_speed_error": 0.3487226963043213
+        },
+        {
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 4.439996719360352,
+          "max_forward": 3.40203857421875,
+          "max_lateral": 0.3707876205444336,
+          "final_forward": 3.40203857421875,
+          "mean_speed_error": 0.3767355978488922
+        },
+        {
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 4.299996852874756,
+          "max_forward": 3.403505325317383,
+          "max_lateral": 0.22373199462890625,
+          "final_forward": 3.403505325317383,
+          "mean_speed_error": 0.38885676860809326
+        },
+        {
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 4.219996929168701,
+          "max_forward": 3.4124975204467773,
+          "max_lateral": 0.3884129524230957,
+          "final_forward": 3.4124975204467773,
+          "mean_speed_error": 0.3859623074531555
+        },
+        {
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 4.15999698638916,
+          "max_forward": 3.4038853645324707,
+          "max_lateral": 0.29018545150756836,
+          "final_forward": 3.4038853645324707,
+          "mean_speed_error": 0.3672674596309662
+        },
+        {
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 4.219996929168701,
+          "max_forward": 3.4026541709899902,
+          "max_lateral": 0.3022456169128418,
+          "final_forward": 3.4026541709899902,
+          "mean_speed_error": 0.35333558917045593
+        },
+        {
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 4.359996795654297,
+          "max_forward": 3.4180808067321777,
+          "max_lateral": 0.17340755462646484,
+          "final_forward": 3.4180808067321777,
+          "mean_speed_error": 0.34852707386016846
+        },
+        {
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 3.9599969387054443,
+          "max_forward": 3.40049409866333,
+          "max_lateral": 0.08223509788513184,
+          "final_forward": 3.40049409866333,
+          "mean_speed_error": 0.3705213963985443
+        },
+        {
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 4.059997081756592,
+          "max_forward": 3.405292510986328,
+          "max_lateral": 0.0970759391784668,
+          "final_forward": 3.405292510986328,
+          "mean_speed_error": 0.3598746657371521
+        },
+        {
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 4.059997081756592,
+          "max_forward": 3.404216766357422,
+          "max_lateral": 0.11267280578613281,
+          "final_forward": 3.404216766357422,
+          "mean_speed_error": 0.3754996359348297
+        }
+      ],
+      "stairs": [
+        {
+          "success": false,
+          "failed": false,
+          "timeout": false,
+          "duration": 18.000221252441406,
+          "max_forward": 1.1068878173828125,
+          "max_lateral": 0.224456787109375,
+          "final_forward": 1.037674903869629,
+          "mean_speed_error": 0.467167466878891
+        },
+        {
+          "success": false,
+          "failed": true,
+          "timeout": false,
+          "duration": 1.8599988222122192,
+          "max_forward": 1.0050086975097656,
+          "max_lateral": 0.7743422985076904,
+          "final_forward": 1.0050086975097656,
+          "mean_speed_error": 0.2992347776889801
+        },
+        {
+          "success": false,
+          "failed": false,
+          "timeout": false,
+          "duration": 18.000221252441406,
+          "max_forward": 1.063237190246582,
+          "max_lateral": 0.1846323013305664,
+          "final_forward": 1.0387277603149414,
+          "mean_speed_error": 0.4741191864013672
+        },
+        {
+          "success": false,
+          "failed": true,
+          "timeout": false,
+          "duration": 2.2399985790252686,
+          "max_forward": 0.908900260925293,
+          "max_lateral": 0.6391186714172363,
+          "final_forward": 0.8783578872680664,
+          "mean_speed_error": 0.3633332848548889
+        },
+        {
+          "success": false,
+          "failed": true,
+          "timeout": false,
+          "duration": 2.5599982738494873,
+          "max_forward": 0.9064311981201172,
+          "max_lateral": 0.7411043643951416,
+          "final_forward": 0.8534002304077148,
+          "mean_speed_error": 0.3705708682537079
+        },
+        {
+          "success": false,
+          "failed": true,
+          "timeout": false,
+          "duration": 2.2399985790252686,
+          "max_forward": 0.9221525192260742,
+          "max_lateral": 0.8277978897094727,
+          "final_forward": 0.9152460098266602,
+          "mean_speed_error": 0.29970499873161316
+        },
+        {
+          "success": false,
+          "failed": true,
+          "timeout": false,
+          "duration": 2.199998617172241,
+          "max_forward": 0.8594808578491211,
+          "max_lateral": 0.5510573387145996,
+          "final_forward": 0.7723188400268555,
+          "mean_speed_error": 0.326255738735199
+        },
+        {
+          "success": false,
+          "failed": true,
+          "timeout": false,
+          "duration": 2.099998712539673,
+          "max_forward": 1.0185880661010742,
+          "max_lateral": 0.5299758911132812,
+          "final_forward": 1.0185880661010742,
+          "mean_speed_error": 0.2928754687309265
+        },
+        {
+          "success": false,
+          "failed": true,
+          "timeout": false,
+          "duration": 2.219998598098755,
+          "max_forward": 0.9173393249511719,
+          "max_lateral": 0.6127548217773438,
+          "final_forward": 0.9173393249511719,
+          "mean_speed_error": 0.324189692735672
+        },
+        {
+          "success": false,
+          "failed": false,
+          "timeout": false,
+          "duration": 18.000221252441406,
+          "max_forward": 1.0865097045898438,
+          "max_lateral": 0.17180395126342773,
+          "final_forward": 1.0475406646728516,
+          "mean_speed_error": 0.4764586389064789
+        },
+        {
+          "success": false,
+          "failed": true,
+          "timeout": false,
+          "duration": 10.120041847229004,
+          "max_forward": 3.4037351608276367,
+          "max_lateral": 0.4029240608215332,
+          "final_forward": 3.4037351608276367,
+          "mean_speed_error": 0.27869880199432373
+        },
+        {
+          "success": false,
+          "failed": false,
+          "timeout": false,
+          "duration": 18.000221252441406,
+          "max_forward": 1.0697393417358398,
+          "max_lateral": 0.26982712745666504,
+          "final_forward": 1.0407629013061523,
+          "mean_speed_error": 0.47847265005111694
+        },
+        {
+          "success": false,
+          "failed": true,
+          "timeout": false,
+          "duration": 2.639998197555542,
+          "max_forward": 0.98297119140625,
+          "max_lateral": 0.5660994052886963,
+          "final_forward": 0.9808053970336914,
+          "mean_speed_error": 0.3987221419811249
+        },
+        {
+          "success": false,
+          "failed": false,
+          "timeout": false,
+          "duration": 18.000221252441406,
+          "max_forward": 1.0711688995361328,
+          "max_lateral": 0.16021108627319336,
+          "final_forward": 1.0436687469482422,
+          "mean_speed_error": 0.47267434000968933
+        },
+        {
+          "success": false,
+          "failed": true,
+          "timeout": false,
+          "duration": 2.039998769760132,
+          "max_forward": 0.988490104675293,
+          "max_lateral": 0.7091422080993652,
+          "final_forward": 0.9875602722167969,
+          "mean_speed_error": 0.35561588406562805
+        },
+        {
+          "success": false,
+          "failed": true,
+          "timeout": false,
+          "duration": 1.8399988412857056,
+          "max_forward": 1.0003910064697266,
+          "max_lateral": 0.4991621971130371,
+          "final_forward": 1.0003910064697266,
+          "mean_speed_error": 0.3061779737472534
+        },
+        {
+          "success": false,
+          "failed": false,
+          "timeout": false,
+          "duration": 18.000221252441406,
+          "max_forward": 1.0889739990234375,
+          "max_lateral": 0.1869969367980957,
+          "final_forward": 1.050344467163086,
+          "mean_speed_error": 0.4734916090965271
+        },
+        {
+          "success": false,
+          "failed": true,
+          "timeout": false,
+          "duration": 2.5399982929229736,
+          "max_forward": 1.000798225402832,
+          "max_lateral": 0.9577040672302246,
+          "final_forward": 1.000798225402832,
+          "mean_speed_error": 0.37540364265441895
+        },
+        {
+          "success": false,
+          "failed": false,
+          "timeout": false,
+          "duration": 18.000221252441406,
+          "max_forward": 1.0648479461669922,
+          "max_lateral": 0.2207326889038086,
+          "final_forward": 1.0501470565795898,
+          "mean_speed_error": 0.477819561958313
+        },
+        {
+          "success": false,
+          "failed": false,
+          "timeout": false,
+          "duration": 18.000221252441406,
+          "max_forward": 1.0746326446533203,
+          "max_lateral": 0.16667509078979492,
+          "final_forward": 1.040811538696289,
+          "mean_speed_error": 0.4763356149196625
+        },
+        {
+          "success": false,
+          "failed": true,
+          "timeout": false,
+          "duration": 2.6199982166290283,
+          "max_forward": 0.9210977554321289,
+          "max_lateral": 1.0087637901306152,
+          "final_forward": 0.8781681060791016,
+          "mean_speed_error": 0.3522242307662964
+        },
+        {
+          "success": false,
+          "failed": true,
+          "timeout": false,
+          "duration": 2.459998369216919,
+          "max_forward": 0.879913330078125,
+          "max_lateral": 0.8475441932678223,
+          "final_forward": 0.8516998291015625,
+          "mean_speed_error": 0.36697426438331604
+        },
+        {
+          "success": false,
+          "failed": true,
+          "timeout": false,
+          "duration": 4.219996929168701,
+          "max_forward": 1.623342514038086,
+          "max_lateral": 0.7284715175628662,
+          "final_forward": 1.623342514038086,
+          "mean_speed_error": 0.2968187630176544
+        },
+        {
+          "success": false,
+          "failed": false,
+          "timeout": false,
+          "duration": 18.000221252441406,
+          "max_forward": 1.065974235534668,
+          "max_lateral": 0.11931991577148438,
+          "final_forward": 1.0507564544677734,
+          "mean_speed_error": 0.4746478199958801
+        },
+        {
+          "success": false,
+          "failed": true,
+          "timeout": false,
+          "duration": 2.639998197555542,
+          "max_forward": 0.9970808029174805,
+          "max_lateral": 1.0375795364379883,
+          "final_forward": 0.9970808029174805,
+          "mean_speed_error": 0.3487051725387573
+        },
+        {
+          "success": false,
+          "failed": true,
+          "timeout": false,
+          "duration": 6.71999454498291,
+          "max_forward": 1.538954734802246,
+          "max_lateral": 1.087721347808838,
+          "final_forward": 0.953465461730957,
+          "mean_speed_error": 0.3338963985443115
+        },
+        {
+          "success": false,
+          "failed": false,
+          "timeout": false,
+          "duration": 18.000221252441406,
+          "max_forward": 1.0977840423583984,
+          "max_lateral": 0.15911006927490234,
+          "final_forward": 1.0435857772827148,
+          "mean_speed_error": 0.4791374206542969
+        },
+        {
+          "success": false,
+          "failed": false,
+          "timeout": false,
+          "duration": 18.000221252441406,
+          "max_forward": 1.0773143768310547,
+          "max_lateral": 0.20798397064208984,
+          "final_forward": 1.0297317504882812,
+          "mean_speed_error": 0.4669494032859802
+        },
+        {
+          "success": false,
+          "failed": false,
+          "timeout": false,
+          "duration": 18.000221252441406,
+          "max_forward": 1.0877857208251953,
+          "max_lateral": 0.12810826301574707,
+          "final_forward": 1.040689468383789,
+          "mean_speed_error": 0.46945327520370483
+        },
+        {
+          "success": false,
+          "failed": true,
+          "timeout": false,
+          "duration": 2.1399986743927,
+          "max_forward": 1.0000123977661133,
+          "max_lateral": 0.6634526252746582,
+          "final_forward": 1.0000123977661133,
+          "mean_speed_error": 0.3376672863960266
+        },
+        {
+          "success": false,
+          "failed": false,
+          "timeout": false,
+          "duration": 18.000221252441406,
+          "max_forward": 1.0754919052124023,
+          "max_lateral": 0.39275169372558594,
+          "final_forward": 1.0564956665039062,
+          "mean_speed_error": 0.469978004693985
+        },
+        {
+          "success": false,
+          "failed": false,
+          "timeout": false,
+          "duration": 18.000221252441406,
+          "max_forward": 1.098921775817871,
+          "max_lateral": 0.2356271743774414,
+          "final_forward": 1.0313606262207031,
+          "mean_speed_error": 0.47554686665534973
+        }
+      ],
+      "flat_success": 32,
+      "stair_success": 0
+    }
+  ]
+}

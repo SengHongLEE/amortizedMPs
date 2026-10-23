@@ -206,6 +206,7 @@ class Transient_Dynamics(_DynamicsBase):
         phase = self.X[:, 2, :]      
         amplitude_x = self.X[:, 0, :]
         amplitude_z = self.X[:, 1, :]
+
         amp_clip_x = torch.clip(amplitude_x, self.mu_low, self.mu_up)
         amp_norm_x = (amp_clip_x - self.mu_low) / (self.mu_up - self.mu_low)
         amp_norm_x = torch.clamp(amp_norm_x, 0.0, 1.0)
@@ -220,33 +221,7 @@ class Transient_Dynamics(_DynamicsBase):
         amp_push_z = self._PUSH_EXTENSION * amp_norm_z
         amp_tuck_z = torch.where(self.active, self._TUCK_HEIGHT * torch.ones_like(amp_norm_z),  self._TUCK_HEIGHT * amp_norm_z)
 
-        # ============================================================
-        # Stage 1: preload, 0 -> pi
-        # nominal -> slightly forward
-        # ============================================================
-        load_phase = torch.clamp(
-            phase,
-            min=0.0,
-            max=torch.pi,
-        )
-        load_basis = torch.sin(load_phase).square()
-        x_load = amp_load_x * load_basis
 
-        # ============================================================
-        # Stage 2: push, pi -> 1.5 pi
-        # forward preload -> backward extension
-        # ============================================================
-        push_phase = torch.clamp(
-            (phase - torch.pi),
-            min=0.0,
-            max=0.5 * torch.pi,
-        )
-        push_basis = torch.sin(push_phase).square()
-
-        x_push = (
-            amp_load_x
-            - (amp_load_x + amp_push_x) * push_basis
-        )
         sin_phase = torch.sin(phase)
         self.x = torch.where(
             phase < torch.pi,
@@ -254,25 +229,15 @@ class Transient_Dynamics(_DynamicsBase):
             amp_load_x * torch.sin(0.5 * phase).square(),
             amp_load_x - (amp_push_x + amp_load_x) * sin_phase.square(),
         )
-        #####
-        # self.z = torch.where(
-        #     sin_phase > 0,
-        #     -self._robot_height + amp_load_z * sin_phase.square(),
-        #     -self._robot_height - amp_push_z * sin_phase.square(),
-        # )
-
-
 
         # ============================================================
         # Stage 1: preload, 0 -> pi
         # ============================================================
         load_basis = torch.sin(0.5 * phase).square()
-
         z_load = (
             -self._robot_height
             + amp_load_z * load_basis
         )
-
         # ============================================================
         # Stage 2: push,  pi -> 1.5 pi
         # monotonic nominal -> maximum extension
@@ -283,19 +248,6 @@ class Transient_Dynamics(_DynamicsBase):
             max=0.5 * torch.pi,
         )
         push_basis = torch.sin(push_phase).square()
-
-#         push_progress = torch.clamp(
-#             (phase - 0.5 * torch.pi) / torch.pi,
-#             min=0.0,
-#             max=1.0,
-# )
-
-#         push_basis = (
-#             20.0 * push_progress.pow(3)
-#             - 45.0 * push_progress.pow(4)
-#             + 36.0 * push_progress.pow(5)
-#             - 10.0 * push_progress.pow(6)
-#         )
 
         z_push = (
             -self._robot_height + amp_load_z
@@ -322,12 +274,6 @@ class Transient_Dynamics(_DynamicsBase):
             - amp_push_z
             + (amp_push_z + amp_tuck_z) * smooth_tuck
         )
-
-        # self.x = torch.where(
-        #     phase < torch.pi,
-        #     x_load,
-        #     x_push
-        # )
 
         self.z = torch.where(
             phase < torch.pi,

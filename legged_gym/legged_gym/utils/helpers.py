@@ -76,7 +76,7 @@ def parse_sim_params(args, cfg):
 
     return sim_params
 
-def get_load_path(root, load_run=-1, checkpoint=-1):
+def get_load_path(root, pattern, load_run=-1, checkpoint=-1):
     try:
         runs = os.listdir(root)
         #TODO sort by date to handle change of month
@@ -91,9 +91,6 @@ def get_load_path(root, load_run=-1, checkpoint=-1):
         load_run = os.path.join(root, load_run)
 
     if checkpoint==-1:
-        pattern = re.compile(r"^model_(\d+)_mu-\d+_omega-\d+\.pt$")
-        pattern = re.compile(r"^model_(\d+)_high-\d+_mu-\d+_omega-\d+\.pt$")
-        pattern = re.compile(r"^model_(\d+)_high-\d+_hip-\d+_mu-\d+_omega-\d+\.pt$")
 
         models = [
             file

@@ -1,0 +1,1438 @@
+{
+  "checkpoint": "/home/ubuntu/amortizedMPs/legged_gym/logs/A1/1020_19-56-18_A1MPproprioterrain-trimesh-psF_2e+00-mpF_5e+01-MF_1e+03-noResume/model_24_250.pt",
+  "sha256": "5d741199d930f098ecd97596dd551cf4cce5acb21b6fc8cfb0ee9f5dc1272416",
+  "iteration": 0,
+  "mode": "play",
+  "seed": 123,
+  "seconds": 20.0,
+  "repeats": 8,
+  "command_speed": 0.5,
+  "gait_names": [
+    "walk",
+    "pace",
+    "trot",
+    "canter",
+    "bound",
+    "gallop"
+  ],
+  "effective_config": {
+    "asset": {
+      "angular_damping": 0.0,
+      "armature": 0.0,
+      "calf_link_length_a1": 0.2,
+      "collapse_fixed_joints": true,
+      "default_dof_drive_mode": 3,
+      "density": 0.001,
+      "disable_gravity": false,
+      "file": "{LEGGED_GYM_ROOT_DIR}/resources/robots/a1/urdf/a1_updated_v2.urdf",
+      "fix_base_link": false,
+      "flip_visual_attachments": true,
+      "foot_name": "foot",
+      "ground_clearance": 0.15,
+      "ground_penetration": 0.0,
+      "hip_link_length_a1": 0.0838,
+      "linear_damping": 0.0,
+      "max_angular_velocity": 1000.0,
+      "max_ground_clearance": 0.2,
+      "max_linear_velocity": 1000.0,
+      "max_step_length": 0.1,
+      "penalize_contacts_on": [
+        "thigh",
+        "calf"
+      ],
+      "replace_cylinder_with_capsule": true,
+      "self_collisions": 1,
+      "terminate_after_contacts_on": [
+        "base"
+      ],
+      "thickness": 0.01,
+      "thigh_link_length_a1": 0.2
+    },
+    "commands": {
+      "heading_command": true,
+      "max_vel_x": 0.8,
+      "num_commands": 4,
+      "ranges": {
+        "ang_vel_yaw": [
+          0.0,
+          0.0
+        ],
+        "heading": [
+          -0.0,
+          0.0
+        ],
+        "lin_vel_x": [
+          0.3,
+          0.8
+        ],
+        "lin_vel_y": [
+          -0.0,
+          0.0
+        ]
+      },
+      "resampling_time": 5
+    },
+    "control": {
+      "action_scale": 1.0,
+      "cycle": 2,
+      "damping": {
+        "joint": 2.0
+      },
+      "decimation": 10,
+      "hierarchical": false,
+      "modulation_param_update_cycle": 1,
+      "oscillator_type": "phase_oscillator",
+      "primitive_selection_update_cycle": 25,
+      "stiffness": {
+        "joint": 100.0
+      },
+      "update_quality_threshold": 0.85,
+      "varied_decimation": false
+    },
+    "domain_rand": {
+      "added_mass_range": [
+        -2.0,
+        3.0
+      ],
+      "friction_range": [
+        0.6,
+        1.0
+      ],
+      "max_push_vel_xy": 0.3,
+      "push_interval": 250.0,
+      "push_interval_s": 5,
+      "push_robots": false,
+      "randomize_base_mass": false,
+      "randomize_friction": false
+    },
+    "env": {
+      "env_spacing": 3.0,
+      "episode_length_s": 20.0,
+      "num_actions": 17,
+      "num_envs": 40,
+      "num_modulation_params": 16,
+      "num_observations": 54,
+      "num_primitives": 6,
+      "num_privileged_obs": 61,
+      "play": false,
+      "send_timeouts": true
+    },
+    "init_member_classes": {},
+    "init_state": {
+      "ang_vel": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "default_joint_angles": {
+        "FL_hip_joint": 0.1,
+        "RL_hip_joint": 0.1,
+        "FR_hip_joint": -0.1,
+        "RR_hip_joint": -0.1,
+        "FL_thigh_joint": 0.8,
+        "RL_thigh_joint": 1.0,
+        "FR_thigh_joint": 0.8,
+        "RR_thigh_joint": 1.0,
+        "FL_calf_joint": -1.5,
+        "RL_calf_joint": -1.5,
+        "FR_calf_joint": -1.5,
+        "RR_calf_joint": -1.5
+      },
+      "lin_vel": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "pos": [
+        0.0,
+        0.0,
+        0.32
+      ],
+      "rot": [
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ]
+    },
+    "noise": {
+      "add_noise": false,
+      "noise_level": 1.0,
+      "noise_scales": {
+        "ang_vel": 0.4,
+        "dof_pos": 0.5,
+        "dof_vel": 1.5,
+        "gravity": 0.1,
+        "height_measurements": 0.0,
+        "lin_vel": 0.1
+      }
+    },
+    "normalization": {
+      "clip_actions": 1.0,
+      "clip_observations": 100.0,
+      "obs_scales": {
+        "ang_vel": 0.25,
+        "dof_pos": 1.0,
+        "dof_vel": 0.05,
+        "height_measurements": 5.0,
+        "lin_vel": 2.0
+      }
+    },
+    "rewards": {
+      "base_height_target": 0.32,
+      "contact_off_force": 1.0,
+      "contact_on_force": 5.0,
+      "max_contact_force": 180.0,
+      "modulation_param_rewards": [
+        "tracking_lin_vel",
+        "tracking_ang_vel",
+        "orientation",
+        "orientation_yaw",
+        "ang_vel_xy",
+        "action_rate_mp",
+        "stance_slip",
+        "exceed_torque_limits_l1norm",
+        "dof_vel_limits"
+      ],
+      "only_positive_rewards": false,
+      "pi_g_contact_force": 1.0,
+      "pi_g_switch_cost": 2.0,
+      "pi_g_utility_weight": 0.4,
+      "primitive_selection_rewards": [
+        "pi_g_utility",
+        "pi_g_cot",
+        "pi_g_torque",
+        "pi_g_contact",
+        "pi_g_work"
+      ],
+      "primitive_selection_scales": {
+        "pi_g_contact": 1.0,
+        "pi_g_cot": 1.0,
+        "pi_g_torque": 1.0,
+        "pi_g_utility": 1.0,
+        "pi_g_work": 1.0
+      },
+      "scales": {
+        "action_rate_mp": -0.1,
+        "action_rate_ps": -0.1,
+        "ang_vel_xy": -0.1,
+        "dof_vel_limits": -0.4,
+        "exceed_torque_limits_l1norm": -0.4,
+        "orientation": -2.0,
+        "orientation_yaw": -2.0,
+        "stance_slip": -0.2,
+        "tracking_ang_vel": 1.5,
+        "tracking_lin_vel": 3.0
+      },
+      "soft_dof_pos_limit": 0.9,
+      "soft_dof_vel_limit": 0.9,
+      "soft_torque_limit": 0.9,
+      "task_rewards": [
+        "tracking_lin_vel",
+        "tracking_ang_vel"
+      ],
+      "touchdown_force_scale": 180.0,
+      "touchdown_force_weight": 0.25,
+      "touchdown_force_window": 0.02,
+      "touchdown_min_air_time": 0.02,
+      "touchdown_velocity_scale": 1.0,
+      "tracking_sigma": 0.25
+    },
+    "seed": 1,
+    "sim": {
+      "dt": 0.001,
+      "gravity": [
+        0.0,
+        0.0,
+        -9.81
+      ],
+      "physx": {
+        "bounce_threshold_velocity": 0.5,
+        "contact_collection": 2,
+        "contact_offset": 0.01,
+        "default_buffer_size_multiplier": 5,
+        "max_depenetration_velocity": 1.0,
+        "max_gpu_contact_pairs": 8388608,
+        "num_position_iterations": 4,
+        "num_threads": 10,
+        "num_velocity_iterations": 0,
+        "rest_offset": 0.0,
+        "solver_type": 1
+      },
+      "substeps": 1,
+      "up_axis": 1
+    },
+    "terrain": {
+      "border_size": 4.0,
+      "boundary_margin": 0.6,
+      "curriculum": false,
+      "curriculum_demote_ratio": 0.5,
+      "curriculum_initial_level": 1,
+      "curriculum_max_level": null,
+      "curriculum_min_level": 0,
+      "curriculum_promote_distance": 2.5,
+      "curriculum_promote_ratio": 0.8,
+      "difficulty_mode": "linear",
+      "difficulty_range": [
+        0.0,
+        1.0
+      ],
+      "dynamic_friction": 1.0,
+      "fixed_terrain_level": null,
+      "horizontal_scale": 0.1,
+      "max_init_terrain_level": null,
+      "measure_heights": false,
+      "mesh_type": "trimesh",
+      "num_cols": 8,
+      "num_rows": 5,
+      "origin_sample_size": 1.0,
+      "platform_size": 3.0,
+      "restitution": 0.0,
+      "row_difficulties": [
+        0.0,
+        0.25,
+        0.5,
+        0.75,
+        1.0
+      ],
+      "seed": 1,
+      "selected": "stairs",
+      "selected_kwargs": null,
+      "slope_threshold": 0.75,
+      "spawn_platform": false,
+      "spawn_xy_jitter": 0.1,
+      "static_friction": 1.0,
+      "terrain_columns": null,
+      "terrain_length": 8.0,
+      "terrain_params": {
+        "flat": {
+          "height": 0.0
+        },
+        "slope": {
+          "slope_range": [
+            0.02,
+            0.3
+          ],
+          "slope_signs": [
+            -1,
+            1
+          ]
+        },
+        "ramp": {
+          "slope_range": [
+            0.02,
+            0.3
+          ],
+          "slope_signs": [
+            -1,
+            1
+          ],
+          "center_platform": true
+        },
+        "rough_slope": {
+          "slope_range": [
+            0.02,
+            0.2
+          ],
+          "slope_signs": [
+            -1,
+            1
+          ],
+          "height_range": [
+            0.005,
+            0.025
+          ],
+          "height_step": 0.005,
+          "downsampled_scale": 0.3
+        },
+        "rough": {
+          "height_range": [
+            0.005,
+            0.04
+          ],
+          "height_step": 0.005,
+          "downsampled_scale": 0.3
+        },
+        "rubble": {
+          "height_range": [
+            0.01,
+            0.04
+          ],
+          "stone_size_range": [
+            0.6,
+            1.2
+          ],
+          "num_rects": 12
+        },
+        "stairs": {
+          "step_height_range": [
+            0.0,
+            0.08
+          ],
+          "step_width": 0.6,
+          "step_signs": [
+            -1
+          ]
+        },
+        "stairs_linear": {
+          "step_height_range": [
+            0.01,
+            0.08
+          ],
+          "step_width": 0.4,
+          "step_signs": [
+            -1,
+            1
+          ]
+        },
+        "stepping_stones": {
+          "stone_size_range": [
+            0.8,
+            0.3
+          ],
+          "stone_distance_range": [
+            0.1,
+            0.3
+          ],
+          "height_range": [
+            0.0,
+            0.05
+          ],
+          "depth_range": [
+            0.2,
+            0.6
+          ]
+        },
+        "wave": {
+          "amplitude_range": [
+            0.01,
+            0.12
+          ],
+          "num_waves": 2
+        },
+        "gap": {
+          "width_range": [
+            0.1,
+            0.5
+          ],
+          "depth_range": [
+            0.2,
+            0.6
+          ],
+          "spacing": 1.5
+        },
+        "pit": {
+          "size_range": [
+            2.5,
+            3.0
+          ],
+          "depth_range": [
+            0.1,
+            0.5
+          ]
+        },
+        "hurdle": {
+          "width_range": [
+            0.2,
+            0.3
+          ],
+          "height_range": [
+            0.05,
+            0.2
+          ],
+          "spacing": 1.5
+        },
+        "beam": {
+          "width_range": [
+            1.0,
+            0.3
+          ],
+          "depth_range": [
+            0.2,
+            0.6
+          ]
+        }
+      },
+      "terrain_proportions": {
+        "flat": 1.0,
+        "slope": 1.0,
+        "rough_slope": 1.0,
+        "rough": 1.0,
+        "rubble": 1.0,
+        "stairs": 1.0,
+        "ramp": 1.0,
+        "stairs_linear": 0.0,
+        "stepping_stones": 0.0,
+        "wave": 1.0,
+        "gap": 0.0,
+        "pit": 0.0,
+        "hurdle": 0.0,
+        "beam": 0.0
+      },
+      "terrain_variants": {
+        "uphill": {
+          "type": "ramp",
+          "params": {
+            "slope_range": [
+              0.02,
+              0.3
+            ],
+            "slope_signs": [
+              1
+            ]
+          }
+        },
+        "downhill": {
+          "type": "ramp",
+          "params": {
+            "slope_range": [
+              0.02,
+              0.3
+            ],
+            "slope_signs": [
+              -1
+            ]
+          }
+        },
+        "side_slope": {
+          "type": "ramp",
+          "params": {
+            "slope_range": [
+              0.02,
+              0.2
+            ],
+            "axis": "y"
+          }
+        }
+      },
+      "terrain_width": 8.0,
+      "vertical_scale": 0.005
+    },
+    "viewer": {
+      "lookat": [
+        1.8,
+        0.8,
+        0.3
+      ],
+      "pos": [
+        1.8,
+        0.6,
+        0.4
+      ],
+      "ref_env": 0
+    }
+  },
+  "rows": [
+    {
+      "height_m": 0.0,
+      "first_riser_x_m": null,
+      "episodes": [
+        {
+          "env": 0,
+          "duration_s": 9.900000470224768,
+          "max_forward_m": 3.40812349319458,
+          "final_forward_m": 3.40812349319458,
+          "max_body_rise_m": 0.0016461014747619629,
+          "failed": false,
+          "crossed": true,
+          "front_supported_on_first_step": null,
+          "rear_supported_on_first_step": null,
+          "torque_saturation_fraction": 0.0008922559791244566,
+          "foot_z_rmse_m": 0.0462074913084507,
+          "residual_clip_fraction": 0.15387205387205388,
+          "selected_gait_counts": [
+            0,
+            0,
+            495,
+            0,
+            0,
+            0
+          ]
+        },
+        {
+          "env": 1,
+          "duration_s": 6.760000321082771,
+          "max_forward_m": 3.4037766456604004,
+          "final_forward_m": 3.4037766456604004,
+          "max_body_rise_m": 0.0015806853771209717,
+          "failed": false,
+          "crossed": true,
+          "front_supported_on_first_step": null,
+          "rear_supported_on_first_step": null,
+          "torque_saturation_fraction": 0.0009368837345391512,
+          "foot_z_rmse_m": 0.04592713341116905,
+          "residual_clip_fraction": 0.0039447731755424065,
+          "selected_gait_counts": [
+            0,
+            0,
+            338,
+            0,
+            0,
+            0
+          ]
+        },
+        {
+          "env": 2,
+          "duration_s": 8.440000400878489,
+          "max_forward_m": 3.403689384460449,
+          "final_forward_m": 3.403689384460449,
+          "max_body_rise_m": 0.0,
+          "failed": false,
+          "crossed": true,
+          "front_supported_on_first_step": null,
+          "rear_supported_on_first_step": null,
+          "torque_saturation_fraction": 8.88625654624775e-05,
+          "foot_z_rmse_m": 0.045927975326776505,
+          "residual_clip_fraction": 0.00039494470774091627,
+          "selected_gait_counts": [
+            0,
+            0,
+            422,
+            0,
+            0,
+            0
+          ]
+        },
+        {
+          "env": 3,
+          "duration_s": 8.300000394228846,
+          "max_forward_m": 3.4068431854248047,
+          "final_forward_m": 3.4068431854248047,
+          "max_body_rise_m": 0.0,
+          "failed": false,
+          "crossed": true,
+          "front_supported_on_first_step": null,
+          "rear_supported_on_first_step": null,
+          "torque_saturation_fraction": 0.00028112452127970755,
+          "foot_z_rmse_m": 0.046099256724119186,
+          "residual_clip_fraction": 0.14718875502008033,
+          "selected_gait_counts": [
+            0,
+            0,
+            415,
+            0,
+            0,
+            0
+          ]
+        },
+        {
+          "env": 4,
+          "duration_s": 6.820000323932618,
+          "max_forward_m": 3.403486728668213,
+          "final_forward_m": 3.403486728668213,
+          "max_body_rise_m": 0.0,
+          "failed": false,
+          "crossed": true,
+          "front_supported_on_first_step": null,
+          "rear_supported_on_first_step": null,
+          "torque_saturation_fraction": 0.0005742913926951587,
+          "foot_z_rmse_m": 0.046024128794670105,
+          "residual_clip_fraction": 0.011974584555229716,
+          "selected_gait_counts": [
+            0,
+            0,
+            341,
+            0,
+            0,
+            0
+          ]
+        },
+        {
+          "env": 5,
+          "duration_s": 7.640000362880528,
+          "max_forward_m": 3.404808521270752,
+          "final_forward_m": 3.404808521270752,
+          "max_body_rise_m": 0.003910660743713379,
+          "failed": false,
+          "crossed": true,
+          "front_supported_on_first_step": null,
+          "rear_supported_on_first_step": null,
+          "torque_saturation_fraction": 0.00014179757272358984,
+          "foot_z_rmse_m": 0.04598189517855644,
+          "residual_clip_fraction": 0.0063263525305410125,
+          "selected_gait_counts": [
+            0,
+            0,
+            382,
+            0,
+            0,
+            0
+          ]
+        },
+        {
+          "env": 6,
+          "duration_s": 9.900000470224768,
+          "max_forward_m": 3.4003114700317383,
+          "final_forward_m": 3.4003114700317383,
+          "max_body_rise_m": 0.0020383596420288086,
+          "failed": false,
+          "crossed": true,
+          "front_supported_on_first_step": null,
+          "rear_supported_on_first_step": null,
+          "torque_saturation_fraction": 0.0007407407974824309,
+          "foot_z_rmse_m": 0.046180058270692825,
+          "residual_clip_fraction": 0.06936026936026936,
+          "selected_gait_counts": [
+            0,
+            0,
+            495,
+            0,
+            0,
+            0
+          ]
+        },
+        {
+          "env": 7,
+          "duration_s": 6.220000295434147,
+          "max_forward_m": 3.401495933532715,
+          "final_forward_m": 3.401495933532715,
+          "max_body_rise_m": 0.002404630184173584,
+          "failed": false,
+          "crossed": true,
+          "front_supported_on_first_step": null,
+          "rear_supported_on_first_step": null,
+          "torque_saturation_fraction": 0.0004153268819209188,
+          "foot_z_rmse_m": 0.0460694283246994,
+          "residual_clip_fraction": 0.08011789924973205,
+          "selected_gait_counts": [
+            0,
+            0,
+            311,
+            0,
+            0,
+            0
+          ]
+        }
+      ]
+    },
+    {
+      "height_m": 0.02,
+      "first_riser_x_m": 1.0,
+      "episodes": [
+        {
+          "env": 8,
+          "duration_s": 7.440000353381038,
+          "max_forward_m": 3.4123687744140625,
+          "final_forward_m": 3.4123687744140625,
+          "max_body_rise_m": 0.07954239845275879,
+          "failed": false,
+          "crossed": true,
+          "front_supported_on_first_step": true,
+          "rear_supported_on_first_step": true,
+          "torque_saturation_fraction": 0.0008624551701359451,
+          "foot_z_rmse_m": 0.0460285022854805,
+          "residual_clip_fraction": 0.06765232974910394,
+          "selected_gait_counts": [
+            0,
+            0,
+            372,
+            0,
+            0,
+            0
+          ]
+        },
+        {
+          "env": 9,
+          "duration_s": 6.880000326782465,
+          "max_forward_m": 3.401273727416992,
+          "final_forward_m": 3.401273727416992,
+          "max_body_rise_m": 0.07432682812213898,
+          "failed": false,
+          "crossed": true,
+          "front_supported_on_first_step": true,
+          "rear_supported_on_first_step": true,
+          "torque_saturation_fraction": 0.0010174419730901718,
+          "foot_z_rmse_m": 0.04592854902148247,
+          "residual_clip_fraction": 0.013808139534883721,
+          "selected_gait_counts": [
+            0,
+            0,
+            344,
+            0,
+            0,
+            0
+          ]
+        },
+        {
+          "env": 10,
+          "duration_s": 6.940000329632312,
+          "max_forward_m": 3.407130241394043,
+          "final_forward_m": 3.407130241394043,
+          "max_body_rise_m": 0.08323776721954346,
+          "failed": false,
+          "crossed": true,
+          "front_supported_on_first_step": true,
+          "rear_supported_on_first_step": true,
+          "torque_saturation_fraction": 0.0008165226317942142,
+          "foot_z_rmse_m": 0.04622289165854454,
+          "residual_clip_fraction": 0.00888568683957733,
+          "selected_gait_counts": [
+            0,
+            0,
+            347,
+            0,
+            0,
+            0
+          ]
+        },
+        {
+          "env": 11,
+          "duration_s": 5.380000255536288,
+          "max_forward_m": 3.405048370361328,
+          "final_forward_m": 3.405048370361328,
+          "max_body_rise_m": 0.08392074704170227,
+          "failed": false,
+          "crossed": true,
+          "front_supported_on_first_step": true,
+          "rear_supported_on_first_step": true,
+          "torque_saturation_fraction": 0.0005111524951644242,
+          "foot_z_rmse_m": 0.04604077339172363,
+          "residual_clip_fraction": 0.0,
+          "selected_gait_counts": [
+            0,
+            0,
+            269,
+            0,
+            0,
+            0
+          ]
+        },
+        {
+          "env": 12,
+          "duration_s": 7.60000036098063,
+          "max_forward_m": 3.4004383087158203,
+          "final_forward_m": 3.4004383087158203,
+          "max_body_rise_m": 0.07562465965747833,
+          "failed": false,
+          "crossed": true,
+          "front_supported_on_first_step": true,
+          "rear_supported_on_first_step": true,
+          "torque_saturation_fraction": 0.0010416667209938169,
+          "foot_z_rmse_m": 0.04613710194826126,
+          "residual_clip_fraction": 0.07171052631578947,
+          "selected_gait_counts": [
+            0,
+            0,
+            380,
+            0,
+            0,
+            0
+          ]
+        },
+        {
+          "env": 13,
+          "duration_s": 5.7800002745352685,
+          "max_forward_m": 3.4135189056396484,
+          "final_forward_m": 3.4135189056396484,
+          "max_body_rise_m": 0.06706026196479797,
+          "failed": false,
+          "crossed": true,
+          "front_supported_on_first_step": true,
+          "rear_supported_on_first_step": true,
+          "torque_saturation_fraction": 0.005723760463297367,
+          "foot_z_rmse_m": 0.04805013909935951,
+          "residual_clip_fraction": 0.05363321799307959,
+          "selected_gait_counts": [
+            0,
+            0,
+            150,
+            0,
+            0,
+            139
+          ]
+        },
+        {
+          "env": 14,
+          "duration_s": 8.480000402778387,
+          "max_forward_m": 3.413118362426758,
+          "final_forward_m": 3.413118362426758,
+          "max_body_rise_m": 0.07616491615772247,
+          "failed": false,
+          "crossed": true,
+          "front_supported_on_first_step": true,
+          "rear_supported_on_first_step": true,
+          "torque_saturation_fraction": 0.0008058176608756185,
+          "foot_z_rmse_m": 0.046183906495571136,
+          "residual_clip_fraction": 0.10849056603773585,
+          "selected_gait_counts": [
+            0,
+            0,
+            424,
+            0,
+            0,
+            0
+          ]
+        },
+        {
+          "env": 15,
+          "duration_s": 7.220000342931598,
+          "max_forward_m": 3.4086484909057617,
+          "final_forward_m": 3.4086484909057617,
+          "max_body_rise_m": 0.07602758705615997,
+          "failed": false,
+          "crossed": true,
+          "front_supported_on_first_step": true,
+          "rear_supported_on_first_step": true,
+          "torque_saturation_fraction": 0.0008771930588409305,
+          "foot_z_rmse_m": 0.04610496759414673,
+          "residual_clip_fraction": 0.10964912280701754,
+          "selected_gait_counts": [
+            0,
+            0,
+            361,
+            0,
+            0,
+            0
+          ]
+        }
+      ]
+    },
+    {
+      "height_m": 0.04,
+      "first_riser_x_m": 1.0,
+      "episodes": [
+        {
+          "env": 16,
+          "duration_s": 6.340000301133841,
+          "max_forward_m": 3.4036922454833984,
+          "final_forward_m": 3.4036922454833984,
+          "max_body_rise_m": 0.1702127754688263,
+          "failed": false,
+          "crossed": true,
+          "front_supported_on_first_step": true,
+          "rear_supported_on_first_step": true,
+          "torque_saturation_fraction": 0.009503155015408993,
+          "foot_z_rmse_m": 0.048992883414030075,
+          "residual_clip_fraction": 0.06729758149316509,
+          "selected_gait_counts": [
+            0,
+            0,
+            25,
+            125,
+            0,
+            167
+          ]
+        },
+        {
+          "env": 17,
+          "duration_s": 7.160000340081751,
+          "max_forward_m": 3.4068603515625,
+          "final_forward_m": 3.4068603515625,
+          "max_body_rise_m": 0.15947175025939941,
+          "failed": false,
+          "crossed": true,
+          "front_supported_on_first_step": true,
+          "rear_supported_on_first_step": true,
+          "torque_saturation_fraction": 0.0021415273658931255,
+          "foot_z_rmse_m": 0.046474140137434006,
+          "residual_clip_fraction": 0.07355679702048418,
+          "selected_gait_counts": [
+            0,
+            0,
+            100,
+            258,
+            0,
+            0
+          ]
+        },
+        {
+          "env": 18,
+          "duration_s": 6.240000296384096,
+          "max_forward_m": 3.4124927520751953,
+          "final_forward_m": 3.4124927520751953,
+          "max_body_rise_m": 0.19443094730377197,
+          "failed": false,
+          "crossed": true,
+          "front_supported_on_first_step": true,
+          "rear_supported_on_first_step": true,
+          "torque_saturation_fraction": 0.0014690172392874956,
+          "foot_z_rmse_m": 0.04645414277911186,
+          "residual_clip_fraction": 0.06597222222222222,
+          "selected_gait_counts": [
+            0,
+            0,
+            125,
+            187,
+            0,
+            0
+          ]
+        },
+        {
+          "env": 19,
+          "duration_s": 8.580000407528132,
+          "max_forward_m": 3.405599594116211,
+          "final_forward_m": 3.405599594116211,
+          "max_body_rise_m": 0.17056849598884583,
+          "failed": false,
+          "crossed": true,
+          "front_supported_on_first_step": true,
+          "rear_supported_on_first_step": true,
+          "torque_saturation_fraction": 0.0010683761211112142,
+          "foot_z_rmse_m": 0.0461394228041172,
+          "residual_clip_fraction": 0.04992229992229992,
+          "selected_gait_counts": [
+            0,
+            0,
+            429,
+            0,
+            0,
+            0
+          ]
+        },
+        {
+          "env": 20,
+          "duration_s": 6.880000326782465,
+          "max_forward_m": 3.409177780151367,
+          "final_forward_m": 3.409177780151367,
+          "max_body_rise_m": 0.1848505735397339,
+          "failed": false,
+          "crossed": true,
+          "front_supported_on_first_step": true,
+          "rear_supported_on_first_step": true,
+          "torque_saturation_fraction": 0.0017684109043329954,
+          "foot_z_rmse_m": 0.04604491591453552,
+          "residual_clip_fraction": 0.019137596899224806,
+          "selected_gait_counts": [
+            0,
+            0,
+            344,
+            0,
+            0,
+            0
+          ]
+        },
+        {
+          "env": 21,
+          "duration_s": 7.840000372380018,
+          "max_forward_m": 3.4062976837158203,
+          "final_forward_m": 3.4062976837158203,
+          "max_body_rise_m": 0.16731837391853333,
+          "failed": false,
+          "crossed": true,
+          "front_supported_on_first_step": true,
+          "rear_supported_on_first_step": true,
+          "torque_saturation_fraction": 0.0012436225078999996,
+          "foot_z_rmse_m": 0.04611966013908386,
+          "residual_clip_fraction": 0.05038265306122449,
+          "selected_gait_counts": [
+            0,
+            0,
+            350,
+            42,
+            0,
+            0
+          ]
+        },
+        {
+          "env": 22,
+          "duration_s": 6.720000319182873,
+          "max_forward_m": 3.405691146850586,
+          "final_forward_m": 3.405691146850586,
+          "max_body_rise_m": 0.15867023169994354,
+          "failed": false,
+          "crossed": true,
+          "front_supported_on_first_step": true,
+          "rear_supported_on_first_step": true,
+          "torque_saturation_fraction": 0.008531746454536915,
+          "foot_z_rmse_m": 0.049180857837200165,
+          "residual_clip_fraction": 0.07490079365079365,
+          "selected_gait_counts": [
+            0,
+            0,
+            125,
+            0,
+            0,
+            211
+          ]
+        },
+        {
+          "env": 23,
+          "duration_s": 7.580000360030681,
+          "max_forward_m": 3.406574249267578,
+          "final_forward_m": 3.406574249267578,
+          "max_body_rise_m": 0.17924030125141144,
+          "failed": false,
+          "crossed": true,
+          "front_supported_on_first_step": true,
+          "rear_supported_on_first_step": true,
+          "torque_saturation_fraction": 0.0013632365735247731,
+          "foot_z_rmse_m": 0.04603595286607742,
+          "residual_clip_fraction": 0.055628847845206685,
+          "selected_gait_counts": [
+            0,
+            0,
+            379,
+            0,
+            0,
+            0
+          ]
+        }
+      ]
+    },
+    {
+      "height_m": 0.06,
+      "first_riser_x_m": 1.0,
+      "episodes": [
+        {
+          "env": 24,
+          "duration_s": 7.680000364780426,
+          "max_forward_m": 3.4004135131835938,
+          "final_forward_m": 3.4004135131835938,
+          "max_body_rise_m": 0.27015388011932373,
+          "failed": false,
+          "crossed": true,
+          "front_supported_on_first_step": true,
+          "rear_supported_on_first_step": true,
+          "torque_saturation_fraction": 0.003938802983611822,
+          "foot_z_rmse_m": 0.04672384634613991,
+          "residual_clip_fraction": 0.06640625,
+          "selected_gait_counts": [
+            0,
+            0,
+            359,
+            0,
+            0,
+            25
+          ]
+        },
+        {
+          "env": 25,
+          "duration_s": 8.680000412277877,
+          "max_forward_m": 3.4083728790283203,
+          "final_forward_m": 3.4083728790283203,
+          "max_body_rise_m": 0.256048321723938,
+          "failed": false,
+          "crossed": true,
+          "front_supported_on_first_step": true,
+          "rear_supported_on_first_step": true,
+          "torque_saturation_fraction": 0.012077571824193,
+          "foot_z_rmse_m": 0.049649596214294434,
+          "residual_clip_fraction": 0.05971582181259601,
+          "selected_gait_counts": [
+            0,
+            0,
+            200,
+            0,
+            0,
+            234
+          ]
+        },
+        {
+          "env": 26,
+          "duration_s": 6.200000294484198,
+          "max_forward_m": 3.406557083129883,
+          "final_forward_m": 3.406557083129883,
+          "max_body_rise_m": 0.26120230555534363,
+          "failed": false,
+          "crossed": true,
+          "front_supported_on_first_step": true,
+          "rear_supported_on_first_step": true,
+          "torque_saturation_fraction": 0.01090053841471672,
+          "foot_z_rmse_m": 0.04993833974003792,
+          "residual_clip_fraction": 0.058333333333333334,
+          "selected_gait_counts": [
+            0,
+            0,
+            110,
+            0,
+            0,
+            200
+          ]
+        },
+        {
+          "env": 27,
+          "duration_s": 7.80000037048012,
+          "max_forward_m": 3.409656524658203,
+          "final_forward_m": 3.409656524658203,
+          "max_body_rise_m": 0.26843082904815674,
+          "failed": false,
+          "crossed": true,
+          "front_supported_on_first_step": true,
+          "rear_supported_on_first_step": true,
+          "torque_saturation_fraction": 0.008547008968889713,
+          "foot_z_rmse_m": 0.04890004172921181,
+          "residual_clip_fraction": 0.03461538461538462,
+          "selected_gait_counts": [
+            0,
+            0,
+            190,
+            0,
+            0,
+            200
+          ]
+        },
+        {
+          "env": 28,
+          "duration_s": 7.2400003438815475,
+          "max_forward_m": 3.4063072204589844,
+          "final_forward_m": 3.4063072204589844,
+          "max_body_rise_m": 0.26575949788093567,
+          "failed": false,
+          "crossed": true,
+          "front_supported_on_first_step": true,
+          "rear_supported_on_first_step": true,
+          "torque_saturation_fraction": 0.017288215458393097,
+          "foot_z_rmse_m": 0.05104372650384903,
+          "residual_clip_fraction": 0.04788213627992634,
+          "selected_gait_counts": [
+            0,
+            0,
+            100,
+            0,
+            0,
+            262
+          ]
+        },
+        {
+          "env": 29,
+          "duration_s": 7.880000374279916,
+          "max_forward_m": 3.4079647064208984,
+          "final_forward_m": 3.4079647064208984,
+          "max_body_rise_m": 0.2820982038974762,
+          "failed": false,
+          "crossed": true,
+          "front_supported_on_first_step": true,
+          "rear_supported_on_first_step": true,
+          "torque_saturation_fraction": 0.0033312183804810047,
+          "foot_z_rmse_m": 0.04676396772265434,
+          "residual_clip_fraction": 0.09200507614213198,
+          "selected_gait_counts": [
+            0,
+            0,
+            50,
+            344,
+            0,
+            0
+          ]
+        },
+        {
+          "env": 30,
+          "duration_s": 7.740000367630273,
+          "max_forward_m": 3.409076690673828,
+          "final_forward_m": 3.409076690673828,
+          "max_body_rise_m": 0.25614458322525024,
+          "failed": false,
+          "crossed": true,
+          "front_supported_on_first_step": true,
+          "rear_supported_on_first_step": true,
+          "torque_saturation_fraction": 0.0017549525946378708,
+          "foot_z_rmse_m": 0.04618920758366585,
+          "residual_clip_fraction": 0.09754521963824289,
+          "selected_gait_counts": [
+            0,
+            25,
+            237,
+            125,
+            0,
+            0
+          ]
+        },
+        {
+          "env": 31,
+          "duration_s": 7.2600003448314965,
+          "max_forward_m": 3.402494430541992,
+          "final_forward_m": 3.402494430541992,
+          "max_body_rise_m": 0.26552045345306396,
+          "failed": false,
+          "crossed": true,
+          "front_supported_on_first_step": true,
+          "rear_supported_on_first_step": true,
+          "torque_saturation_fraction": 0.0021923785097897053,
+          "foot_z_rmse_m": 0.046742673963308334,
+          "residual_clip_fraction": 0.09044995408631772,
+          "selected_gait_counts": [
+            0,
+            0,
+            25,
+            338,
+            0,
+            0
+          ]
+        }
+      ]
+    },
+    {
+      "height_m": 0.08,
+      "first_riser_x_m": 1.0,
+      "episodes": [
+        {
+          "env": 32,
+          "duration_s": 18.4800008777529,
+          "max_forward_m": 3.4097137451171875,
+          "final_forward_m": 3.4097137451171875,
+          "max_body_rise_m": 0.38587623834609985,
+          "failed": false,
+          "crossed": true,
+          "front_supported_on_first_step": true,
+          "rear_supported_on_first_step": true,
+          "torque_saturation_fraction": 0.011742426082491875,
+          "foot_z_rmse_m": 0.048426806926727295,
+          "residual_clip_fraction": 0.09803391053391053,
+          "selected_gait_counts": [
+            0,
+            0,
+            425,
+            300,
+            0,
+            199
+          ]
+        },
+        {
+          "env": 33,
+          "duration_s": 18.000000854954123,
+          "max_forward_m": 3.4088096618652344,
+          "final_forward_m": 3.4088096618652344,
+          "max_body_rise_m": 0.383967787027359,
+          "failed": false,
+          "crossed": true,
+          "front_supported_on_first_step": true,
+          "rear_supported_on_first_step": true,
+          "torque_saturation_fraction": 0.016939815133810043,
+          "foot_z_rmse_m": 0.04928272217512131,
+          "residual_clip_fraction": 0.10074074074074074,
+          "selected_gait_counts": [
+            0,
+            0,
+            450,
+            200,
+            0,
+            250
+          ]
+        },
+        {
+          "env": 34,
+          "duration_s": 10.180000483524054,
+          "max_forward_m": 1.8711585998535156,
+          "final_forward_m": 1.8711585998535156,
+          "max_body_rise_m": 0.14712592959403992,
+          "failed": true,
+          "crossed": false,
+          "front_supported_on_first_step": true,
+          "rear_supported_on_first_step": true,
+          "torque_saturation_fraction": 0.010903732851147652,
+          "foot_z_rmse_m": 0.047006912529468536,
+          "residual_clip_fraction": 0.10183366077275705,
+          "selected_gait_counts": [
+            0,
+            0,
+            359,
+            75,
+            0,
+            75
+          ]
+        },
+        {
+          "env": 35,
+          "duration_s": 16.26000077230856,
+          "max_forward_m": 3.405609130859375,
+          "final_forward_m": 3.405609130859375,
+          "max_body_rise_m": 0.3788719177246094,
+          "failed": false,
+          "crossed": true,
+          "front_supported_on_first_step": true,
+          "rear_supported_on_first_step": true,
+          "torque_saturation_fraction": 0.0175533015280962,
+          "foot_z_rmse_m": 0.04956382140517235,
+          "residual_clip_fraction": 0.08466584665846659,
+          "selected_gait_counts": [
+            0,
+            0,
+            400,
+            100,
+            0,
+            313
+          ]
+        },
+        {
+          "env": 36,
+          "duration_s": 9.060000430326909,
+          "max_forward_m": 2.596141815185547,
+          "final_forward_m": 2.470012664794922,
+          "max_body_rise_m": 0.30348944664001465,
+          "failed": true,
+          "crossed": false,
+          "front_supported_on_first_step": true,
+          "rear_supported_on_first_step": true,
+          "torque_saturation_fraction": 0.01416482962667942,
+          "foot_z_rmse_m": 0.04938441514968872,
+          "residual_clip_fraction": 0.09032376747608535,
+          "selected_gait_counts": [
+            0,
+            0,
+            328,
+            0,
+            0,
+            125
+          ]
+        },
+        {
+          "env": 37,
+          "duration_s": 13.740000652614981,
+          "max_forward_m": 3.4122886657714844,
+          "final_forward_m": 3.4122886657714844,
+          "max_body_rise_m": 0.3652423322200775,
+          "failed": false,
+          "crossed": true,
+          "front_supported_on_first_step": true,
+          "rear_supported_on_first_step": true,
+          "torque_saturation_fraction": 0.012578845955431461,
+          "foot_z_rmse_m": 0.04867274686694145,
+          "residual_clip_fraction": 0.09995147986414361,
+          "selected_gait_counts": [
+            0,
+            0,
+            537,
+            50,
+            0,
+            100
+          ]
+        },
+        {
+          "env": 38,
+          "duration_s": 16.560000786557794,
+          "max_forward_m": 3.400157928466797,
+          "final_forward_m": 3.400157928466797,
+          "max_body_rise_m": 0.37587428092956543,
+          "failed": false,
+          "crossed": true,
+          "front_supported_on_first_step": true,
+          "rear_supported_on_first_step": true,
+          "torque_saturation_fraction": 0.015630032867193222,
+          "foot_z_rmse_m": 0.04939916357398033,
+          "residual_clip_fraction": 0.08776167471819646,
+          "selected_gait_counts": [
+            0,
+            0,
+            375,
+            253,
+            0,
+            200
+          ]
+        },
+        {
+          "env": 39,
+          "duration_s": 5.880000279285014,
+          "max_forward_m": 1.1542091369628906,
+          "final_forward_m": 0.6868896484375,
+          "max_body_rise_m": 0.08113495260477066,
+          "failed": true,
+          "crossed": false,
+          "front_supported_on_first_step": true,
+          "rear_supported_on_first_step": true,
+          "torque_saturation_fraction": 0.01585884392261505,
+          "foot_z_rmse_m": 0.047990236431360245,
+          "residual_clip_fraction": 0.09240362811791383,
+          "selected_gait_counts": [
+            0,
+            0,
+            169,
+            50,
+            0,
+            75
+          ]
+        }
+      ]
+    }
+  ],
+  "notes": "First episodes only; no push/noise/mass/friction randomization; initial state jitter retained. Camera follows first 8 cm robot. Supported means any foot with Fz>5 N beyond first riser; not sustained stable support. Current source controller, saved network/config; no historical source snapshot exists."
+}

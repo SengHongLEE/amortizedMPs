@@ -38,8 +38,8 @@ contact_boolean = np.load(
 # ============================================================
 # Basic settings
 # ============================================================
-min_step = 3000
-max_step = 4000
+min_step = 6000
+max_step = 7000
 dt = 0.001
 
 contact_boolean = contact_boolean[min_step:max_step]   # [T, 4]

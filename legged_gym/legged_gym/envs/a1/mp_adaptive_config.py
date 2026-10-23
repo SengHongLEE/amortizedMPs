@@ -60,7 +60,7 @@ class MotorPrimitivesCfg(BaseConfig):
 
     class mp_modeling:
         process_type = 'slow'       #'fast' or 'slow'
-        ref_type = 'canter'
+        ref_type = 'trot'
         ref_motion_filename = [f'{LEGGED_GYM_ROOT_DIR}/data/a1/pace.txt',
                                f'{LEGGED_GYM_ROOT_DIR}/data/a1/trot.txt',
                                f'{LEGGED_GYM_ROOT_DIR}/data/a1/canter.txt']
@@ -79,7 +79,7 @@ class MotorPrimitivesCfg(BaseConfig):
         resampling_time = 10 # time before command are changed[s]
         heading_command = True #True # if true: compute ang vel command from heading error
         class ranges:
-            lin_vel_x = [.3, 2.0] # min max [m/s]
+            lin_vel_x = [.3, 2.] # min max [m/s]
             lin_vel_y = [-0., 0.0]   # min max [m/s]
             ang_vel_yaw = [0.0, 0.0]    # min max [rad/s]
             heading = [-0.0, 0.0]
@@ -120,7 +120,12 @@ class MotorPrimitivesCfg(BaseConfig):
         high_cycle = 50
 
         mu_freq_idx = [10, 25, 50]
-        omega_freq_idx = [5, 10, 25]
+        omega_freq_idx = [10, 25, 50]
+
+        # mu_freq_idx = [25, 50, 100]
+        # omega_freq_idx = [25, 50, 100]
+
+        oscillator_type = "phase_oscillator"
 
         stiffness = {'joint': 100.}  # [N*m/rad]
         damping = {'joint': 2.0}     # [N*m*s/rad]
@@ -151,6 +156,9 @@ class MotorPrimitivesCfg(BaseConfig):
         hip_link_length_a1 = 0.0838
         thigh_link_length_a1 = 0.213
         calf_link_length_a1 = 0.213
+        max_step_length = 0.1
+        ground_clearance = 0.15
+        ground_penetration = 0.0
 
     class domain_rand:
         randomize_friction = True
@@ -175,7 +183,7 @@ class MotorPrimitivesCfg(BaseConfig):
 
             # dof_acc = -2.5e-8
             # torques = -0.00002
-            ref_motion = 10.        #trot 10.
+            ref_motion = 100.        #trot 10.
             action_rate_omega = -0.1
             action_rate_mu = -0.1
 
@@ -191,7 +199,7 @@ class MotorPrimitivesCfg(BaseConfig):
             dof_vel_limits = -0.4
 
         high_rewards = ['tracking_lin_vel', 'tracking_ang_vel']
-        mu_rewards = ['tracking_lin_vel', 'tracking_ang_vel', 'ang_vel_xy', 'action_rate_mu', 'ref_motion', 'exceed_torque_limits_l1norm', 'dof_vel_limits']
+        mu_rewards = ['tracking_lin_vel', 'tracking_ang_vel', 'ang_vel_xy', 'action_rate_mu', 'exceed_torque_limits_l1norm', 'dof_vel_limits']
         omega_rewards = ['tracking_lin_vel', 'tracking_ang_vel', 'ang_vel_xy', 'action_rate_omega', 'ref_motion', 'exceed_torque_limits_l1norm', 'dof_vel_limits']
         hip_rewards = ['tracking_lin_vel', 'tracking_ang_vel', 'ang_vel_xy', 'dof_acc_hip', 'torques_hip', 'action_rate_hip', 'ref_motion_hip']
         hip_rewards = ['tracking_lin_vel', 'tracking_ang_vel', 'ang_vel_xy']

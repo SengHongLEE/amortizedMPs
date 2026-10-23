@@ -48,6 +48,12 @@ class MPPolicyRunner(TwinPolicyRunner):
         else:
             num_critic_obs = self.env.num_obs
 
+        
+        if self.cfg['resume']:
+            self.cfg['procedure'] = 'high'
+        else:
+            self.cfg['procedure'] = 'low & high'
+
         low_actor_critic_class = _resolve_class(
             self.cfg["low_level_policy_class_name"],
             _POLICY_CLASSES,
@@ -58,27 +64,12 @@ class MPPolicyRunner(TwinPolicyRunner):
             _ALGORITHM_CLASSES,
             "algorithm class",
         )
-
-        hip_actor_critic: ActorCritic = low_actor_critic_class( self.env.num_obs,
+        self.low_actor_critic: ActorCritic = low_actor_critic_class( self.env.num_obs - 1,
                                             num_critic_obs,
-                                            self.env.hip_shape,
+                                            self.env.num_actions,
                                             **self.policy_cfg).to(self.device)
-
-        self.hip_alg: PPOevent = low_alg_class(hip_actor_critic, device=self.device, **self.alg_cfg)
-
-        mu_actor_critic: ActorCritic = low_actor_critic_class( self.env.num_obs,
-                                            num_critic_obs,
-                                            self.env.mu_shape,
-                                            **self.policy_cfg).to(self.device)
-
-        self.mu_alg: PPOevent = low_alg_class(mu_actor_critic, device=self.device, **self.alg_cfg)
-
-        omega_actor_critic: ActorCritic = low_actor_critic_class( self.env.num_obs,
-                                            num_critic_obs,
-                                            self.env.omega_shape,
-                                            **self.policy_cfg).to(self.device)
-
-        self.omega_alg: PPOevent = low_alg_class(omega_actor_critic, device=self.device, **self.alg_cfg)
+        
+        self.low_alg: PPOevent = low_alg_class(self.low_actor_critic, device=self.device, **self.alg_cfg)
 
         high_actor_critic_class = _resolve_class(
             self.cfg["high_level_policy_class_name"],
@@ -91,58 +82,41 @@ class MPPolicyRunner(TwinPolicyRunner):
             "algorithm class",
         )
 
-        high_actor_critic: ActorCritic = high_actor_critic_class( self.env.num_obs,
+        self.high_actor_critic: ActorCritic = high_actor_critic_class( self.env.num_obs,
                                             num_critic_obs,
-                                            self.env.mu_freq_idx_shape,
-                                            self.env.omega_freq_idx_shape,
+                                            self.env.low_freq_idx_shape,
+                                            self.env.low_freq_idx_shape,
                                             **self.policy_cfg).to(self.device)
-
-        self.high_alg: PPOevent_discrete = high_alg_class(high_actor_critic, device=self.device, **self.alg_cfg)
-
+        self.high_alg: PPOevent_discrete = high_alg_class(self.high_actor_critic, device=self.device, **self.alg_cfg)
 
         self.num_steps_per_env = self.cfg["num_steps_per_env"]
         self.save_interval = self.cfg["save_interval"]
 
         #Storage
-        self.hip_alg.init_storage(self.env.num_envs,
-                              self.num_steps_per_env,
-                              [self.env.num_obs],
-                              [self.env.num_privileged_obs],
-                              [self.env.hip_shape])
-        self.mu_alg.init_storage(self.env.num_envs,
+        self.low_alg.init_storage(self.env.num_envs,
                               int(self.num_steps_per_env),
-                              [self.env.num_obs],
+                              [self.env.num_obs - 1],
                               [self.env.num_privileged_obs],
-                              [self.env.mu_shape])
-        self.omega_alg.init_storage(self.env.num_envs,
-                              self.num_steps_per_env,
-                              [self.env.num_obs],
-                              [self.env.num_privileged_obs],
-                              [self.env.omega_shape])
+                              [self.env.num_actions])
 
         self.high_alg.init_storage(self.env.num_envs,
-                              int(self.num_steps_per_env),
-                              [self.env.num_obs],
-                              [self.env.num_privileged_obs],
-                              [2],
-                              [self.env.mu_freq_idx_shape + self.env.omega_freq_idx_shape])
+                            int(5),
+                            [self.env.num_obs],
+                            [self.env.num_privileged_obs],
+                            [1],
+                            [self.env.low_freq_idx_shape])
 
         #Twin Rate
-        self.mu_cached = torch.zeros(self.env.num_envs, self.env.mu_shape, device=self.device)
-        self.omega_cached = torch.zeros(self.env.num_envs, self.env.omega_shape, device=self.device)
-        self.hip_cached = torch.zeros(self.env.num_envs, self.env.hip_shape, device=self.device)
         self.actions = torch.zeros(
             self.env.num_envs,
-            self.env.mu_shape + self.env.omega_shape + self.env.hip_shape,
+            self.env.num_actions,
             device=self.device,
         )
-        self.mu_update_cycle = torch.ones(self.env.num_envs, dtype=torch.long, device=self.device) * min(self.env.cfg.control.mu_freq_idx)
-        self.omega_update_cycle = torch.ones(self.env.num_envs, dtype=torch.long, device=self.device) * min(self.env.cfg.control.omega_freq_idx)
+        self.last_actions = torch.zeros_like(self.actions)
+        self.low_update_cycle = torch.ones(self.env.num_envs, dtype=torch.long, device=self.device) * min(self.env.cfg.control.low_freq_idx)
 
-        self.mu_reservoir_states = None
-        self.omega_reservoir_states = None
-        self.high_reservoir_states =None
-        self.hip_reservoir_states =None
+        self.high_reservoir_states = None
+        self.low_reservoir_states = None
 
         if getattr(self.high_alg.actor_critic, "is_reservoir", False):
             self.high_reservoir_states = torch.zeros(
@@ -150,41 +124,23 @@ class MPPolicyRunner(TwinPolicyRunner):
                 self.high_alg.actor_critic.actor.reservoir_state_dim,
                 device=self.device,
             )
-        if getattr(self.mu_alg.actor_critic, "is_reservoir", False):
-            self.mu_reservoir_states = torch.zeros(
+        if getattr(self.low_alg.actor_critic, "is_reservoir", False):
+            self.low_reservoir_states = torch.zeros(
                 self.env.num_envs,
-                self.mu_alg.actor_critic.actor.reservoir_state_dim,
-                device=self.device,
-            )
-        if getattr(self.omega_alg.actor_critic, "is_reservoir", False):
-            self.omega_reservoir_states = torch.zeros(
-                self.env.num_envs,
-                self.omega_alg.actor_critic.actor.reservoir_state_dim,
-                device=self.device,
-            )
-        if getattr(self.hip_alg.actor_critic, "is_reservoir", False):
-            self.hip_reservoir_states = torch.zeros(
-                self.env.num_envs,
-                self.hip_alg.actor_critic.actor.reservoir_state_dim,
+                self.low_alg.actor_critic.actor.reservoir_state_dim,
                 device=self.device,
             )
 
-        self.current_hip_step = 0
         self.current_high_step = 0
-        self.current_mu_step = 0
-        self.current_omega_step = 0
+        self.current_low_step = 0
 
         # Log
         self.log_dir = log_dir
         self.writer = None
-        self.hip_tot_timesteps = 0
-        self.hip_tot_time = 0
         self.high_tot_timesteps = 0
         self.high_tot_time = 0
-        self.mu_tot_timesteps = 0
-        self.mu_tot_time = 0
-        self.omega_tot_timesteps = 0
-        self.omega_tot_time = 0
+        self.low_tot_timesteps = 0
+        self.low_tot_time = 0
         self.current_learning_iteration = 0
 
         _, _ = self.env.reset()
@@ -206,98 +162,105 @@ class MPPolicyRunner(TwinPolicyRunner):
         ).squeeze(-1)
 
     @torch.no_grad
-    def inference_rollout(self, obs, high_policy, mu_policy, omega_policy, hip_policy):
+    def inference_rollout(self, obs, high_policy, low_policy):
+        low_map = torch.tensor(
+            self.env.cfg.control.low_freq_idx,
+            device=self.low_update_cycle.device,
+            dtype=self.low_update_cycle.dtype,
+        )
         high_update_env_ids = self.get_update_env_ids(
             self.env.episode_length_buf,
             self.env.cfg.control.high_cycle,
         )
+        low_update_freq_idx = (self.low_update_cycle.unsqueeze(-1) == low_map).long().argmax(dim=-1)
 
-        if getattr(self, "high_reservoir_states", None) is not None:
-            mu_update_freq_idx, omega_update_freq_idx, reservoir_states = high_policy(obs[high_update_env_ids], self.high_reservoir_states[high_update_env_ids])
-            self.high_reservoir_states[high_update_env_ids] = reservoir_states
-        else:
-            mu_update_freq_idx, omega_update_freq_idx = high_policy(obs[high_update_env_ids,-1])
-        mu_map = torch.tensor(
-            self.env.cfg.control.mu_freq_idx,
-            device=mu_update_freq_idx.device,
-            dtype=self.mu_update_cycle.dtype,
-        )
-        omega_map = torch.tensor(
-            self.env.cfg.control.omega_freq_idx,
-            device=omega_update_freq_idx.device,
-            dtype=self.omega_update_cycle.dtype,
-        )
-
-        self.mu_update_cycle[high_update_env_ids] = mu_map[mu_update_freq_idx.long()]
-        self.omega_update_cycle[high_update_env_ids] = omega_map[omega_update_freq_idx.long()]
-
-
-        mu_update_env_ids = self.get_update_env_ids(
-            self.env.episode_length_buf,
-            self.mu_update_cycle,
-        )
-        omega_update_env_ids = self.get_update_env_ids(
-            self.env.episode_length_buf,
-            self.omega_update_cycle,
-        )
-        hip_update_env_ids = self.get_update_env_ids(
-            self.env.episode_length_buf,
-            self.env.cfg.control.hip_cycle,
-        )
-
-        if getattr(self, "mu_reservoir_states", None) is not None:
-            mu_actions, reservoir_states = mu_policy(obs[mu_update_env_ids,-1], self.mu_reservoir_states[mu_update_env_ids])
-            self.mu_reservoir_states[mu_update_env_ids] = reservoir_states
-        else:
-            mu_actions = mu_policy(obs[mu_update_env_ids,-1])
-
-        if getattr(self, "omega_reservoir_states", None) is not None:
-            omega_actions, reservoir_states = omega_policy(obs[omega_update_env_ids,-1], self.omega_reservoir_states[omega_update_env_ids])
-            self.omega_reservoir_states[omega_update_env_ids] = reservoir_states
-        else:
-            omega_actions = omega_policy(obs[omega_update_env_ids,-1])
-
-        if getattr(self, "hip_reservoir_states", None) is not None:
-            hip_actions, reservoir_states = hip_policy(obs[hip_update_env_ids,-1], self.hip_reservoir_states[hip_update_env_ids])
-            self.hip_reservoir_states[hip_update_env_ids] = reservoir_states
-        else:
-            hip_actions = hip_policy(obs[hip_update_env_ids,-1])
-
-
-        self.mu_cached[mu_update_env_ids] = mu_actions
-        self.omega_cached[omega_update_env_ids] = omega_actions
-        self.hip_cached[hip_update_env_ids] = hip_actions
-        self.actions[:, :self.env.mu_shape] = self.mu_cached
-        self.actions[:, self.env.mu_shape:self.env.mu_shape + self.env.omega_shape] = self.omega_cached
-        self.actions[:, self.env.mu_shape + self.env.omega_shape:] = self.hip_cached
-
-        print(self.mu_update_cycle, self.omega_update_cycle)    
-        self.env.update_idx_buffer.append([torch.concat((self.mu_update_cycle, self.omega_update_cycle), dim=-1).cpu().numpy()])
-
-        obs, privileged_obs, rewards, dones, infos = self.env.step(self.actions)
-        cycles = torch.stack((self.mu_update_cycle, self.omega_update_cycle),
-            dim=-1) 
+        cycles = low_update_freq_idx.unsqueeze(-1)
         cycles = cycles.unsqueeze(1).expand(
             -1, obs.size(1), -1
         )
+        high_obs = torch.cat((obs, cycles), dim=-1)
+        if getattr(self, "high_reservoir_states", None) is not None:
+            low_update_freq_idx, reservoir_states = high_policy(high_obs[high_update_env_ids], self.high_reservoir_states[high_update_env_ids])
+            self.high_reservoir_states[high_update_env_ids] = reservoir_states
+        else:
+            low_update_freq_idx = high_policy(high_obs[high_update_env_ids,-1])
 
-        obs = torch.cat((obs, cycles), dim=-1)
+        self.low_update_cycle[high_update_env_ids] = low_map[low_update_freq_idx.long()]
+        self.low_update_cycle[high_update_env_ids] = min(self.env.cfg.control.low_freq_idx)
+
+        low_update_freq_idx = (self.low_update_cycle.unsqueeze(-1) == low_map).long().argmax(dim=-1)
+
+        low_update_env_ids = self.get_update_env_ids(
+            self.env.episode_length_buf,
+            self.low_update_cycle,
+        )
+
+        if getattr(self, "low_reservoir_states", None) is not None:
+            low_actions, reservoir_states = low_policy(obs[low_update_env_ids,-1], self.low_reservoir_states[low_update_env_ids])
+            self.low_reservoir_states[low_update_env_ids] = reservoir_states
+        else:
+            low_actions = low_policy(obs[low_update_env_ids,-1])
+
+        self.last_actions[low_update_env_ids] = self.actions[low_update_env_ids]
+        self.actions[low_update_env_ids] = low_actions
+        self.env.actions_diff[low_update_env_ids] = torch.sum(torch.square(self.last_actions[low_update_env_ids] - self.actions[low_update_env_ids]), dim=1)
+ 
+        self.env.update_idx_buffer.append([self.low_update_cycle.cpu().numpy()])
+
+        obs, privileged_obs, rewards, dones, infos = self.env.step(self.actions)
+
+        print(self.low_update_cycle)
+
         critic_obs = privileged_obs if privileged_obs is not None else obs[:,-1]
         obs, critic_obs, dones = obs.to(self.device), critic_obs.to(self.device), dones.to(self.device)
 
         if getattr(self, "high_reservoir_states", None) is not None:
             self.high_reservoir_states[dones] = 0.0
-        if getattr(self, "mu_reservoir_states", None) is not None:
-            self.mu_reservoir_states[dones] = 0.0
-        if getattr(self, "omega_reservoir_states", None) is not None:
-            self.omega_reservoir_states[dones] = 0.0
-        if getattr(self, "hip_reservoir_states", None) is not None:
-            self.hip_reservoir_states[dones] = 0.0
+        if getattr(self, "low_reservoir_states", None) is not None:
+            self.low_reservoir_states[dones] = 0.0
 
         return obs, critic_obs, rewards, dones, infos
 
     @torch.no_grad
-    def training_rollout(self, obs, critic_obs, current_high_step, current_mu_step, current_omega_step, current_hip_step):
+    def low_training_rollout(self, obs, critic_obs, current_low_step):
+        self.low_update_env_ids = self.get_update_env_ids(
+            self.env.episode_length_buf,
+            self.low_update_cycle,
+        )
+        low_step_ids = torch.full(
+            (self.low_update_env_ids.shape[0],),
+            current_low_step,
+            dtype=torch.long,
+            device=self.device,
+        )
+        if getattr(self.low_alg.actor_critic, "is_reservoir", False):
+            low_actions, reservoir_states = self.low_alg.act(self.low_update_env_ids, low_step_ids, obs[:, -1], critic_obs, self.low_reservoir_states)
+            self.low_reservoir_states[self.low_update_env_ids] = reservoir_states
+        else:
+            low_actions = self.low_alg.act(self.low_update_env_ids, low_step_ids, obs[:, -1], critic_obs)
+
+        self.last_actions[self.low_update_env_ids] = self.actions[self.low_update_env_ids]
+        self.actions[self.low_update_env_ids] = low_actions
+        self.env.actions_diff[self.low_update_env_ids] = torch.sum(torch.square(self.last_actions[self.low_update_env_ids] - self.actions[self.low_update_env_ids]), dim=1)
+
+        obs, privileged_obs, rewards, dones, infos = self.env.step(self.actions)
+
+        critic_obs = privileged_obs if privileged_obs is not None else obs[:, -1]
+        obs, critic_obs, dones = obs.to(self.device), critic_obs.to(self.device), dones.to(self.device)
+        rewards = [reward.to(self.device) for reward in rewards]
+        self.low_alg.clear_start_transition()
+
+        return obs, critic_obs, rewards, dones, infos
+
+    @torch.no_grad
+    def high_training_rollout(self, obs, critic_obs, current_high_step):
+        self.low_actor_critic.eval()
+        low_policy = self.low_actor_critic.act_inference
+        low_map = torch.tensor(
+                self.env.cfg.control.low_freq_idx,
+                device=self.device,
+                dtype=self.low_update_cycle.dtype,
+                )
         high_update_env_ids = self.get_update_env_ids(
             self.env.episode_length_buf,
             self.env.cfg.control.high_cycle,
@@ -309,114 +272,51 @@ class MPPolicyRunner(TwinPolicyRunner):
             device=self.device,
         )
 
-        if getattr(self.high_alg.actor_critic, "is_reservoir", False):
-            if high_update_env_ids.numel() > 0:
-                update_freq_idx, reservoir_states = self.high_alg.act(high_update_env_ids, high_step_ids, obs, critic_obs, self.high_reservoir_states)
-                self.high_reservoir_states[high_update_env_ids] = reservoir_states
-                mu_map = torch.tensor(
-                self.env.cfg.control.mu_freq_idx,
-                device=self.device,
-                dtype=self.mu_update_cycle.dtype,
-                )
-                omega_map = torch.tensor(
-                self.env.cfg.control.omega_freq_idx,
-                device=self.device,
-                dtype=self.omega_update_cycle.dtype,
-                )
+        low_update_freq_idx = (self.low_update_cycle.unsqueeze(-1) == low_map).long().argmax(dim=-1)
 
-                self.mu_update_cycle[high_update_env_ids] = mu_map[update_freq_idx[:, 0].long()]
-                self.omega_update_cycle[high_update_env_ids] = omega_map[update_freq_idx[:, 1].long()]
-        else:
-            update_freq_idx = self.high_alg.act(high_update_env_ids, high_step_ids, obs[:, -1], critic_obs)
-        # mu_map = torch.tensor(
-        #     [50, 100, 200, 400],
-        #     device=self.device,
-        #     dtype=self.mu_update_cycle.dtype,
-        # )
-        # omega_map = torch.tensor(
-        #     [4, 10, 100, 200],
-        #     device=self.device,
-        #     dtype=self.omega_update_cycle.dtype,
-        # )
-
-        # self.mu_update_cycle[high_update_env_ids] = mu_map[update_freq_idx[:, 0].long()]
-        # self.omega_update_cycle[high_update_env_ids] = omega_map[update_freq_idx[:, 1].long()]
-
-        self.mu_update_env_ids = self.get_update_env_ids(
-            self.env.episode_length_buf,
-            self.mu_update_cycle,
-        )
-        self.omega_update_env_ids = self.get_update_env_ids(
-            self.env.episode_length_buf,
-            self.omega_update_cycle,
-        )
-        mu_step_ids = torch.full(
-            (self.mu_update_env_ids.shape[0],),
-            current_mu_step,
-            dtype=torch.long,
-            device=self.device,
-        )
-        omega_step_ids = torch.full(
-            (self.omega_update_env_ids.shape[0],),
-            current_omega_step,
-            dtype=torch.long,
-            device=self.device,
-        )
-
-        hip_update_env_ids = self.get_update_env_ids(
-            self.env.episode_length_buf,
-            self.env.cfg.control.hip_cycle,
-        )
-        hip_step_ids = torch.full(
-            (hip_update_env_ids.shape[0],),
-            current_hip_step,
-            dtype=torch.long,
-            device=self.device,
-        )
-
-        if getattr(self.mu_alg.actor_critic, "is_reservoir", False):
-            mu_actions, reservoir_states = self.mu_alg.act(self.mu_update_env_ids, mu_step_ids, obs[:, -1], critic_obs, self.mu_reservoir_states)
-            self.mu_reservoir_states[self.mu_update_env_ids] = reservoir_states
-        else:
-            mu_actions = self.mu_alg.act(self.mu_update_env_ids, mu_step_ids, obs[:, -1], critic_obs)
-
-        if getattr(self.omega_alg.actor_critic, "is_reservoir", False):
-            omega_actions, reservoir_states = self.omega_alg.act(self.omega_update_env_ids, omega_step_ids, obs[:, -1], critic_obs, self.omega_reservoir_states)
-            self.omega_reservoir_states[self.omega_update_env_ids] = reservoir_states
-        else:
-            omega_actions = self.omega_alg.act(self.omega_update_env_ids, omega_step_ids, obs[:, -1], critic_obs)
-
-        # if getattr(self.hip_alg.actor_critic, "is_reservoir", False):
-        #     hip_actions, reservoir_states = self.hip_alg.act(hip_update_env_ids, hip_step_ids, obs[:, -1], critic_obs, self.hip_reservoir_states)
-        #     self.hip_reservoir_states[hip_update_env_ids] = reservoir_states
-        # else:
-        #     hip_actions = self.hip_alg.act(hip_update_env_ids, hip_step_ids, obs[:, -1], critic_obs)
-
-        self.mu_cached[self.mu_update_env_ids] = mu_actions
-        self.omega_cached[self.omega_update_env_ids] = omega_actions
-        # self.hip_cached[hip_update_env_ids] = hip_actions
-        self.actions[:, :self.env.mu_shape] = self.mu_cached
-        self.actions[:, self.env.mu_shape:self.env.mu_shape + self.env.omega_shape] = self.omega_cached
-        self.actions[:, self.env.mu_shape + self.env.omega_shape:] = self.hip_cached
-
-        obs, privileged_obs, rewards, dones, infos = self.env.step(self.actions)
-        cycles = torch.stack((self.mu_update_cycle, self.omega_update_cycle),
-            dim=-1) 
+        cycles = low_update_freq_idx.unsqueeze(-1)
         cycles = cycles.unsqueeze(1).expand(
             -1, obs.size(1), -1
         )
+        high_obs = torch.cat((obs, cycles), dim=-1)
 
-        obs = torch.cat((obs, cycles), dim=-1)
+        if getattr(self.high_alg.actor_critic, "is_reservoir", False):
+            if high_update_env_ids.numel() > 0:
+                update_freq_idx, reservoir_states = self.high_alg.act(high_update_env_ids, high_step_ids, high_obs, critic_obs, self.high_reservoir_states)
+                self.high_reservoir_states[high_update_env_ids] = reservoir_states
+
+                self.low_update_cycle[high_update_env_ids] = low_map[update_freq_idx[:, 0].long()]
+        else:
+            update_freq_idx = self.high_alg.act(high_update_env_ids, high_step_ids, high_obs[:, -1], critic_obs)
+
+        self.low_update_env_ids = self.get_update_env_ids(
+            self.env.episode_length_buf,
+            self.low_update_cycle,
+        )
+
+        if getattr(self, "low_reservoir_states", None) is not None:
+            low_actions, reservoir_states = low_policy(obs[self.low_update_env_ids,-1], self.low_reservoir_states[self.low_update_env_ids])
+            self.low_reservoir_states[self.low_update_env_ids] = reservoir_states
+        else:
+            low_actions = low_policy(obs[self.low_update_env_ids,-1])
+
+        self.last_actions[self.low_update_env_ids] = self.actions[self.low_update_env_ids]
+        self.actions[self.low_update_env_ids] = low_actions
+        self.env.actions_diff[self.low_update_env_ids] = torch.sum(torch.square(self.last_actions[self.low_update_env_ids] - self.actions[self.low_update_env_ids]), dim=1)
+
+        obs, privileged_obs, rewards, dones, infos = self.env.step(self.actions)
+        # cycles = low_update_freq_idx.unsqueeze(-1)
+        # cycles = cycles.unsqueeze(1).expand(
+        #     -1, obs.size(1), -1
+        # )
+
+        # obs = torch.cat((obs, cycles), dim=-1)
         critic_obs = privileged_obs if privileged_obs is not None else obs[:, -1]
         obs, critic_obs, dones = obs.to(self.device), critic_obs.to(self.device), dones.to(self.device)
         rewards = [reward.to(self.device) for reward in rewards]
         self.high_alg.clear_start_transition()
-        self.mu_alg.clear_start_transition()
-        self.omega_alg.clear_start_transition()
-        self.hip_alg.clear_start_transition()
 
         return obs, critic_obs, rewards, dones, infos
-
 
     def learn(self, num_learning_iterations, init_at_random_ep_len=False):
         # initialize writer
@@ -425,255 +325,263 @@ class MPPolicyRunner(TwinPolicyRunner):
         if init_at_random_ep_len:
             self.env.episode_length_buf = torch.randint_like(self.env.episode_length_buf, high=int(self.env.max_episode_length))
         obs = self.env.get_observations()
-        cycles = torch.stack((self.mu_update_cycle, self.omega_update_cycle),
-            dim=-1) 
-        cycles = cycles.unsqueeze(1).expand(
-            -1, obs.size(1), -1
+        low_map = torch.tensor(
+            self.env.cfg.control.low_freq_idx,
+            device=self.low_update_cycle.device,
+            dtype=self.low_update_cycle.dtype,
         )
 
-        obs = torch.cat((obs, cycles), dim=-1)
         privileged_obs = self.env.get_privileged_observations()
-        if self.env.cfg.control.hierarchical:
-            critic_obs = privileged_obs
-        else:
-            critic_obs = privileged_obs if privileged_obs is not None else obs[:,-1]
+        critic_obs = privileged_obs if privileged_obs is not None else obs[:,-1]
         obs, critic_obs = obs.to(self.device), critic_obs.to(self.device)
-        self.high_alg.actor_critic.train() # switch to train mode (for dropout for example)
-        self.mu_alg.actor_critic.train() # switch to train mode (for dropout for example)
-        self.omega_alg.actor_critic.train() # switch to train mode (for dropout for example)
-        self.hip_alg.actor_critic.train() # switch to train mode (for dropout for example)
+
         high_ep_infos = []
-        mu_ep_infos = []
-        omega_ep_infos = []
-        hip_ep_infos = []
-        rewbuffer = deque(maxlen=100)
+        low_ep_infos = []
+        high_ep_counts = []
+        low_ep_counts = []
+        high_rewbuffer = deque(maxlen=100)
+        low_rewbuffer = deque(maxlen=100)
         lenbuffer = deque(maxlen=100)
-        cur_reward_sum = torch.zeros(self.env.num_envs, dtype=torch.float, device=self.device)
+        cur_high_reward_sum = torch.zeros(self.env.num_envs, dtype=torch.float, device=self.device)
+        cur_low_reward_sum = torch.zeros(self.env.num_envs, dtype=torch.float, device=self.device)
         cur_episode_length = torch.zeros(self.env.num_envs, dtype=torch.float, device=self.device)
+        decision_episode_sum = torch.zeros(self.env.num_envs, device=self.device)
 
         #Accumulate Rewards
         high_acc_rewards = torch.zeros(self.env.num_envs, device=self.device)
-        mu_acc_rewards = torch.zeros(self.env.num_envs, device=self.device)
-        omega_acc_rewards = torch.zeros(self.env.num_envs, device=self.device)
-        hip_acc_rewards = torch.zeros(self.env.num_envs, device=self.device)
+        low_acc_rewards = torch.zeros(self.env.num_envs, device=self.device)
 
-        tot_iter = self.current_learning_iteration + num_learning_iterations
-        high_it = self.current_learning_iteration
-        mu_it = self.current_learning_iteration
-        omega_it = self.current_learning_iteration
-        hip_it = self.current_learning_iteration
+        tot_iter = num_learning_iterations
+        high_it = 0
+        low_it = 0
 
-        # Rollout
-        high_collection_start = time.time()
-        mu_collection_start = time.time()
-        omega_collection_start = time.time()
-        hip_collection_start = time.time()
-        while True:
+        if self.cfg['procedure'] == 'low & high':
+            ########################### Phase 1 ###########################
+            low_collection_start = time.time()
+            self.high_alg.actor_critic.eval()
+            self.low_alg.actor_critic.train()
 
-            obs, critic_obs, rewards, dones, infos = self.training_rollout(obs, critic_obs, self.current_high_step, self.current_mu_step, self.current_omega_step, self.current_hip_step)
-            mu_acc_rewards += rewards[2]
-            omega_acc_rewards += rewards[3]
-            # hip_acc_rewards += rewards[4]
-            high_acc_rewards += rewards[1]
+            while True:
+                obs, critic_obs, low_acc_rewards, cur_low_reward_sum, cur_episode_length, low_ep_infos, low_ep_counts, low_rewbuffer, lenbuffer = self.low_learn(obs, critic_obs, low_acc_rewards, cur_low_reward_sum, cur_episode_length, low_ep_infos, low_ep_counts, low_rewbuffer, lenbuffer)
+                if self.low_alg.storage.ready:
+                    low_collection_time = time.time() - low_collection_start
+                    low_learn_start = time.time()
+                    self.low_alg.compute_returns(critic_obs)
+                    mean_low_value_loss, mean_low_surrogate_loss = self.low_alg.update()
+                    low_learn_stop = time.time()
+                    low_learn_time = low_learn_stop - low_learn_start
+                    if self.log_dir is not None:
+                        low_it += 1
+                        self.low_log(locals())
+                    if low_it % self.save_interval == 0:
+                        self.save_model(self.log_dir, high_it, low_it)
 
-            c_mu = torch.where(self.mu_update_cycle==0, 1., ((self.mu_update_cycle - min(self.env.cfg.control.mu_freq_idx)) / (max(self.env.cfg.control.mu_freq_idx) - min(self.env.cfg.control.mu_freq_idx))))
-            c_omega = torch.where(self.omega_update_cycle==0, 1., ((self.omega_update_cycle - min(self.env.cfg.control.omega_freq_idx)) / (max(self.env.cfg.control.omega_freq_idx) - min(self.env.cfg.control.omega_freq_idx))))
+                    low_collection_start = time.time()
+                    low_ep_infos.clear()
+                    low_ep_counts.clear()
+                if low_it >= tot_iter:
+                    break
 
-            track_max = self.env.reward_scales["tracking_lin_vel"] + self.env.reward_scales["tracking_ang_vel"]
-            track_quality = torch.clamp(
-                rewards[1] / (track_max + 1e-6),
-                min=0.0,
-                max=1.0,
-            )
-            q_bad = self.env.cfg.rewards.q_bad
-            q_good = self.env.cfg.rewards.q_good
-            failure_cost = (
-                torch.relu(q_bad - track_quality) / q_bad
-            ).square()
+            self.save_model(self.log_dir, high_it, low_it)       
+            self.final_log()
 
-            success_cost = (torch.relu(track_quality - q_good) / (1.0 - q_good)).square()
+            ########################### Phase 2 ###########################
+            tot_iter = int(0.5 * num_learning_iterations)
+            high_collection_start = time.time()
+            self.high_alg.actor_critic.train()
+            self.low_alg.actor_critic.eval()
 
-            lambda_mu_dist = 0.5
-            lambda_omega_dist = 0.5
+            while True:
+                obs, critic_obs, high_acc_rewards, cur_high_reward_sum, cur_episode_length, decision_episode_sum, high_ep_infos, high_ep_counts, high_rewbuffer, lenbuffer = self.high_learn(obs, critic_obs, high_acc_rewards, cur_high_reward_sum, cur_episode_length, decision_episode_sum, high_ep_infos, high_ep_counts, high_rewbuffer, lenbuffer)
+                if self.high_alg.storage.ready:
+                    high_collection_time = time.time() - high_collection_start
+                    high_learn_start = time.time()
+                    self.high_alg.compute_returns(critic_obs)
+                    mean_high_value_loss, mean_high_surrogate_loss = self.high_alg.update()
+                    high_learn_stop = time.time()
+                    high_learn_time = high_learn_stop - high_learn_start
+                    if self.log_dir is not None:
+                        high_it += 1
+                        self.high_log(locals())
+                    if high_it % self.save_interval == 0:
+                        self.save_model(self.log_dir, high_it, low_it)
 
-            high_acc_rewards += self.env.reward_scales['disturbance_penalty'] * failure_cost * (lambda_mu_dist * c_mu + lambda_omega_dist * c_omega)
-            high_acc_rewards += self.env.reward_scales['mu_decision'] * success_cost * (1 - lambda_mu_dist) * (1 - c_mu)
-            high_acc_rewards += self.env.reward_scales['omega_decision'] * success_cost * (1 - lambda_omega_dist) * (1 - c_omega)
-
-            self.env.episode_sums['disturbance_penalty'] = self.env.reward_scales['disturbance_penalty'] * failure_cost * c_omega
-            self.env.episode_sums['mu_decision'][self.mu_update_env_ids] = self.env.reward_scales['mu_decision'] * (torch.relu(track_quality - q_good) / (1.0 - q_good)).square()[self.mu_update_env_ids]
-            self.env.episode_sums['omega_decision'][self.omega_update_env_ids] = self.env.reward_scales['omega_decision']* (torch.relu(track_quality - q_good) / (1.0 - q_good)).square()[self.omega_update_env_ids]
+                    high_collection_start = time.time()
+                    high_ep_infos.clear()
+                    high_ep_counts.clear()
+                if high_it >= tot_iter:
+                    break
             
-            env_ids = dones.nonzero(as_tuple=False).flatten()
-            infos['episode']['rew_disturbance_penalty'] = torch.mean(self.env.episode_sums['disturbance_penalty'][env_ids]) / self.env.max_episode_length_s
-            infos['episode']['rew_mu_decision'] = torch.mean(self.env.episode_sums['mu_decision'][env_ids]) / self.env.max_episode_length_s
-            infos['episode']['rew_omega_decision'] = torch.mean(self.env.episode_sums['omega_decision'][env_ids]) / self.env.max_episode_length_s
-            self.env.episode_sums['disturbance_penalty'][env_ids] = 0.
-            self.env.episode_sums['mu_decision'][env_ids] = 0.
-            self.env.episode_sums['omega_decision'][env_ids] = 0.
+            self.save_model(self.log_dir, high_it, low_it)
+            self.final_log()
 
+        elif self.cfg['procedure'] == 'high':
+            self.low_actor_critic.eval()
+            low_policy = self.low_actor_critic.act_inference
 
-            self.current_high_step += 1
-            self.current_mu_step += 1
-            self.current_omega_step += 1
-            self.current_hip_step += 1
+            with torch.no_grad():
+                for _ in range(200):
+                    low_update_env_ids = self.get_update_env_ids(
+                        self.env.episode_length_buf,
+                        self.low_update_cycle,
+                    )
+            
+                    if getattr(self, "low_reservoir_states", None) is not None:
+                        low_actions, reservoir_states = low_policy(obs[low_update_env_ids,-1], self.low_reservoir_states[low_update_env_ids])
+                        self.low_reservoir_states[low_update_env_ids] = reservoir_states
+                    else:
+                        low_actions = low_policy(obs[low_update_env_ids,-1])
+            
+                    self.actions[low_update_env_ids] = low_actions
+                    obs, privileged_obs, rewards, dones, infos = self.env.step(self.actions)
+                    obs, critic_obs, dones = obs.to(self.device), critic_obs.to(self.device), dones.to(self.device)
+            
+                    if getattr(self, "low_reservoir_states", None) is not None:
+                        self.low_reservoir_states[dones] = 0.0
 
-            high_update_env_ids = self.get_update_env_ids(
-                self.env.episode_length_buf,
-                self.env.cfg.control.high_cycle,
-            )
-            mu_update_env_ids = self.get_update_env_ids(
-                self.env.episode_length_buf,
-                self.mu_update_cycle,
-            )
-            omega_update_env_ids = self.get_update_env_ids(
-                self.env.episode_length_buf,
-                self.omega_update_cycle,
-            )
-            hip_update_env_ids = self.get_update_env_ids(
-                self.env.episode_length_buf,
-                self.env.cfg.control.hip_cycle,
-            )
+            tot_iter = int(0.5 * num_learning_iterations)
+            high_collection_start = time.time()
+            self.high_alg.actor_critic.train()
+            self.low_alg.actor_critic.eval()
 
-            if self.hip_reservoir_states is not None:
-                self.hip_reservoir_states[dones] = 0.
-            if self.omega_reservoir_states is not None:
-                self.omega_reservoir_states[dones] = 0.
-            if self.mu_reservoir_states is not None:
-                self.mu_reservoir_states[dones] = 0.
-            if self.high_reservoir_states is not None:
-                self.high_reservoir_states[dones] = 0.
+            while True:
+                obs, critic_obs, high_acc_rewards, cur_high_reward_sum, cur_episode_length, decision_episode_sum, high_ep_infos, high_ep_counts, high_rewbuffer, lenbuffer = self.high_learn(obs, critic_obs, high_acc_rewards, cur_high_reward_sum, cur_episode_length, decision_episode_sum, high_ep_infos, high_ep_counts, high_rewbuffer, lenbuffer)
+                if self.high_alg.storage.ready:
+                    high_collection_time = time.time() - high_collection_start
+                    high_learn_start = time.time()
+                    self.high_alg.compute_returns(critic_obs)
+                    mean_high_value_loss, mean_high_surrogate_loss = self.high_alg.update()
+                    high_learn_stop = time.time()
+                    high_learn_time = high_learn_stop - high_learn_start
+                    if self.log_dir is not None:
+                        high_it += 1
+                        self.high_log(locals())
+                    if high_it % self.save_interval == 0:
+                        self.save_model(self.log_dir, high_it, low_it)
 
-            # self.hip_alg.process_env_step(
-            #     self.current_hip_step,
-            #     hip_update_env_ids,
-            #     hip_acc_rewards,
-            #     dones,
-            #     critic_obs,
-            #     infos,
-            # )
-            self.high_alg.process_env_step(
-                self.current_high_step,
-                high_update_env_ids,
-                high_acc_rewards,
-                dones,
-                critic_obs,
-                infos,
-            )
-            self.mu_alg.process_env_step(
-                self.current_mu_step,
-                mu_update_env_ids,
-                mu_acc_rewards,
-                dones,
-                critic_obs,
-                infos,
-            )
-            self.omega_alg.process_env_step(
-                self.current_omega_step,
-                omega_update_env_ids,
-                omega_acc_rewards,
-                dones,
-                critic_obs,
-                infos,
-            )
+                    high_collection_start = time.time()
+                    high_ep_infos.clear()
+                    high_ep_counts.clear()
+                if high_it >= tot_iter:
+                    break
+            
+            self.save_model(self.log_dir, high_it, low_it)
+            self.final_log()
 
-            if self.log_dir is not None:
-                # Book keeping
-                if 'episode' in infos:
-                    hip_ep_infos.append(infos['episode'])
-                    high_ep_infos.append(infos['episode'])
-                    mu_ep_infos.append(infos['episode'])
-                    omega_ep_infos.append(infos['episode'])
-                cur_reward_sum += rewards[0]
-                cur_episode_length += 1
-                new_ids = (dones > 0).nonzero(as_tuple=False)
-                rewbuffer.extend(cur_reward_sum[new_ids][:, 0].cpu().numpy().tolist())
-                lenbuffer.extend(cur_episode_length[new_ids][:, 0].cpu().numpy().tolist())
-                cur_reward_sum[new_ids] = 0
-                cur_episode_length[new_ids] = 0
+    def low_learn(self, obs, critic_obs, low_acc_rewards, cur_low_reward_sum, cur_episode_length, low_ep_infos, low_ep_counts, low_rewbuffer, lenbuffer):
+        obs, critic_obs, rewards, dones, infos = self.low_training_rollout(obs, critic_obs, self.current_low_step)
+        low_acc_rewards += rewards[2]
 
-            hip_acc_rewards[hip_update_env_ids] = 0.
-            high_acc_rewards[high_update_env_ids] = 0.
-            mu_acc_rewards[mu_update_env_ids] = 0.
-            omega_acc_rewards[omega_update_env_ids] = 0.
+        env_ids = dones.nonzero(as_tuple=False).flatten()
 
-            if self.high_alg.storage.ready:
-                high_collection_time = time.time() - high_collection_start
-                high_learn_start = time.time()
-                self.high_alg.compute_returns(critic_obs)
-                mean_high_value_loss, mean_high_surrogate_loss = self.high_alg.update()
-                high_learn_stop = time.time()
-                high_learn_time = high_learn_stop - high_learn_start
-                if self.log_dir is not None:
-                    self.high_log(locals())
-                if high_it % self.save_interval == 0:
-                    self.save_model(self.log_dir, high_it, hip_it, mu_it, omega_it)
+        self.current_low_step += 1
 
-                high_it += 1
-                high_collection_start = time.time()
-                high_ep_infos.clear()
-            # if self.hip_alg.storage.ready:
-            if self.current_hip_step % self.num_steps_per_env == 0:
-                hip_collection_time = time.time() - hip_collection_start
-                hip_learn_start = time.time()
-                # self.hip_alg.compute_returns(critic_obs)
-                # mean_hip_value_loss, mean_hip_surrogate_loss = self.hip_alg.update()
-                mean_hip_value_loss, mean_hip_surrogate_loss = 0., 0.
-                hip_learn_stop = time.time()
-                hip_learn_time = hip_learn_stop - hip_learn_start
-                if self.log_dir is not None:
-                    self.hip_log(locals())
-                if hip_it % self.save_interval == 0:
-                    self.save_model(self.log_dir, high_it, hip_it, mu_it, omega_it)
+        low_update_env_ids = self.get_update_env_ids(
+            self.env.episode_length_buf,
+            self.low_update_cycle,
+        )
 
-                hip_it += 1
-                hip_collection_start = time.time()
-                hip_ep_infos.clear()
-            if self.mu_alg.storage.ready:
-                mu_collection_time = time.time() - mu_collection_start
-                mu_learn_start = time.time()
-                self.mu_alg.compute_returns(critic_obs)
-                mean_mu_value_loss, mean_mu_surrogate_loss = self.mu_alg.update()
-                mu_learn_stop = time.time()
-                mu_learn_time = mu_learn_stop - mu_learn_start
-                if self.log_dir is not None:
-                    self.mu_log(locals())
-                if mu_it % self.save_interval == 0:
-                    self.save_model(self.log_dir, high_it, hip_it, mu_it, omega_it)
+        if self.low_reservoir_states is not None:
+            self.low_reservoir_states[dones] = 0.
 
-                mu_it += 1
-                mu_collection_start = time.time()
-                mu_ep_infos.clear()
+        self.low_alg.process_env_step(
+            self.current_low_step,
+            low_update_env_ids,
+            low_acc_rewards,
+            dones,
+            critic_obs,
+            infos,
+        )
 
-            # torch.nonzero(self.omega_alg.storage.pending,as_tuple=False).squeeze(-1)
-            if self.omega_alg.storage.ready:
-                omega_collection_time = time.time() - omega_collection_start
-                omega_learn_start = time.time()
-                self.omega_alg.compute_returns(critic_obs)
-                mean_omega_value_loss, mean_omega_surrogate_loss = self.omega_alg.update()
-                omega_learn_stop = time.time()
-                omega_learn_time = omega_learn_stop - omega_learn_start
-                if self.log_dir is not None:
-                    self.omega_log(locals())
-                if omega_it % self.save_interval == 0:
-                    self.save_model(self.log_dir,high_it, hip_it, mu_it, omega_it)
+        if self.log_dir is not None:
+            # Book keeping
+            cur_low_reward_sum += rewards[2]
+            cur_episode_length += 1
+            if env_ids.numel() > 0:
+                episode_info = infos.get('episode', {}).copy()
+                low_ep_infos.append(episode_info)
+                low_ep_counts.append(env_ids.numel())
 
-                omega_it += 1
-                omega_collection_start = time.time()
-                omega_ep_infos.clear()
+                low_rewbuffer.extend(cur_low_reward_sum[env_ids].cpu().numpy().tolist())
+                lenbuffer.extend(cur_episode_length[env_ids].cpu().numpy().tolist())
+                cur_low_reward_sum[env_ids] = 0.
+                cur_episode_length[env_ids] = 0.
 
-            if high_it >= tot_iter:
-                break
+        low_acc_rewards[low_update_env_ids] = 0.
 
-        self.current_learning_iteration += num_learning_iterations
-        self.save(os.path.join(self.log_dir,
-                               f"model_last_high-{high_it}-{mu_it}_omega-{omega_it}.pt"))
-        self.final_log()
+        return obs, critic_obs, low_acc_rewards, cur_low_reward_sum, cur_episode_length, low_ep_infos, low_ep_counts, low_rewbuffer, lenbuffer
 
-    def save_model(self, log_dir, high_it, hip_it, mu_it, omega_it):
+    def high_learn(self, obs, critic_obs, high_acc_rewards, cur_high_reward_sum, cur_episode_length, decision_episode_sum, high_ep_infos, high_ep_counts, high_rewbuffer, lenbuffer):
+        obs, critic_obs, rewards, dones, infos = self.high_training_rollout(obs, critic_obs, self.current_high_step)
+        
+        track_max = self.env.reward_scales["tracking_lin_vel"] + self.env.reward_scales["tracking_ang_vel"]
+        track_quality = torch.clamp(
+            rewards[1] / (track_max + 1e-6),
+            min=0.0,
+            max=1.0,
+        )
+
+        eta = 1.
+        threshold_25 = self.env.cfg.rewards.threshold_25
+        threshold_50 = self.env.cfg.rewards.threshold_50
+        tmp_10 = (self.low_update_cycle == self.env.cfg.control.low_freq_idx[0]).float() * torch.clip(track_quality, min=0., max=threshold_25)
+        tmp_25 = (self.low_update_cycle == self.env.cfg.control.low_freq_idx[1]).float() * torch.clip(track_quality + eta * (track_quality - threshold_25), min=0., max=(threshold_25 + eta * (threshold_50 - threshold_25)))
+        tmp_50 = (self.low_update_cycle == self.env.cfg.control.low_freq_idx[2]).float() * torch.clip(track_quality + eta * (track_quality - threshold_25) + eta * (track_quality - threshold_50), min=0.)
+
+        high_reward = track_max * (tmp_10 + tmp_25 + tmp_50)
+
+        decision_reward = high_reward
+        high_acc_rewards += high_reward
+
+        env_ids = dones.nonzero(as_tuple=False).flatten()
+
+        self.current_high_step += 1
+
+        high_update_env_ids = self.get_update_env_ids(
+            self.env.episode_length_buf,
+            self.env.cfg.control.high_cycle,
+        )
+
+        if self.high_reservoir_states is not None:
+            self.high_reservoir_states[dones] = 0.
+        if self.low_reservoir_states is not None:
+            self.low_reservoir_states[dones] = 0.
+
+        self.high_alg.process_env_step(
+            self.current_high_step,
+            high_update_env_ids,
+            high_acc_rewards,
+            dones,
+            critic_obs,
+            infos,
+        )
+
+        if self.log_dir is not None:
+            # Book keeping
+            cur_high_reward_sum += high_reward
+
+            cur_episode_length += 1
+            # Keep runner rewards separate from the sums cleared by env.reset_idx().
+            decision_episode_sum += decision_reward
+            if env_ids.numel() > 0:
+                episode_info = infos.get('episode', {}).copy()
+                episode_info['rew_decision'] = torch.mean(decision_episode_sum[env_ids]) / self.env.max_episode_length_s
+                high_ep_infos.append(episode_info)
+                high_ep_counts.append(env_ids.numel())
+                high_rewbuffer.extend(cur_high_reward_sum[env_ids].cpu().numpy().tolist())
+                lenbuffer.extend(cur_episode_length[env_ids].cpu().numpy().tolist())
+                cur_high_reward_sum[env_ids] = 0.
+                cur_episode_length[env_ids] = 0.
+                decision_episode_sum[env_ids] = 0.
+
+        high_acc_rewards[high_update_env_ids] = 0.
+
+        return obs, critic_obs, high_acc_rewards, cur_high_reward_sum, cur_episode_length, decision_episode_sum, high_ep_infos, high_ep_counts, high_rewbuffer, lenbuffer
+
+    def save_model(self, log_dir, high_it, low_it):
         log_dir = Path(log_dir)
 
-        pattern = re.compile(r"^model_(\d+)_high-\d+_hip-\d+_mu-\d+_omega-\d+\.pt$")
+        pattern = re.compile(r"^model_(\d+)_high-\d+_low-\d+\.pt$")
         existing_indices = []
         for file in log_dir.glob("*.pt"):
             match = pattern.match(file.name)
@@ -683,7 +591,7 @@ class MPPolicyRunner(TwinPolicyRunner):
         model_idx = max(existing_indices, default=-1) + 1
 
         save_path = log_dir / (
-            f"model_{model_idx}_high-{high_it}_hip-{hip_it}_mu-{mu_it}_omega-{omega_it}.pt"
+            f"model_{model_idx}_high-{high_it}_low-{low_it}.pt"
         )
 
         self.save(str(save_path))
@@ -701,45 +609,42 @@ class MPPolicyRunner(TwinPolicyRunner):
 
         ep_string = f''
         if locs['high_ep_infos']:
+            episode_counts = torch.tensor(locs['high_ep_counts'], device=self.device)
             for key in locs['high_ep_infos'][0]:
                 infotensor = torch.tensor([], device=self.device)
                 for ep_info in locs['high_ep_infos']:
-                    # handle scalar and zero dimensional tensor infos
-                    if not isinstance(ep_info[key], torch.Tensor):
-                        ep_info[key] = torch.Tensor([ep_info[key]])
-                    if len(ep_info[key].shape) == 0:
-                        ep_info[key] = ep_info[key].unsqueeze(0)
-                    infotensor = torch.cat((infotensor, ep_info[key].to(self.device)))
-                value = torch.mean(infotensor)
+                    ep_value = torch.as_tensor(ep_info[key], device=self.device).float().mean().view(1)
+                    infotensor = torch.cat((infotensor, ep_value))
+                value = torch.sum(infotensor * episode_counts) / episode_counts.sum()
                 self.writer.add_scalar('Episode/high/' + key, value, locs['high_it'])
                 ep_string += f"""{f'Mean episode {key}:':>{pad}} {value:.4f}\n"""
-        mean_std = self.high_alg.actor_critic.std.mean()
+        mean_entropy = self.high_alg.mean_entropy
         fps = int(self.num_steps_per_env * self.env.num_envs / iteration_time)
 
         self.writer.add_scalar('Loss/high/value_function', locs['mean_high_value_loss'], locs['high_it'])
         self.writer.add_scalar('Loss/high/surrogate', locs['mean_high_surrogate_loss'], locs['high_it'])
         self.writer.add_scalar('Loss/high/learning_rate', self.high_alg.learning_rate, locs['high_it'])
-        self.writer.add_scalar('Policy/high/mean_noise_std', mean_std.item(), locs['high_it'])
+        self.writer.add_scalar('Policy/high/entropy', mean_entropy, locs['high_it'])
         self.writer.add_scalar('Perf/high/total_fps', fps, locs['high_it'])
         self.writer.add_scalar('Perf/high/collection time', locs['high_collection_time'], locs['high_it'])
         self.writer.add_scalar('Perf/high/learning_time', locs['high_learn_time'], locs['high_it'])
-        if len(locs['rewbuffer']) > 0:
-            self.writer.add_scalar('Train/high/mean_reward', statistics.mean(locs['rewbuffer']), locs['high_it'])
+        if len(locs['high_rewbuffer']) > 0:
+            self.writer.add_scalar('Train/high/mean_reward', statistics.mean(locs['high_rewbuffer']), locs['high_it'])
             self.writer.add_scalar('Train/high/mean_episode_length', statistics.mean(locs['lenbuffer']), locs['high_it'])
-            self.writer.add_scalar('Train/high/mean_reward/time', statistics.mean(locs['rewbuffer']), self.high_tot_time)
+            self.writer.add_scalar('Train/high/mean_reward/time', statistics.mean(locs['high_rewbuffer']), self.high_tot_time)
             self.writer.add_scalar('Train/high/mean_episode_length/time', statistics.mean(locs['lenbuffer']), self.high_tot_time)
 
         str = f" \033[1m Learning iteration {locs['high_it']}/{locs['tot_iter']} \033[0m "
 
-        if len(locs['rewbuffer']) > 0:
+        if len(locs['high_rewbuffer']) > 0:
             log_string = (f"""{'#' * width} high {'#' * width}\n"""
                           f"""{str.center(2*width, ' ')}\n\n"""
                           f"""{'Computation:':>{pad}} {fps:.0f} steps/s (collection: {locs[
                             'high_collection_time']:.3f}s, learning {locs['high_learn_time']:.3f}s)\n"""
                           f"""{'Value function loss:':>{pad}} {locs['mean_high_value_loss']:.4f}\n"""
                           f"""{'Surrogate loss:':>{pad}} {locs['mean_high_surrogate_loss']:.4f}\n"""
-                          f"""{'Mean action noise std:':>{pad}} {mean_std.item():.2f}\n"""
-                          f"""{'Mean reward:':>{pad}} {statistics.mean(locs['rewbuffer']):.2f}\n"""
+                          f"""{'Mean policy entropy:':>{pad}} {mean_entropy:.4f}\n"""
+                          f"""{'Mean reward:':>{pad}} {statistics.mean(locs['high_rewbuffer']):.2f}\n"""
                           f"""{'Mean episode length:':>{pad}} {statistics.mean(locs['lenbuffer']):.2f}\n""")
                         #   f"""{'Mean reward/step:':>{pad}} {locs['mean_reward']:.2f}\n"""
                         #   f"""{'Mean episode length/episode:':>{pad}} {locs['mean_trajectory_length']:.2f}\n""")
@@ -750,7 +655,7 @@ class MPPolicyRunner(TwinPolicyRunner):
                             'high_collection_time']:.3f}s, learning {locs['high_learn_time']:.3f}s)\n"""
                           f"""{'Value function loss:':>{pad}} {locs['mean_high_value_loss']:.4f}\n"""
                           f"""{'Surrogate loss:':>{pad}} {locs['mean_high_surrogate_loss']:.4f}\n"""
-                          f"""{'Mean action noise std:':>{pad}} {mean_std.item():.2f}\n""")
+                          f"""{'Mean policy entropy:':>{pad}} {mean_entropy:.4f}\n""")
                         #   f"""{'Mean reward/step:':>{pad}} {locs['mean_reward']:.2f}\n"""
                         #   f"""{'Mean episode length/episode:':>{pad}} {locs['mean_trajectory_length']:.2f}\n""")
 
@@ -763,52 +668,49 @@ class MPPolicyRunner(TwinPolicyRunner):
                                locs['num_learning_iterations'] - locs['high_it']):.1f}s\n""")
         print(log_string)
 
-    def mu_log(self, locs, width=40, pad=35):
-        self.mu_tot_timesteps += self.num_steps_per_env * self.env.num_envs
-        self.mu_tot_time += locs['mu_collection_time'] + locs['mu_learn_time']
-        iteration_time = locs['mu_collection_time'] + locs['mu_learn_time']
+    def low_log(self, locs, width=40, pad=35):
+        self.low_tot_timesteps += self.num_steps_per_env * self.env.num_envs
+        self.low_tot_time += locs['low_collection_time'] + locs['low_learn_time']
+        iteration_time = locs['low_collection_time'] + locs['low_learn_time']
 
         ep_string = f''
-        if locs['mu_ep_infos']:
-            for key in locs['mu_ep_infos'][0]:
+        if locs['low_ep_infos']:
+            episode_counts = torch.tensor(locs['low_ep_counts'], device=self.device)
+            for key in locs['low_ep_infos'][0]:
                 infotensor = torch.tensor([], device=self.device)
-                for ep_info in locs['mu_ep_infos']:
-                    # handle scalar and zero dimensional tensor infos
-                    if not isinstance(ep_info[key], torch.Tensor):
-                        ep_info[key] = torch.Tensor([ep_info[key]])
-                    if len(ep_info[key].shape) == 0:
-                        ep_info[key] = ep_info[key].unsqueeze(0)
-                    infotensor = torch.cat((infotensor, ep_info[key].to(self.device)))
-                value = torch.mean(infotensor)
-                self.writer.add_scalar('Episode/mu/' + key, value, locs['mu_it'])
+                for ep_info in locs['low_ep_infos']:
+                    ep_value = torch.as_tensor(ep_info[key], device=self.device).float().mean().view(1)
+                    infotensor = torch.cat((infotensor, ep_value))
+                value = torch.sum(infotensor * episode_counts) / episode_counts.sum()
+                self.writer.add_scalar('Episode/low/' + key, value, locs['low_it'])
                 ep_string += f"""{f'Mean episode {key}:':>{pad}} {value:.4f}\n"""
-        mean_std = self.mu_alg.actor_critic.std.mean()
+        mean_std = self.low_alg.actor_critic.std.mean()
         fps = int(self.num_steps_per_env * self.env.num_envs / iteration_time)
 
-        self.writer.add_scalar('Loss/mu/value_function', locs['mean_mu_value_loss'], locs['mu_it'])
-        self.writer.add_scalar('Loss/mu/surrogate', locs['mean_mu_surrogate_loss'], locs['mu_it'])
-        self.writer.add_scalar('Loss/mu/learning_rate', self.mu_alg.learning_rate, locs['mu_it'])
-        self.writer.add_scalar('Policy/mu/mean_noise_std', mean_std.item(), locs['mu_it'])
-        self.writer.add_scalar('Perf/mu/total_fps', fps, locs['mu_it'])
-        self.writer.add_scalar('Perf/mu/collection time', locs['mu_collection_time'], locs['mu_it'])
-        self.writer.add_scalar('Perf/mu/learning_time', locs['mu_learn_time'], locs['mu_it'])
-        if len(locs['rewbuffer']) > 0:
-            self.writer.add_scalar('Train/mu/mean_reward', statistics.mean(locs['rewbuffer']), locs['mu_it'])
-            self.writer.add_scalar('Train/mu/mean_episode_length', statistics.mean(locs['lenbuffer']), locs['mu_it'])
-            self.writer.add_scalar('Train/mu/mean_reward/time', statistics.mean(locs['rewbuffer']), self.mu_tot_time)
-            self.writer.add_scalar('Train/mu/mean_episode_length/time', statistics.mean(locs['lenbuffer']), self.mu_tot_time)
+        self.writer.add_scalar('Loss/low/value_function', locs['mean_low_value_loss'], locs['low_it'])
+        self.writer.add_scalar('Loss/low/surrogate', locs['mean_low_surrogate_loss'], locs['low_it'])
+        self.writer.add_scalar('Loss/low/learning_rate', self.low_alg.learning_rate, locs['low_it'])
+        self.writer.add_scalar('Policy/low/mean_noise_std', mean_std.item(), locs['low_it'])
+        self.writer.add_scalar('Perf/low/total_fps', fps, locs['low_it'])
+        self.writer.add_scalar('Perf/low/collection time', locs['low_collection_time'], locs['low_it'])
+        self.writer.add_scalar('Perf/low/learning_time', locs['low_learn_time'], locs['low_it'])
+        if len(locs['low_rewbuffer']) > 0:
+            self.writer.add_scalar('Train/low/mean_reward', statistics.mean(locs['low_rewbuffer']), locs['low_it'])
+            self.writer.add_scalar('Train/low/mean_episode_length', statistics.mean(locs['lenbuffer']), locs['low_it'])
+            self.writer.add_scalar('Train/low/mean_reward/time', statistics.mean(locs['low_rewbuffer']), self.low_tot_time)
+            self.writer.add_scalar('Train/low/mean_episode_length/time', statistics.mean(locs['lenbuffer']), self.low_tot_time)
 
-        str = f" \033[1m Learning iteration {locs['mu_it']}/{locs['tot_iter']} \033[0m "
+        str = f" \033[1m Learning iteration {locs['low_it']}/{locs['tot_iter']} \033[0m "
 
-        if len(locs['rewbuffer']) > 0:
-            log_string = (f"""{'#' * width} mu {'#' * width}\n"""
+        if len(locs['low_rewbuffer']) > 0:
+            log_string = (f"""{'#' * width} low {'#' * width}\n"""
                           f"""{str.center(2*width, ' ')}\n\n"""
                           f"""{'Computation:':>{pad}} {fps:.0f} steps/s (collection: {locs[
-                            'mu_collection_time']:.3f}s, learning {locs['mu_learn_time']:.3f}s)\n"""
-                          f"""{'Value function loss:':>{pad}} {locs['mean_mu_value_loss']:.4f}\n"""
-                          f"""{'Surrogate loss:':>{pad}} {locs['mean_mu_surrogate_loss']:.4f}\n"""
+                            'low_collection_time']:.3f}s, learning {locs['low_learn_time']:.3f}s)\n"""
+                          f"""{'Value function loss:':>{pad}} {locs['mean_low_value_loss']:.4f}\n"""
+                          f"""{'Surrogate loss:':>{pad}} {locs['mean_low_surrogate_loss']:.4f}\n"""
                           f"""{'Mean action noise std:':>{pad}} {mean_std.item():.2f}\n"""
-                          f"""{'Mean reward:':>{pad}} {statistics.mean(locs['rewbuffer']):.2f}\n"""
+                          f"""{'Mean reward:':>{pad}} {statistics.mean(locs['low_rewbuffer']):.2f}\n"""
                           f"""{'Mean episode length:':>{pad}} {statistics.mean(locs['lenbuffer']):.2f}\n""")
                         #   f"""{'Mean reward/step:':>{pad}} {locs['mean_reward']:.2f}\n"""
                         #   f"""{'Mean episode length/episode:':>{pad}} {locs['mean_trajectory_length']:.2f}\n""")
@@ -816,170 +718,27 @@ class MPPolicyRunner(TwinPolicyRunner):
             log_string = (f"""{'#' * width}\n"""
                           f"""{str.center(2*width, ' ')}\n\n"""
                           f"""{'Computation:':>{pad}} {fps:.0f} steps/s (collection: {locs[
-                            'mu_collection_time']:.3f}s, learning {locs['mu_learn_time']:.3f}s)\n"""
-                          f"""{'Value function loss:':>{pad}} {locs['mean_mu_value_loss']:.4f}\n"""
-                          f"""{'Surrogate loss:':>{pad}} {locs['mean_mu_surrogate_loss']:.4f}\n"""
+                            'low_collection_time']:.3f}s, learning {locs['low_learn_time']:.3f}s)\n"""
+                          f"""{'Value function loss:':>{pad}} {locs['mean_low_value_loss']:.4f}\n"""
+                          f"""{'Surrogate loss:':>{pad}} {locs['mean_low_surrogate_loss']:.4f}\n"""
                           f"""{'Mean action noise std:':>{pad}} {mean_std.item():.2f}\n""")
                         #   f"""{'Mean reward/step:':>{pad}} {locs['mean_reward']:.2f}\n"""
                         #   f"""{'Mean episode length/episode:':>{pad}} {locs['mean_trajectory_length']:.2f}\n""")
 
         log_string += ep_string
         log_string += (f"""{'--' * width}\n"""
-                       f"""{'Total timesteps:':>{pad}} {self.mu_tot_timesteps}\n"""
+                       f"""{'Total timesteps:':>{pad}} {self.low_tot_timesteps}\n"""
                        f"""{'Iteration time:':>{pad}} {iteration_time:.2f}s\n"""
-                       f"""{'Total time:':>{pad}} {self.mu_tot_time:.2f}s\n"""
-                       f"""{'ETA:':>{pad}} {self.mu_tot_time / (locs['mu_it'] + 1) * (
-                               locs['num_learning_iterations'] - locs['mu_it']):.1f}s\n""")
+                       f"""{'Total time:':>{pad}} {self.low_tot_time:.2f}s\n"""
+                       f"""{'ETA:':>{pad}} {self.low_tot_time / (locs['low_it'] + 1) * (
+                               locs['num_learning_iterations'] - locs['low_it']):.1f}s\n""")
         print(log_string)
 
-    def omega_log(self, locs, width=40, pad=35):
-        self.omega_tot_timesteps += self.num_steps_per_env * self.env.num_envs
-        self.omega_tot_time += locs['omega_collection_time'] + locs['omega_learn_time']
-        iteration_time = locs['omega_collection_time'] + locs['omega_learn_time']
-
-        ep_string = f''
-        if locs['omega_ep_infos']:
-            for key in locs['omega_ep_infos'][0]:
-                infotensor = torch.tensor([], device=self.device)
-                for ep_info in locs['omega_ep_infos']:
-                    # handle scalar and zero dimensional tensor infos
-                    if not isinstance(ep_info[key], torch.Tensor):
-                        ep_info[key] = torch.Tensor([ep_info[key]])
-                    if len(ep_info[key].shape) == 0:
-                        ep_info[key] = ep_info[key].unsqueeze(0)
-                    infotensor = torch.cat((infotensor, ep_info[key].to(self.device)))
-                value = torch.mean(infotensor)
-                self.writer.add_scalar('Episode/omega/' + key, value, locs['omega_it'])
-                ep_string += f"""{f'Mean episode {key}:':>{pad}} {value:.4f}\n"""
-        mean_std = self.omega_alg.actor_critic.std.mean()
-        fps = int(self.num_steps_per_env * self.env.num_envs / iteration_time)
-
-        self.writer.add_scalar('Loss/omega/value_function', locs['mean_omega_value_loss'], locs['omega_it'])
-        self.writer.add_scalar('Loss/omega/surrogate', locs['mean_omega_surrogate_loss'], locs['omega_it'])
-        self.writer.add_scalar('Loss/omega/learning_rate', self.omega_alg.learning_rate, locs['omega_it'])
-        self.writer.add_scalar('Policy/omega/mean_noise_std', mean_std.item(), locs['omega_it'])
-        self.writer.add_scalar('Perf/omega/total_fps', fps, locs['omega_it'])
-        self.writer.add_scalar('Perf/omega/collection time', locs['omega_collection_time'], locs['omega_it'])
-        self.writer.add_scalar('Perf/omega/learning_time', locs['omega_learn_time'], locs['omega_it'])
-        if len(locs['rewbuffer']) > 0:
-            self.writer.add_scalar('Train/omega/mean_reward', statistics.mean(locs['rewbuffer']), locs['omega_it'])
-            self.writer.add_scalar('Train/omega/mean_episode_length', statistics.mean(locs['lenbuffer']), locs['omega_it'])
-            self.writer.add_scalar('Train/omega/mean_reward/time', statistics.mean(locs['rewbuffer']), self.omega_tot_time)
-            self.writer.add_scalar('Train/omega/mean_episode_length/time', statistics.mean(locs['lenbuffer']), self.omega_tot_time)
-
-        str = f" \033[1m Learning iteration {locs['omega_it']}/{locs['tot_iter']} \033[0m "
-
-        if len(locs['rewbuffer']) > 0:
-            log_string = (f"""{'#' * width} omega {'#' * width}\n"""
-                          f"""{str.center(2*width, ' ')}\n\n"""
-                          f"""{'Computation:':>{pad}} {fps:.0f} steps/s (collection: {locs[
-                            'omega_collection_time']:.3f}s, learning {locs['omega_learn_time']:.3f}s)\n"""
-                          f"""{'Value function loss:':>{pad}} {locs['mean_omega_value_loss']:.4f}\n"""
-                          f"""{'Surrogate loss:':>{pad}} {locs['mean_omega_surrogate_loss']:.4f}\n"""
-                          f"""{'Mean action noise std:':>{pad}} {mean_std.item():.2f}\n"""
-                          f"""{'Mean reward:':>{pad}} {statistics.mean(locs['rewbuffer']):.2f}\n"""
-                          f"""{'Mean episode length:':>{pad}} {statistics.mean(locs['lenbuffer']):.2f}\n""")
-                        #   f"""{'Mean reward/step:':>{pad}} {locs['mean_reward']:.2f}\n"""
-                        #   f"""{'Mean episode length/episode:':>{pad}} {locs['mean_trajectory_length']:.2f}\n""")
-        else:
-            log_string = (f"""{'#' * width}\n"""
-                          f"""{str.center(2*width, ' ')}\n\n"""
-                          f"""{'Computation:':>{pad}} {fps:.0f} steps/s (collection: {locs[
-                            'omega_collection_time']:.3f}s, learning {locs['omega_learn_time']:.3f}s)\n"""
-                          f"""{'Value function loss:':>{pad}} {locs['mean_omega_value_loss']:.4f}\n"""
-                          f"""{'Surrogate loss:':>{pad}} {locs['mean_omega_surrogate_loss']:.4f}\n"""
-                          f"""{'Mean action noise std:':>{pad}} {mean_std.item():.2f}\n""")
-                        #   f"""{'Mean reward/step:':>{pad}} {locs['mean_reward']:.2f}\n"""
-                        #   f"""{'Mean episode length/episode:':>{pad}} {locs['mean_trajectory_length']:.2f}\n""")
-
-        log_string += ep_string
-        log_string += (f"""{'--' * width}\n"""
-                       f"""{'Total timesteps:':>{pad}} {self.omega_tot_timesteps}\n"""
-                       f"""{'Iteration time:':>{pad}} {iteration_time:.2f}s\n"""
-                       f"""{'Total time:':>{pad}} {self.omega_tot_time:.2f}s\n"""
-                       f"""{'ETA:':>{pad}} {self.omega_tot_time / (locs['omega_it'] + 1) * (
-                               locs['num_learning_iterations'] - locs['omega_it']):.1f}s\n""")
-        print(log_string)
-
-    def hip_log(self, locs, width=40, pad=35):
-        self.hip_tot_timesteps += self.num_steps_per_env * self.env.num_envs
-        self.hip_tot_time += locs['hip_collection_time'] + locs['hip_learn_time']
-        iteration_time = locs['hip_collection_time'] + locs['hip_learn_time']
-
-        ep_string = f''
-        if locs['hip_ep_infos']:
-            for key in locs['hip_ep_infos'][0]:
-                infotensor = torch.tensor([], device=self.device)
-                for ep_info in locs['hip_ep_infos']:
-                    # handle scalar and zero dimensional tensor infos
-                    if not isinstance(ep_info[key], torch.Tensor):
-                        ep_info[key] = torch.Tensor([ep_info[key]])
-                    if len(ep_info[key].shape) == 0:
-                        ep_info[key] = ep_info[key].unsqueeze(0)
-                    infotensor = torch.cat((infotensor, ep_info[key].to(self.device)))
-                value = torch.mean(infotensor)
-                self.writer.add_scalar('Episode/hip/' + key, value, locs['hip_it'])
-                ep_string += f"""{f'Mean episode {key}:':>{pad}} {value:.4f}\n"""
-        mean_std = self.hip_alg.actor_critic.std.mean()
-        fps = int(self.num_steps_per_env * self.env.num_envs / iteration_time)
-
-        self.writer.add_scalar('Loss/hip/value_function', locs['mean_hip_value_loss'], locs['hip_it'])
-        self.writer.add_scalar('Loss/hip/surrogate', locs['mean_hip_surrogate_loss'], locs['hip_it'])
-        self.writer.add_scalar('Loss/hip/learning_rate', self.hip_alg.learning_rate, locs['hip_it'])
-        self.writer.add_scalar('Policy/hip/mean_noise_std', mean_std.item(), locs['hip_it'])
-        self.writer.add_scalar('Perf/hip/total_fps', fps, locs['hip_it'])
-        self.writer.add_scalar('Perf/hip/collection time', locs['hip_collection_time'], locs['hip_it'])
-        self.writer.add_scalar('Perf/hip/learning_time', locs['hip_learn_time'], locs['hip_it'])
-        if len(locs['rewbuffer']) > 0:
-            self.writer.add_scalar('Train/hip/mean_reward', statistics.mean(locs['rewbuffer']), locs['hip_it'])
-            self.writer.add_scalar('Train/hip/mean_episode_length', statistics.mean(locs['lenbuffer']), locs['hip_it'])
-            self.writer.add_scalar('Train/hip/mean_reward/time', statistics.mean(locs['rewbuffer']), self.hip_tot_time)
-            self.writer.add_scalar('Train/hip/mean_episode_length/time', statistics.mean(locs['lenbuffer']), self.hip_tot_time)
-
-        str = f" \033[1m Learning iteration {locs['hip_it']}/{locs['tot_iter']} \033[0m "
-
-        if len(locs['rewbuffer']) > 0:
-            log_string = (f"""{'#' * width} hip {'#' * width}\n"""
-                          f"""{str.center(2*width, ' ')}\n\n"""
-                          f"""{'Computation:':>{pad}} {fps:.0f} steps/s (collection: {locs[
-                            'hip_collection_time']:.3f}s, learning {locs['hip_learn_time']:.3f}s)\n"""
-                          f"""{'Value function loss:':>{pad}} {locs['mean_hip_value_loss']:.4f}\n"""
-                          f"""{'Surrogate loss:':>{pad}} {locs['mean_hip_surrogate_loss']:.4f}\n"""
-                          f"""{'Mean action noise std:':>{pad}} {mean_std.item():.2f}\n"""
-                          f"""{'Mean reward:':>{pad}} {statistics.mean(locs['rewbuffer']):.2f}\n"""
-                          f"""{'Mean episode length:':>{pad}} {statistics.mean(locs['lenbuffer']):.2f}\n""")
-                        #   f"""{'Mean reward/step:':>{pad}} {locs['mean_reward']:.2f}\n"""
-                        #   f"""{'Mean episode length/episode:':>{pad}} {locs['mean_trajectory_length']:.2f}\n""")
-        else:
-            log_string = (f"""{'#' * width}\n"""
-                          f"""{str.center(2*width, ' ')}\n\n"""
-                          f"""{'Computation:':>{pad}} {fps:.0f} steps/s (collection: {locs[
-                            'hip_collection_time']:.3f}s, learning {locs['hip_learn_time']:.3f}s)\n"""
-                          f"""{'Value function loss:':>{pad}} {locs['mean_hip_value_loss']:.4f}\n"""
-                          f"""{'Surrogate loss:':>{pad}} {locs['mean_hip_surrogate_loss']:.4f}\n"""
-                          f"""{'Mean action noise std:':>{pad}} {mean_std.item():.2f}\n""")
-                        #   f"""{'Mean reward/step:':>{pad}} {locs['mean_reward']:.2f}\n"""
-                        #   f"""{'Mean episode length/episode:':>{pad}} {locs['mean_trajectory_length']:.2f}\n""")
-
-        log_string += ep_string
-        log_string += (f"""{'--' * width}\n"""
-                       f"""{'Total timesteps:':>{pad}} {self.hip_tot_timesteps}\n"""
-                       f"""{'Iteration time:':>{pad}} {iteration_time:.2f}s\n"""
-                       f"""{'Total time:':>{pad}} {self.hip_tot_time:.2f}s\n"""
-                       f"""{'ETA:':>{pad}} {self.hip_tot_time / (locs['hip_it'] + 1) * (
-                               locs['num_learning_iterations'] - locs['hip_it']):.1f}s\n""")
-        print(log_string)
 
     def save(self, path, infos=None):
         torch.save({
-            'high_model_state_dict': self.high_alg.actor_critic.state_dict(),
-            'mu_model_state_dict': self.mu_alg.actor_critic.state_dict(),
-            'omega_model_state_dict': self.omega_alg.actor_critic.state_dict(),
-            'hip_model_state_dict': self.hip_alg.actor_critic.state_dict(),
-            'high_optimizer_state_dict': self.high_alg.optimizer.state_dict(),
-            'mu_optimizer_state_dict': self.mu_alg.optimizer.state_dict(),
-            'omega_optimizer_state_dict': self.omega_alg.optimizer.state_dict(),
-            'hip_optimizer_state_dict': self.hip_alg.optimizer.state_dict(),
+            'high_model_state_dict': self.high_actor_critic.state_dict(),
+            'low_model_state_dict': self.low_actor_critic.state_dict(),
             'iter': self.current_learning_iteration,
             'infos': infos,
             }, path)
@@ -990,20 +749,12 @@ class MPPolicyRunner(TwinPolicyRunner):
             map_location=self.device,
             weights_only=True,
         )
-        self.high_alg.actor_critic.load_state_dict(
+        self.high_actor_critic.load_state_dict(
             loaded_dict['high_model_state_dict'],
             strict=True,
         )
-        self.hip_alg.actor_critic.load_state_dict(
-            loaded_dict['hip_model_state_dict'],
-            strict=True,
-        )
-        self.mu_alg.actor_critic.load_state_dict(
-            loaded_dict['mu_model_state_dict'],
-            strict=True,
-        )
-        self.omega_alg.actor_critic.load_state_dict(
-            loaded_dict['omega_model_state_dict'],
+        self.low_actor_critic.load_state_dict(
+            loaded_dict['low_model_state_dict'],
             strict=True,
         )
         if load_optimizer:
@@ -1011,28 +762,20 @@ class MPPolicyRunner(TwinPolicyRunner):
                 self.high_alg.optimizer.load_state_dict(
                     loaded_dict['high_optimizer_state_dict']
                 )
-            if 'mu_optimizer_state_dict' in loaded_dict:
-                self.mu_alg.optimizer.load_state_dict(
-                    loaded_dict['mu_optimizer_state_dict']
-                )
-            if 'omega_optimizer_state_dict' in loaded_dict:
-                self.omega_alg.optimizer.load_state_dict(
-                    loaded_dict['omega_optimizer_state_dict']
-                )
-            if 'hip_optimizer_state_dict' in loaded_dict:
-                self.hip_alg.optimizer.load_state_dict(
-                    loaded_dict['hip_optimizer_state_dict']
+            if 'low_optimizer_state_dict' in loaded_dict:
+                self.low_alg.optimizer.load_state_dict(
+                    loaded_dict['low_optimizer_state_dict']
                 )
         self.current_learning_iteration = loaded_dict['iter']
         return loaded_dict.get('infos')
 
     def get_inference_policy(self, device=None):
-        self.high_alg.actor_critic.eval() # switch to evaluation mode (dropout for example)
-        self.hip_alg.actor_critic.eval() # switch to evaluation mode (dropout for example)
+        self.high_actor_critic.eval() # switch to evaluation mode (dropout for example)
+        self.low_actor_critic.eval()
         if device is not None:
-            self.high_alg.actor_critic.to(device)
-            self.hip_alg.actor_critic.to(device)
+            self.high_actor_critic.to(device)
+            self.low_actor_critic.to(device)
+        high_policy = self.high_actor_critic.act_inference
+        low_policy = self.low_actor_critic.act_inference
 
-        mu_policy, omega_policy = super().get_inference_policy()
-
-        return self.high_alg.actor_critic.act_inference, mu_policy, omega_policy, self.hip_alg.actor_critic.act_inference
+        return high_policy, low_policy

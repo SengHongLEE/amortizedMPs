@@ -31,12 +31,12 @@ class ImitationTask(object):
                ref_motion_filenames=None,
                pose_weight=1.0,       #0.1, 0.5, 0.2
                velocity_weight=0.0,    #0.05
-               end_effector_weight=0.0,  #0.2
+               end_effector_weight=0.,  #0.2
                root_pose_weight=0.,    #0.15
                root_velocity_weight=0.,  #0.1
                pose_err_scale=5.0,      #5.0
                velocity_err_scale=0.1,   #0.5, 0.1
-               end_effector_err_scale=40.0,   #40.0
+               end_effector_err_scale=5.0,   #40.0
                root_pose_err_scale=20.0,    #40.0 , 20.0
                root_velocity_err_scale=2.0, #0.5, 2.0
                envs_frame_times=None,
@@ -267,10 +267,11 @@ class ImitationTask(object):
   def reward_ee_state(self, indices, frame, end_state):
       #end effector state
       end_state_ref = frame[:,19:].clone().reshape(-1,4,3)
-      end_state_ref[:,:,0:2] += self._default_pose.index_select(0, indices)[:,0:2].unsqueeze(1)
+      root_pos_ref = frame[:,:3].clone()
+      end_state_ref[:,:,0:2] -= root_pos_ref[:,None, :2]
+      # end_state_ref[:,:,0:2] += self._default_pose.index_select(0, indices)[:,0:2].unsqueeze(1)
       end_state_ref = end_state_ref.reshape(-1,12)
       end_state_sim = end_state.index_select(0, indices)
-
       # alignment between api of simulator and ref motion
       end_state_ref_tmp = self._reorder_ee(end_state_ref)
 

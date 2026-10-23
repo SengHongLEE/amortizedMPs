@@ -39,13 +39,15 @@ from .reservoir_actors import (
     LIFReservoirMLPReadoutActor,
     LIFReservoirSNNReadoutActor,
     LIFReservoirSNNReadoutActor_TWIN_output_head,
+    LIFReservoirSNNReadoutActor_SINGLE_output_head
 
 )
-from .snn import SNNActor, SNNActor_TWIN_output_head
+from .snn import SNNActor, SNNActor_TWIN_output_head, SNNActor_SINGLE_output_head
 
 ACTOR_REGISTRY = {
     "mlp": MLPActor,
     "snn": SNNActor,
+    "snn_single_output_head": SNNActor_SINGLE_output_head,
     "analog_reservoir_mlp": AnalogReservoirMLPReadoutActor,
     "analog_reservoir_snn": AnalogReservoirSNNReadoutActor,
     "lif_reservoir_mlp": LIFReservoirMLPReadoutActor,
@@ -54,6 +56,7 @@ ACTOR_REGISTRY = {
     "mlp_twin_ouput": MLPActor_TWIN_output_head,
     "snn_twin_output": SNNActor_TWIN_output_head,
     "lif_reservoir_snn_twin_output": LIFReservoirSNNReadoutActor_TWIN_output_head,
+    "lif_reservoir_snn_single_output": LIFReservoirSNNReadoutActor_SINGLE_output_head,
 }
 
 
@@ -290,6 +293,7 @@ class ActorCriticDiscrete(ActorCritic):
             )
         nn.Module.__init__(self)
 
+        self.actor_class = actor_class
         self.mlp_input_dim_a = num_actor_obs
         self.mlp_input_dim_c = num_critic_obs
 
@@ -314,12 +318,52 @@ class ActorCriticDiscrete(ActorCritic):
                 reset_mode=snn_reset_mode,
                 input_scale=snn_input_scale,
             )
+        elif actor_class is SNNActor_SINGLE_output_head:
+            actor = actor_class(
+                input_dim=num_actor_obs,
+                hidden_dims=actor_hidden_dims,
+                output_dim=num_actions_1,
+                num_snn_steps=num_snn_steps,
+                lif_beta=snn_lif_beta,
+                lif_threshold=snn_lif_threshold,
+                surrogate_alpha=snn_surrogate_alpha,
+                reset_mode=snn_reset_mode,
+                input_scale=snn_input_scale,
+            )
 
-        else:
+        elif actor_class is LIFReservoirSNNReadoutActor_TWIN_output_head:
             actor = actor_class(
                 input_dim=num_actor_obs,
                 output_dim_1=num_actions_1,
                 output_dim_2=num_actions_2,
+                reservoir_dim=reservoir_dim,
+                reservoir_connectivity=reservoir_connectivity,
+                spectral_radius=spectral_radius,
+                reservoir_input_scale=reservoir_input_scale,
+                reservoir_bias_scale=reservoir_bias_scale,
+                num_reservoir_steps=num_reservoir_steps,
+                leak_rate=leak_rate,
+                reservoir_activation=reservoir_activation,
+                reservoir_lif_beta=reservoir_lif_beta,
+                reservoir_lif_threshold=reservoir_lif_threshold,
+                reservoir_surrogate_alpha=reservoir_surrogate_alpha,
+                reservoir_reset_mode=reservoir_reset_mode,
+                readout_hidden_dims=readout_hidden_dims,
+                readout_activation=readout_activation,
+                include_input_in_readout=include_input_in_readout,
+                num_snn_steps=num_snn_steps,
+                snn_lif_beta=snn_lif_beta,
+                snn_lif_threshold=snn_lif_threshold,
+                snn_surrogate_alpha=snn_surrogate_alpha,
+                snn_reset_mode=snn_reset_mode,
+                snn_input_scale=snn_input_scale,
+                train_reservoir=train_reservoir,
+            )
+
+        elif actor_class is LIFReservoirSNNReadoutActor_SINGLE_output_head:
+            actor = actor_class(
+                input_dim=num_actor_obs,
+                output_dim=num_actions_1,
                 reservoir_dim=reservoir_dim,
                 reservoir_connectivity=reservoir_connectivity,
                 spectral_radius=spectral_radius,
@@ -368,45 +412,76 @@ class ActorCriticDiscrete(ActorCritic):
 
     @property
     def entropy(self):
-        entropy_1 = self.distribution_1.entropy()
-        entropy_2 = self.distribution_2.entropy()
-        # return entropy_2
-        return entropy_1 + entropy_2
+        if self.actor_class is LIFReservoirSNNReadoutActor_SINGLE_output_head or self.actor_class is SNNActor_SINGLE_output_head:
+            return self.distribution_1.entropy()
+        
+        elif self.actor_class is LIFReservoirSNNReadoutActor_TWIN_output_head:   
+            entropy_1 = self.distribution_1.entropy()
+            entropy_2 = self.distribution_2.entropy()
+            # return entropy_2
+            return entropy_1 + entropy_2
 
     def update_distribution(self, observations, reservoir_states=None):
         if self.is_reservoir:
             if reservoir_states is None:
                 raise ValueError("reservoir_states are required.")
-            logits_1, logits_2, reservoir_states = self.actor(
+            if self.actor_class is LIFReservoirSNNReadoutActor_SINGLE_output_head:
+                logits_1, reservoir_states = self.actor(
+                    observations,
+                    reservoir_states,
+                )
+                self.distribution_1 = Categorical(logits=logits_1)
+                return reservoir_states, logits_1
+            elif self.actor_class is LIFReservoirSNNReadoutActor_TWIN_output_head:                
+                logits_1, logits_2, reservoir_states = self.actor(
+                    observations,
+                    reservoir_states,
+                )
+                self.distribution_1 = Categorical(logits=logits_1)
+                self.distribution_2 = Categorical(logits=logits_2)
+                return reservoir_states, logits_1, logits_2
+        else:
+            if self.actor_class is SNNActor_SINGLE_output_head:
+                logits_1 = self.actor(observations)
+                self.distribution_1 = Categorical(logits=logits_1)
+                return logits_1
+
+    def act(self, observations, reservoir_states=None, **kwargs):
+        if self.actor_class is LIFReservoirSNNReadoutActor_SINGLE_output_head:
+            next_states, logits_1 = self.update_distribution(
                 observations,
                 reservoir_states,
             )
-        else:
-            logits_1, logits_2 = self.actor(observations)
-
-        self.distribution_1 = Categorical(logits=logits_1)
-        self.distribution_2 = Categorical(logits=logits_2)
-        return reservoir_states, logits_1, logits_2
-
-    def act(self, observations, reservoir_states=None, **kwargs):
-        next_states, logits_1, logits_2 = self.update_distribution(
-            observations,
-            reservoir_states,
-        )
-        actions_1 = self.distribution_1.sample()
-        actions_2 = self.distribution_2.sample()
-        if self.is_reservoir:
+            actions_1 = self.distribution_1.sample()
+            return actions_1.unsqueeze(-1), logits_1, next_states
+        elif self.actor_class is SNNActor_SINGLE_output_head:
+            logits_1 = self.update_distribution(observations)
+            actions_1 = self.distribution_1.sample()
+            return actions_1.unsqueeze(-1), logits_1
+        elif self.actor_class is LIFReservoirSNNReadoutActor_TWIN_output_head:   
+            next_states, logits_1, logits_2 = self.update_distribution(
+                observations,
+                reservoir_states,
+            )
+            actions_1 = self.distribution_1.sample()
+            actions_2 = self.distribution_2.sample()
             return torch.cat((actions_1.unsqueeze(-1), actions_2.unsqueeze(-1)), dim=-1), torch.cat((logits_1, logits_2), dim=-1), next_states
+
         return torch.cat((actions_1.unsqueeze(-1), actions_2.unsqueeze(-1)), dim=-1), torch.cat((logits_1, logits_2), dim=-1)
 
     def get_actions_log_prob(self, actions):
-        log_prob_1 = self.distribution_1.log_prob(actions[:,0])
-        log_prob_2 = self.distribution_2.log_prob(actions[:,1])
+        if self.actor_class is LIFReservoirSNNReadoutActor_SINGLE_output_head or self.actor_class is SNNActor_SINGLE_output_head:
+            log_prob_1 = self.distribution_1.log_prob(actions[:,0])
+            joint_log_prob = log_prob_1
+            return joint_log_prob
+        
+        elif self.actor_class is LIFReservoirSNNReadoutActor_TWIN_output_head:   
+            log_prob_1 = self.distribution_1.log_prob(actions[:,0])
+            log_prob_2 = self.distribution_2.log_prob(actions[:,1])
 
-        joint_log_prob = log_prob_1 + log_prob_2
-        # joint_log_prob = log_prob_2
+            joint_log_prob = log_prob_1 + log_prob_2
 
-        return joint_log_prob
+            return joint_log_prob
 
     def act_inference(
         self,
@@ -417,18 +492,21 @@ class ActorCriticDiscrete(ActorCritic):
         if self.is_reservoir:
             if reservoir_states is None:
                 raise ValueError("reservoir_states are required.")
-
-            logits_1, logits_2, reservoir_states = self.actor(observations, reservoir_states)
-            action_1 = torch.argmax(logits_1, dim=-1)
-            action_2 = torch.argmax(logits_2, dim=-1)
-            return action_1, action_2, reservoir_states
-        
-        logits_1, logits_2 = self.actor(observations)
-
-        action_1 = torch.argmax(logits_1, dim=-1)
-        action_2 = torch.argmax(logits_2, dim=-1)
-
-        return action_1, action_2
+            if self.actor_class is LIFReservoirSNNReadoutActor_SINGLE_output_head:
+                logits_1, reservoir_states = self.actor(observations, reservoir_states)
+                action_1 = torch.argmax(logits_1, dim=-1)
+                return action_1, reservoir_states
+            
+            elif self.actor_class is LIFReservoirSNNReadoutActor_TWIN_output_head:   
+                logits_1, logits_2, reservoir_states = self.actor(observations, reservoir_states)
+                action_1 = torch.argmax(logits_1, dim=-1)
+                action_2 = torch.argmax(logits_2, dim=-1)
+                return action_1, action_2, reservoir_states
+        else:
+            if self.actor_class is SNNActor_SINGLE_output_head:
+                logits_1 = self.actor(observations)
+                action_1 = torch.argmax(logits_1, dim=-1)
+                return action_1
 
 
     def act_for_ppo_update(self, observations, reservoir_states):
@@ -436,9 +514,16 @@ class ActorCriticDiscrete(ActorCritic):
             raise RuntimeError(
                 "act_for_ppo_update requires a reservoir actor."
             )
-        logits_1, logits_2 = self.actor.readout_process(
-            observations,
-            reservoir_states,
-        )
-        self.distribution_1 = Categorical(logits=logits_1)
-        self.distribution_2 = Categorical(logits=logits_2)
+        if self.actor_class is LIFReservoirSNNReadoutActor_SINGLE_output_head:
+            logits_1 = self.actor.readout_process(
+                observations,
+                reservoir_states,
+            )
+            self.distribution_1 = Categorical(logits=logits_1)
+        elif self.actor_class is LIFReservoirSNNReadoutActor_TWIN_output_head:
+            logits_1, logits_2 = self.actor.readout_process(
+                observations,
+                reservoir_states,
+            )
+            self.distribution_1 = Categorical(logits=logits_1)
+            self.distribution_2 = Categorical(logits=logits_2)

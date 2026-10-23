@@ -1,0 +1,2546 @@
+{
+  "checkpoint": "/home/ubuntu/amortizedMPs/legged_gym/logs/A1/1021_equilibrium_v2_mixed_round1/model_0_10.pt",
+  "sha256": "bf778707ccf472fe28c9f459a1c85b78965c14660a5bb1fa8e1c8ebee772b579",
+  "seed": 123,
+  "terrain_seed": 1,
+  "seconds": 15.0,
+  "corridor": 1.5,
+  "effective_config": {
+    "asset": {
+      "angular_damping": 0.0,
+      "armature": 0.0,
+      "calf_link_length_a1": 0.2,
+      "collapse_fixed_joints": true,
+      "default_dof_drive_mode": 3,
+      "density": 0.001,
+      "disable_gravity": false,
+      "file": "{LEGGED_GYM_ROOT_DIR}/resources/robots/a1/urdf/a1_updated_v2.urdf",
+      "fix_base_link": false,
+      "flip_visual_attachments": true,
+      "foot_name": "foot",
+      "ground_clearance": 0.15,
+      "ground_penetration": 0.0,
+      "hip_link_length_a1": 0.0838,
+      "linear_damping": 0.0,
+      "max_angular_velocity": 1000.0,
+      "max_ground_clearance": 0.2,
+      "max_linear_velocity": 1000.0,
+      "max_step_length": 0.1,
+      "penalize_contacts_on": [
+        "thigh",
+        "calf"
+      ],
+      "replace_cylinder_with_capsule": true,
+      "self_collisions": 1,
+      "terminate_after_contacts_on": [
+        "base"
+      ],
+      "thickness": 0.01,
+      "thigh_link_length_a1": 0.2
+    },
+    "commands": {
+      "heading_command": true,
+      "max_vel_x": 1.5,
+      "num_commands": 4,
+      "ranges": {
+        "ang_vel_yaw": [
+          0.0,
+          0.0
+        ],
+        "heading": [
+          -0.0,
+          0.0
+        ],
+        "lin_vel_x": [
+          0.3,
+          1.5
+        ],
+        "lin_vel_y": [
+          -0.0,
+          0.0
+        ]
+      },
+      "resampling_time": 5
+    },
+    "control": {
+      "action_scale": 1.0,
+      "cycle": 2,
+      "damping": {
+        "joint": 2.0
+      },
+      "decimation": 10,
+      "equilibrium": {
+        "acceleration_limits": [
+          4.0,
+          3.0,
+          4.0
+        ],
+        "frequency_hz": 3.0,
+        "joint_limit_margin": 0.02,
+        "min_foot_depth": 0.06,
+        "min_sagittal_reach": 0.06,
+        "offset_limits": [
+          0.04,
+          0.025,
+          0.04
+        ],
+        "stance_velocity_limits": [
+          0.06,
+          0.04,
+          0.08
+        ],
+        "swing_velocity_limits": [
+          0.4,
+          0.25,
+          0.4
+        ]
+      },
+      "hierarchical": false,
+      "modulation_param_update_cycle": 1,
+      "oscillator_type": "phase_oscillator",
+      "primitive_selection_update_cycle": 25,
+      "stiffness": {
+        "joint": 100.0
+      },
+      "timing": {
+        "align_stroke": true,
+        "clearance_range": [
+          0.06,
+          0.2
+        ],
+        "duty_factor_range": [
+          0.3,
+          0.8
+        ],
+        "duty_offset_range": [
+          -0.15,
+          0.25
+        ],
+        "frequency_scale_range": [
+          0.35,
+          1.2
+        ],
+        "time_constant": 0.1
+      },
+      "update_quality_threshold": 0.85,
+      "varied_decimation": false
+    },
+    "domain_rand": {
+      "added_mass_range": [
+        -2.0,
+        3.0
+      ],
+      "friction_range": [
+        0.6,
+        1.0
+      ],
+      "max_push_vel_xy": 0.3,
+      "push_interval": 250.0,
+      "push_interval_s": 5,
+      "push_robots": false,
+      "randomize_base_mass": false,
+      "randomize_friction": false
+    },
+    "env": {
+      "action_space": "cpg_equilibrium_v2",
+      "env_spacing": 3.0,
+      "episode_length_s": 15.0,
+      "num_actions": 23,
+      "num_controller_observations": 72,
+      "num_envs": 144,
+      "num_modulation_params": 22,
+      "num_observations": 132,
+      "num_primitives": 6,
+      "num_privileged_obs": 139,
+      "play": false,
+      "send_timeouts": true
+    },
+    "init_member_classes": {},
+    "init_state": {
+      "ang_vel": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "default_joint_angles": {
+        "FL_hip_joint": 0.1,
+        "RL_hip_joint": 0.1,
+        "FR_hip_joint": -0.1,
+        "RR_hip_joint": -0.1,
+        "FL_thigh_joint": 0.8,
+        "RL_thigh_joint": 1.0,
+        "FR_thigh_joint": 0.8,
+        "RR_thigh_joint": 1.0,
+        "FL_calf_joint": -1.5,
+        "RL_calf_joint": -1.5,
+        "FR_calf_joint": -1.5,
+        "RR_calf_joint": -1.5
+      },
+      "lin_vel": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "pos": [
+        0.0,
+        0.0,
+        0.32
+      ],
+      "rot": [
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ]
+    },
+    "noise": {
+      "add_noise": false,
+      "noise_level": 1.0,
+      "noise_scales": {
+        "ang_vel": 0.4,
+        "dof_pos": 0.5,
+        "dof_vel": 1.5,
+        "gravity": 0.1,
+        "height_measurements": 0.0,
+        "lin_vel": 0.1
+      }
+    },
+    "normalization": {
+      "clip_actions": 1.0,
+      "clip_observations": 100.0,
+      "obs_scales": {
+        "ang_vel": 0.25,
+        "dof_pos": 1.0,
+        "dof_vel": 0.05,
+        "height_measurements": 5.0,
+        "lin_vel": 2.0
+      }
+    },
+    "rewards": {
+      "base_height_target": 0.32,
+      "contact_off_force": 1.0,
+      "contact_on_force": 5.0,
+      "max_contact_force": 180.0,
+      "modulation_param_rewards": [
+        "tracking_lin_vel",
+        "tracking_ang_vel",
+        "orientation",
+        "orientation_yaw",
+        "ang_vel_xy",
+        "action_rate_mp",
+        "stance_slip",
+        "exceed_torque_limits_l1norm",
+        "dof_vel_limits"
+      ],
+      "only_positive_rewards": false,
+      "pi_g_contact_force": 1.0,
+      "pi_g_switch_cost": 2.0,
+      "pi_g_utility_weight": 0.4,
+      "primitive_selection_rewards": [
+        "pi_g_utility",
+        "pi_g_cot",
+        "pi_g_torque",
+        "pi_g_contact",
+        "pi_g_work"
+      ],
+      "primitive_selection_scales": {
+        "pi_g_contact": 1.0,
+        "pi_g_cot": 1.0,
+        "pi_g_torque": 1.0,
+        "pi_g_utility": 1.0,
+        "pi_g_work": 1.0
+      },
+      "scales": {
+        "action_rate_mp": -0.1,
+        "action_rate_ps": -0.1,
+        "ang_vel_xy": -0.1,
+        "dof_vel_limits": -0.4,
+        "exceed_torque_limits_l1norm": -0.4,
+        "orientation": -2.0,
+        "orientation_yaw": -2.0,
+        "stance_slip": -0.2,
+        "tracking_ang_vel": 1.5,
+        "tracking_lin_vel": 3.0
+      },
+      "soft_dof_pos_limit": 0.9,
+      "soft_dof_vel_limit": 0.9,
+      "soft_torque_limit": 0.9,
+      "task_rewards": [
+        "tracking_lin_vel",
+        "tracking_ang_vel"
+      ],
+      "touchdown_force_scale": 180.0,
+      "touchdown_force_weight": 0.25,
+      "touchdown_force_window": 0.02,
+      "touchdown_min_air_time": 0.02,
+      "touchdown_velocity_scale": 1.0,
+      "tracking_sigma": 0.25
+    },
+    "seed": 1,
+    "sim": {
+      "dt": 0.001,
+      "gravity": [
+        0.0,
+        0.0,
+        -9.81
+      ],
+      "physx": {
+        "bounce_threshold_velocity": 0.5,
+        "contact_collection": 2,
+        "contact_offset": 0.01,
+        "default_buffer_size_multiplier": 5,
+        "max_depenetration_velocity": 1.0,
+        "max_gpu_contact_pairs": 8388608,
+        "num_position_iterations": 4,
+        "num_threads": 10,
+        "num_velocity_iterations": 0,
+        "rest_offset": 0.0,
+        "solver_type": 1
+      },
+      "substeps": 1,
+      "up_axis": 1
+    },
+    "terrain": {
+      "border_size": 4.0,
+      "boundary_margin": 0.6,
+      "curriculum": false,
+      "curriculum_demote_ratio": 0.5,
+      "curriculum_initial_level": 5,
+      "curriculum_max_level": null,
+      "curriculum_min_level": 0,
+      "curriculum_promote_distance": 2.5,
+      "curriculum_promote_ratio": 0.8,
+      "difficulty_mode": "linear",
+      "difficulty_range": [
+        0.0,
+        1.0
+      ],
+      "dynamic_friction": 1.0,
+      "fixed_terrain_level": null,
+      "horizontal_scale": 0.1,
+      "max_init_terrain_level": null,
+      "measure_heights": false,
+      "mesh_type": "trimesh",
+      "num_cols": 2,
+      "num_rows": 3,
+      "origin_sample_size": 1.0,
+      "platform_size": 3.0,
+      "restitution": 0.0,
+      "row_difficulties": [
+        0.715,
+        0.858,
+        1.0
+      ],
+      "seed": 1,
+      "selected": null,
+      "selected_kwargs": null,
+      "slope_threshold": 0.75,
+      "spawn_platform": false,
+      "spawn_xy_jitter": 0.1,
+      "static_friction": 1.0,
+      "terrain_columns": [
+        "stairs",
+        "stairs"
+      ],
+      "terrain_length": 8.0,
+      "terrain_params": {
+        "flat": {
+          "height": 0.0
+        },
+        "slope": {
+          "slope_range": [
+            0.02,
+            0.3
+          ],
+          "slope_signs": [
+            -1,
+            1
+          ]
+        },
+        "ramp": {
+          "slope_range": [
+            0.02,
+            0.3
+          ],
+          "slope_signs": [
+            -1,
+            1
+          ],
+          "center_platform": true
+        },
+        "rough_slope": {
+          "slope_range": [
+            0.02,
+            0.2
+          ],
+          "slope_signs": [
+            -1,
+            1
+          ],
+          "height_range": [
+            0.005,
+            0.025
+          ],
+          "height_step": 0.005,
+          "downsampled_scale": 0.3
+        },
+        "rough": {
+          "height_range": [
+            0.005,
+            0.04
+          ],
+          "height_step": 0.005,
+          "downsampled_scale": 0.3
+        },
+        "rubble": {
+          "height_range": [
+            0.01,
+            0.04
+          ],
+          "stone_size_range": [
+            0.6,
+            1.2
+          ],
+          "num_rects": 12
+        },
+        "stairs": {
+          "step_height_range": [
+            0.01,
+            0.08
+          ],
+          "step_width": 0.6,
+          "step_signs": [
+            -1,
+            1
+          ]
+        },
+        "stairs_linear": {
+          "step_height_range": [
+            0.01,
+            0.08
+          ],
+          "step_width": 0.4,
+          "step_signs": [
+            -1,
+            1
+          ]
+        },
+        "stepping_stones": {
+          "stone_size_range": [
+            0.8,
+            0.3
+          ],
+          "stone_distance_range": [
+            0.1,
+            0.3
+          ],
+          "height_range": [
+            0.0,
+            0.05
+          ],
+          "depth_range": [
+            0.2,
+            0.6
+          ]
+        },
+        "wave": {
+          "amplitude_range": [
+            0.01,
+            0.12
+          ],
+          "num_waves": 2
+        },
+        "gap": {
+          "width_range": [
+            0.1,
+            0.5
+          ],
+          "depth_range": [
+            0.2,
+            0.6
+          ],
+          "spacing": 1.5
+        },
+        "pit": {
+          "size_range": [
+            2.5,
+            3.0
+          ],
+          "depth_range": [
+            0.1,
+            0.5
+          ]
+        },
+        "hurdle": {
+          "width_range": [
+            0.2,
+            0.3
+          ],
+          "height_range": [
+            0.05,
+            0.2
+          ],
+          "spacing": 1.5
+        },
+        "beam": {
+          "width_range": [
+            1.0,
+            0.3
+          ],
+          "depth_range": [
+            0.2,
+            0.6
+          ]
+        }
+      },
+      "terrain_proportions": {
+        "flat": 1.0,
+        "slope": 1.0,
+        "rough_slope": 1.0,
+        "rough": 1.0,
+        "rubble": 1.0,
+        "stairs": 1.0,
+        "ramp": 1.0,
+        "stairs_linear": 0.0,
+        "stepping_stones": 0.0,
+        "wave": 1.0,
+        "gap": 0.0,
+        "pit": 0.0,
+        "hurdle": 0.0,
+        "beam": 0.0
+      },
+      "terrain_variants": {
+        "uphill": {
+          "type": "ramp",
+          "params": {
+            "slope_range": [
+              0.02,
+              0.3
+            ],
+            "slope_signs": [
+              1
+            ]
+          }
+        },
+        "downhill": {
+          "type": "ramp",
+          "params": {
+            "slope_range": [
+              0.02,
+              0.3
+            ],
+            "slope_signs": [
+              -1
+            ]
+          }
+        },
+        "side_slope": {
+          "type": "ramp",
+          "params": {
+            "slope_range": [
+              0.02,
+              0.2
+            ],
+            "axis": "y"
+          }
+        }
+      },
+      "terrain_width": 8.0,
+      "vertical_scale": 0.005
+    },
+    "viewer": {
+      "lookat": [
+        1.8,
+        0.8,
+        0.3
+      ],
+      "pos": [
+        1.8,
+        0.6,
+        0.4
+      ],
+      "ref_env": 0
+    }
+  },
+  "source_hashes": {
+    "legged_gym/legged_gym/envs/__init__.py": "98dbd5427212bacea7bb1ef3240fdba7d8e7d9d792b3b074b00b32fc8b41a4fc",
+    "legged_gym/legged_gym/envs/a1/mp_transient_config.py": "000bbc84953bb9d0c2c391a6495843ccca3f08211b6b4162b3ca7c1743b7fbf5",
+    "legged_gym/legged_gym/envs/a1/mp_interoceptive_config.py": "bdcec49f1abc8319a53f30ccb8131479a1ab6b71d6b3604b3f3a68d9a9cb4f0a",
+    "legged_gym/legged_gym/envs/a1/mp_adaptive.py": "c6b74b9d44b74a2f6523862a3931eecc05d88c7d55bb0ef4b843e5d2f50391a6",
+    "legged_gym/legged_gym/envs/a1/mp_omega_config.py": "1c754a4c1058fe35e04c4855519f245473b1db867bda011965bb3439067f555b",
+    "legged_gym/legged_gym/envs/a1/mp_adaptive_config.py": "5cb40a22c5eb467024dc524cd29372fa082d6e629d170effb15a08b3815e3f3b",
+    "legged_gym/legged_gym/envs/a1/mp_preset_config.py": "6dc3da37c24b4d366b6baeae47667d046bb9180ea4c0c6c397ce80fd2b2b1416",
+    "legged_gym/legged_gym/envs/a1/mp_proprio_terrain_config.py": "b87723e37998ea34183711ee6b95ec37b890ed6259a95dd1614e39ba85c26dab",
+    "legged_gym/legged_gym/envs/a1/mp_multi_primitive.py": "63fe92d695831f86d19cd96c10fa91151b584b5d0bc4917a598136cecc9f527c",
+    "legged_gym/legged_gym/envs/a1/mp_refmotion_config.py": "926981436ee73e99cff49a4c1c871429349903394b600dbf8a84bf1d7c5f518b",
+    "legged_gym/legged_gym/envs/a1/mp_refmotion.py": "27db3af8c3ec0a7dba84172901b1c523e1f42fb99c0763153dbdaed0c31276a3",
+    "legged_gym/legged_gym/envs/a1/mp_transient.py": "90cffab089888bead9e15b352442b6cc8f462976195ac0e17db987279b2baeb6",
+    "legged_gym/legged_gym/envs/a1/mp_interoceptive.py": "cb96fd65e0fbff9780be3ba70635f604ba23cb7e8ce8224210f145484fda5319",
+    "legged_gym/legged_gym/envs/a1/mp_proprio_terrain.py": "87c7922bb4fbec3195f1323ec11c335355d21b4c00eb103af5389a4d91154fc0",
+    "legged_gym/legged_gym/envs/a1/mp_preset.py": "091c48300322452b26faa3f4be1fec3b7de0597e8cf03271c59714ca9244b8b1",
+    "legged_gym/legged_gym/envs/a1/mp_multi_primitive_config.py": "35068d71b2be7685d26fc49f860c411ca135b0b20c1571df7b277974f3c3314c",
+    "legged_gym/legged_gym/envs/a1/mp_omega.py": "0fad7417208b46714085e5392e21dd6d1f93233e8d483c76ce904388903c1b34",
+    "legged_gym/legged_gym/envs/base/base_config.py": "0597eabb0aa9422240ea408e7bd3aa0ebc9ec36cc781d1e5fb26773ca3579362",
+    "legged_gym/legged_gym/envs/base/legged_robot_config.py": "32dfb1b442a149622beeba9fc16bce5daabc5285499184e5ebacdd9ab6241848",
+    "legged_gym/legged_gym/envs/base/base_task.py": "60c57bc907a54e4377c460a2aae46948bd8d9de43959c78db9ec13378bf17b4f",
+    "legged_gym/legged_gym/envs/base/legged_robot.py": "5008ef70d61d30f67f351059a88d339fc5cb03d0b202596e64c2f498318dbf59",
+    "legged_gym/legged_gym/envs/go2/hierarchical_control_config.py": "0725bc59e3e428380adc1bfbaa5626831ff2293af5887907bcfc9b90f06f008c",
+    "legged_gym/legged_gym/envs/go2/mp.py": "b8502bfece95d27ac3e6425ff3a68f2c2852fe973b092e029edd177484a84dd3",
+    "legged_gym/legged_gym/envs/go2/hierarchical_control.py": "78aa898d186b012c9a5dec3564acb68aba5a80ee62ef07719940a2da084b85d5",
+    "legged_gym/legged_gym/envs/go2/mp_config.py": "eaf3fc15b54b502486dd1687dbd26a3fb896d829be8c68703a795055a4a0974e",
+    "legged_gym/legged_gym/utils/dynamics/a1/equilibrium_dynamics.py": "0fa44516d8d7c5cd05765f11ea9510e8126a9ebadb00cf76a1e9095654f206ec",
+    "legged_gym/legged_gym/utils/dynamics/a1/transient_dynamics.py": "a0d2c9f35de43125bfe11950b1a8f76b3e259e0b3cd87b3d606511867085ecd5",
+    "legged_gym/legged_gym/utils/dynamics/a1/rhythmic_dynamics.py": "bc89530ceb5e24436e4e6bb92cc4f9a8f44ae03f917109a213f127465fc12ddb",
+    "legged_gym/legged_gym/utils/dynamics/go2/dynamics.py": "22afd416e51caab5a80a841e5b681e3bad4d1cc6c05dd50c8480b2f1228ce55f",
+    "legged_gym/legged_gym/utils/terrains/__init__.py": "eec9caf53dc614df8b2096f99034cd182c5e994d194d07431f41e3ddae534b5f",
+    "legged_gym/legged_gym/utils/terrains/terrain_curriculum.py": "7bf2578c65b484daeaff31b6744766911f94373b619ebdc32f701a835e51915f",
+    "legged_gym/legged_gym/utils/terrains/blind_terrain.py": "4db3c14b286c391b5c0c558ce2f475b6d5d1d879a12e64d7862beaf634b6dc94"
+  },
+  "groups": [
+    {
+      "terrain": "stairs",
+      "column": 0,
+      "difficulty": 0.715,
+      "speed": 0.5,
+      "parameters": {
+        "step_height_range": 0.06005,
+        "step_width": 0.6,
+        "step_signs": [
+          -1
+        ],
+        "axis": "x",
+        "platform_size": 3.0,
+        "height_offset": 0.0,
+        "roughness": null
+      },
+      "episodes": [
+        {
+          "env": 0,
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 8.600007057189941,
+          "max_forward": 3.4066009521484375,
+          "max_lateral": 0.1928849220275879,
+          "final_forward": 3.4066009521484375,
+          "mean_speed_error": 0.16833843290805817
+        },
+        {
+          "env": 3,
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 7.499993801116943,
+          "max_forward": 3.409878730773926,
+          "max_lateral": 0.23076677322387695,
+          "final_forward": 3.409878730773926,
+          "mean_speed_error": 0.1493614912033081
+        },
+        {
+          "env": 6,
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 8.640007972717285,
+          "max_forward": 3.4040589332580566,
+          "max_lateral": 0.32088422775268555,
+          "final_forward": 3.4040589332580566,
+          "mean_speed_error": 0.16089020669460297
+        },
+        {
+          "env": 9,
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 7.439993858337402,
+          "max_forward": 3.401440143585205,
+          "max_lateral": 0.20018672943115234,
+          "final_forward": 3.401440143585205,
+          "mean_speed_error": 0.14782126247882843
+        },
+        {
+          "env": 12,
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 8.980015754699707,
+          "max_forward": 3.4119200706481934,
+          "max_lateral": 0.5388643741607666,
+          "final_forward": 3.4119200706481934,
+          "mean_speed_error": 0.16932207345962524
+        },
+        {
+          "env": 15,
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 7.679993629455566,
+          "max_forward": 3.4108505249023438,
+          "max_lateral": 0.2535214424133301,
+          "final_forward": 3.4108505249023438,
+          "mean_speed_error": 0.1560949981212616
+        },
+        {
+          "env": 18,
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 7.779993534088135,
+          "max_forward": 3.4032058715820312,
+          "max_lateral": 0.21082735061645508,
+          "final_forward": 3.4032058715820312,
+          "mean_speed_error": 0.15546433627605438
+        },
+        {
+          "env": 21,
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 8.019993782043457,
+          "max_forward": 3.4066576957702637,
+          "max_lateral": 0.7673885822296143,
+          "final_forward": 3.4066576957702637,
+          "mean_speed_error": 0.16408738493919373
+        }
+      ],
+      "success_rate": 1.0
+    },
+    {
+      "terrain": "stairs",
+      "column": 0,
+      "difficulty": 0.715,
+      "speed": 0.8,
+      "parameters": {
+        "step_height_range": 0.06005,
+        "step_width": 0.6,
+        "step_signs": [
+          -1
+        ],
+        "axis": "x",
+        "platform_size": 3.0,
+        "height_offset": 0.0,
+        "roughness": null
+      },
+      "episodes": [
+        {
+          "env": 1,
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 5.439995765686035,
+          "max_forward": 3.4043002128601074,
+          "max_lateral": 0.2595686912536621,
+          "final_forward": 3.4043002128601074,
+          "mean_speed_error": 0.21464650332927704
+        },
+        {
+          "env": 4,
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 5.179996013641357,
+          "max_forward": 3.40341854095459,
+          "max_lateral": 0.34507226943969727,
+          "final_forward": 3.40341854095459,
+          "mean_speed_error": 0.19087354838848114
+        },
+        {
+          "env": 7,
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 5.719995498657227,
+          "max_forward": 3.4058966636657715,
+          "max_lateral": 0.15042400360107422,
+          "final_forward": 3.4058966636657715,
+          "mean_speed_error": 0.23128986358642578
+        },
+        {
+          "env": 10,
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 5.319995880126953,
+          "max_forward": 3.401834487915039,
+          "max_lateral": 0.1433119773864746,
+          "final_forward": 3.401834487915039,
+          "mean_speed_error": 0.20255205035209656
+        },
+        {
+          "env": 13,
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 5.259995937347412,
+          "max_forward": 3.411738872528076,
+          "max_lateral": 0.36412930488586426,
+          "final_forward": 3.411738872528076,
+          "mean_speed_error": 0.20431241393089294
+        },
+        {
+          "env": 16,
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 5.259995937347412,
+          "max_forward": 3.4050307273864746,
+          "max_lateral": 0.18933534622192383,
+          "final_forward": 3.4050307273864746,
+          "mean_speed_error": 0.19653524458408356
+        },
+        {
+          "env": 19,
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 4.939996242523193,
+          "max_forward": 3.403252601623535,
+          "max_lateral": 0.19037961959838867,
+          "final_forward": 3.403252601623535,
+          "mean_speed_error": 0.18123450875282288
+        },
+        {
+          "env": 22,
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 5.379995822906494,
+          "max_forward": 3.410673141479492,
+          "max_lateral": 0.40875816345214844,
+          "final_forward": 3.410673141479492,
+          "mean_speed_error": 0.18525220453739166
+        }
+      ],
+      "success_rate": 1.0
+    },
+    {
+      "terrain": "stairs",
+      "column": 0,
+      "difficulty": 0.715,
+      "speed": 1.2,
+      "parameters": {
+        "step_height_range": 0.06005,
+        "step_width": 0.6,
+        "step_signs": [
+          -1
+        ],
+        "axis": "x",
+        "platform_size": 3.0,
+        "height_offset": 0.0,
+        "roughness": null
+      },
+      "episodes": [
+        {
+          "env": 2,
+          "success": false,
+          "failed": true,
+          "timeout": false,
+          "duration": 3.559997320175171,
+          "max_forward": 2.309241771697998,
+          "max_lateral": 1.118919849395752,
+          "final_forward": 2.309241771697998,
+          "mean_speed_error": 0.4820269048213959
+        },
+        {
+          "env": 5,
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 4.699996471405029,
+          "max_forward": 3.4087681770324707,
+          "max_lateral": 0.5744760036468506,
+          "final_forward": 3.4087681770324707,
+          "mean_speed_error": 0.483938992023468
+        },
+        {
+          "env": 8,
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 4.3199968338012695,
+          "max_forward": 3.401998996734619,
+          "max_lateral": 0.5397777557373047,
+          "final_forward": 3.401998996734619,
+          "mean_speed_error": 0.4058653712272644
+        },
+        {
+          "env": 11,
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 4.219996929168701,
+          "max_forward": 3.401236057281494,
+          "max_lateral": 0.6583905220031738,
+          "final_forward": 3.401236057281494,
+          "mean_speed_error": 0.4120824933052063
+        },
+        {
+          "env": 14,
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 4.559996604919434,
+          "max_forward": 3.4016642570495605,
+          "max_lateral": 0.3746938705444336,
+          "final_forward": 3.4016642570495605,
+          "mean_speed_error": 0.4592744708061218
+        },
+        {
+          "env": 17,
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 4.659996509552002,
+          "max_forward": 3.406589984893799,
+          "max_lateral": 0.6536712646484375,
+          "final_forward": 3.406589984893799,
+          "mean_speed_error": 0.47593218088150024
+        },
+        {
+          "env": 20,
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 4.939996242523193,
+          "max_forward": 3.41404390335083,
+          "max_lateral": 0.41943883895874023,
+          "final_forward": 3.41404390335083,
+          "mean_speed_error": 0.510102391242981
+        },
+        {
+          "env": 23,
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 4.979996204376221,
+          "max_forward": 3.413245677947998,
+          "max_lateral": 1.1511693000793457,
+          "final_forward": 3.413245677947998,
+          "mean_speed_error": 0.4711869955062866
+        }
+      ],
+      "success_rate": 0.875
+    },
+    {
+      "terrain": "stairs",
+      "column": 1,
+      "difficulty": 0.715,
+      "speed": 0.5,
+      "parameters": {
+        "step_height_range": 0.06005,
+        "step_width": 0.6,
+        "step_signs": [
+          1
+        ],
+        "axis": "x",
+        "platform_size": 3.0,
+        "height_offset": 0.0,
+        "roughness": null
+      },
+      "episodes": [
+        {
+          "env": 24,
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 7.819993495941162,
+          "max_forward": 3.413418769836426,
+          "max_lateral": 0.3452339172363281,
+          "final_forward": 3.413418769836426,
+          "mean_speed_error": 0.15421096980571747
+        },
+        {
+          "env": 27,
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 7.8599934577941895,
+          "max_forward": 3.4041595458984375,
+          "max_lateral": 0.2793998718261719,
+          "final_forward": 3.4041595458984375,
+          "mean_speed_error": 0.14332439005374908
+        },
+        {
+          "env": 30,
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 7.31999397277832,
+          "max_forward": 3.400780200958252,
+          "max_lateral": 0.22646808624267578,
+          "final_forward": 3.400780200958252,
+          "mean_speed_error": 0.12518221139907837
+        },
+        {
+          "env": 33,
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 7.339993953704834,
+          "max_forward": 3.4089317321777344,
+          "max_lateral": 0.2741050720214844,
+          "final_forward": 3.4089317321777344,
+          "mean_speed_error": 0.12132663279771805
+        },
+        {
+          "env": 36,
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 8.15999698638916,
+          "max_forward": 3.407027244567871,
+          "max_lateral": 0.511500358581543,
+          "final_forward": 3.407027244567871,
+          "mean_speed_error": 0.14103209972381592
+        },
+        {
+          "env": 39,
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 8.340001106262207,
+          "max_forward": 3.401792526245117,
+          "max_lateral": 0.20568466186523438,
+          "final_forward": 3.401792526245117,
+          "mean_speed_error": 0.13137832283973694
+        },
+        {
+          "env": 42,
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 7.879993438720703,
+          "max_forward": 3.4075112342834473,
+          "max_lateral": 0.3922109603881836,
+          "final_forward": 3.4075112342834473,
+          "mean_speed_error": 0.12411084771156311
+        },
+        {
+          "env": 45,
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 6.8199944496154785,
+          "max_forward": 3.400953769683838,
+          "max_lateral": 0.10869216918945312,
+          "final_forward": 3.400953769683838,
+          "mean_speed_error": 0.1319357007741928
+        }
+      ],
+      "success_rate": 1.0
+    },
+    {
+      "terrain": "stairs",
+      "column": 1,
+      "difficulty": 0.715,
+      "speed": 0.8,
+      "parameters": {
+        "step_height_range": 0.06005,
+        "step_width": 0.6,
+        "step_signs": [
+          1
+        ],
+        "axis": "x",
+        "platform_size": 3.0,
+        "height_offset": 0.0,
+        "roughness": null
+      },
+      "episodes": [
+        {
+          "env": 25,
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 5.019996166229248,
+          "max_forward": 3.417527675628662,
+          "max_lateral": 0.25296783447265625,
+          "final_forward": 3.417527675628662,
+          "mean_speed_error": 0.20773808658123016
+        },
+        {
+          "env": 28,
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 4.839996337890625,
+          "max_forward": 3.4158377647399902,
+          "max_lateral": 0.1996898651123047,
+          "final_forward": 3.4158377647399902,
+          "mean_speed_error": 0.20762251317501068
+        },
+        {
+          "env": 31,
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 4.779996395111084,
+          "max_forward": 3.4144363403320312,
+          "max_lateral": 0.20593929290771484,
+          "final_forward": 3.4144363403320312,
+          "mean_speed_error": 0.18949340283870697
+        },
+        {
+          "env": 34,
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 4.999996185302734,
+          "max_forward": 3.4135231971740723,
+          "max_lateral": 0.15662097930908203,
+          "final_forward": 3.4135231971740723,
+          "mean_speed_error": 0.20272928476333618
+        },
+        {
+          "env": 37,
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 4.579996585845947,
+          "max_forward": 3.411813259124756,
+          "max_lateral": 0.2956838607788086,
+          "final_forward": 3.411813259124756,
+          "mean_speed_error": 0.17581623792648315
+        },
+        {
+          "env": 40,
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 4.599996566772461,
+          "max_forward": 3.4139623641967773,
+          "max_lateral": 0.3689107894897461,
+          "final_forward": 3.4139623641967773,
+          "mean_speed_error": 0.1773192584514618
+        },
+        {
+          "env": 43,
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 4.639996528625488,
+          "max_forward": 3.413419723510742,
+          "max_lateral": 0.18611907958984375,
+          "final_forward": 3.413419723510742,
+          "mean_speed_error": 0.1796143352985382
+        },
+        {
+          "env": 46,
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 4.779996395111084,
+          "max_forward": 3.4126577377319336,
+          "max_lateral": 0.12105464935302734,
+          "final_forward": 3.4126577377319336,
+          "mean_speed_error": 0.20246578752994537
+        }
+      ],
+      "success_rate": 1.0
+    },
+    {
+      "terrain": "stairs",
+      "column": 1,
+      "difficulty": 0.715,
+      "speed": 1.2,
+      "parameters": {
+        "step_height_range": 0.06005,
+        "step_width": 0.6,
+        "step_signs": [
+          1
+        ],
+        "axis": "x",
+        "platform_size": 3.0,
+        "height_offset": 0.0,
+        "roughness": null
+      },
+      "episodes": [
+        {
+          "env": 26,
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 3.199997663497925,
+          "max_forward": 3.415637493133545,
+          "max_lateral": 0.11192989349365234,
+          "final_forward": 3.415637493133545,
+          "mean_speed_error": 0.21569381654262543
+        },
+        {
+          "env": 29,
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 3.6399972438812256,
+          "max_forward": 3.409132480621338,
+          "max_lateral": 0.22777843475341797,
+          "final_forward": 3.409132480621338,
+          "mean_speed_error": 0.33045458793640137
+        },
+        {
+          "env": 32,
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 3.379997491836548,
+          "max_forward": 3.4150071144104004,
+          "max_lateral": 0.20318222045898438,
+          "final_forward": 3.4150071144104004,
+          "mean_speed_error": 0.2616620659828186
+        },
+        {
+          "env": 35,
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 3.5399973392486572,
+          "max_forward": 3.4130115509033203,
+          "max_lateral": 0.7648277282714844,
+          "final_forward": 3.4130115509033203,
+          "mean_speed_error": 0.3039610981941223
+        },
+        {
+          "env": 38,
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 3.0399978160858154,
+          "max_forward": 3.420804500579834,
+          "max_lateral": 0.30352306365966797,
+          "final_forward": 3.420804500579834,
+          "mean_speed_error": 0.18578606843948364
+        },
+        {
+          "env": 41,
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 3.359997510910034,
+          "max_forward": 3.417959213256836,
+          "max_lateral": 0.25466156005859375,
+          "final_forward": 3.417959213256836,
+          "mean_speed_error": 0.26958322525024414
+        },
+        {
+          "env": 44,
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 3.49999737739563,
+          "max_forward": 3.414155960083008,
+          "max_lateral": 0.09875297546386719,
+          "final_forward": 3.414155960083008,
+          "mean_speed_error": 0.30765795707702637
+        },
+        {
+          "env": 47,
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 3.259997606277466,
+          "max_forward": 3.400627613067627,
+          "max_lateral": 0.16631412506103516,
+          "final_forward": 3.400627613067627,
+          "mean_speed_error": 0.26492056250572205
+        }
+      ],
+      "success_rate": 1.0
+    },
+    {
+      "terrain": "stairs",
+      "column": 0,
+      "difficulty": 0.858,
+      "speed": 0.5,
+      "parameters": {
+        "step_height_range": 0.07006000000000001,
+        "step_width": 0.6,
+        "step_signs": [
+          -1
+        ],
+        "axis": "x",
+        "platform_size": 3.0,
+        "height_offset": 0.0,
+        "roughness": null
+      },
+      "episodes": [
+        {
+          "env": 48,
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 11.020062446594238,
+          "max_forward": 3.408806800842285,
+          "max_lateral": 0.614783763885498,
+          "final_forward": 3.408806800842285,
+          "mean_speed_error": 0.25326046347618103
+        },
+        {
+          "env": 51,
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 8.199997901916504,
+          "max_forward": 3.409918785095215,
+          "max_lateral": 0.20513200759887695,
+          "final_forward": 3.409918785095215,
+          "mean_speed_error": 0.16637876629829407
+        },
+        {
+          "env": 54,
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 12.96010684967041,
+          "max_forward": 3.404867172241211,
+          "max_lateral": 1.204350471496582,
+          "final_forward": 3.404867172241211,
+          "mean_speed_error": 0.2177470177412033
+        },
+        {
+          "env": 57,
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 7.719993591308594,
+          "max_forward": 3.4043540954589844,
+          "max_lateral": 0.781109094619751,
+          "final_forward": 3.4043540954589844,
+          "mean_speed_error": 0.1731606125831604
+        },
+        {
+          "env": 60,
+          "success": false,
+          "failed": true,
+          "timeout": false,
+          "duration": 10.580052375793457,
+          "max_forward": 3.3382205963134766,
+          "max_lateral": 1.714590072631836,
+          "final_forward": 3.189573287963867,
+          "mean_speed_error": 0.19254396855831146
+        },
+        {
+          "env": 63,
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 7.379993915557861,
+          "max_forward": 3.4101200103759766,
+          "max_lateral": 0.5381431579589844,
+          "final_forward": 3.4101200103759766,
+          "mean_speed_error": 0.14435319602489471
+        },
+        {
+          "env": 66,
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 11.000061988830566,
+          "max_forward": 3.4044761657714844,
+          "max_lateral": 1.1338613033294678,
+          "final_forward": 3.4044761657714844,
+          "mean_speed_error": 0.178431898355484
+        },
+        {
+          "env": 69,
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 11.820080757141113,
+          "max_forward": 3.400911331176758,
+          "max_lateral": 0.4911963939666748,
+          "final_forward": 3.400911331176758,
+          "mean_speed_error": 0.2304183393716812
+        }
+      ],
+      "success_rate": 0.875
+    },
+    {
+      "terrain": "stairs",
+      "column": 0,
+      "difficulty": 0.858,
+      "speed": 0.8,
+      "parameters": {
+        "step_height_range": 0.07006000000000001,
+        "step_width": 0.6,
+        "step_signs": [
+          -1
+        ],
+        "axis": "x",
+        "platform_size": 3.0,
+        "height_offset": 0.0,
+        "roughness": null
+      },
+      "episodes": [
+        {
+          "env": 49,
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 5.979995250701904,
+          "max_forward": 3.4064245223999023,
+          "max_lateral": 0.6504478454589844,
+          "final_forward": 3.4064245223999023,
+          "mean_speed_error": 0.24723707139492035
+        },
+        {
+          "env": 52,
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 5.579995632171631,
+          "max_forward": 3.4087934494018555,
+          "max_lateral": 0.22444438934326172,
+          "final_forward": 3.4087934494018555,
+          "mean_speed_error": 0.2354944348335266
+        },
+        {
+          "env": 55,
+          "success": false,
+          "failed": true,
+          "timeout": false,
+          "duration": 3.0999977588653564,
+          "max_forward": 1.394587516784668,
+          "max_lateral": 0.814427375793457,
+          "final_forward": 1.3845405578613281,
+          "mean_speed_error": 0.33454668521881104
+        },
+        {
+          "env": 58,
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 5.3599958419799805,
+          "max_forward": 3.409343719482422,
+          "max_lateral": 0.10845255851745605,
+          "final_forward": 3.409343719482422,
+          "mean_speed_error": 0.21694155037403107
+        },
+        {
+          "env": 61,
+          "success": false,
+          "failed": true,
+          "timeout": false,
+          "duration": 7.539993762969971,
+          "max_forward": 3.3725833892822266,
+          "max_lateral": 2.2467432022094727,
+          "final_forward": 3.112980842590332,
+          "mean_speed_error": 0.3198428750038147
+        },
+        {
+          "env": 64,
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 5.939995288848877,
+          "max_forward": 3.406351089477539,
+          "max_lateral": 0.863990306854248,
+          "final_forward": 3.406351089477539,
+          "mean_speed_error": 0.24724802374839783
+        },
+        {
+          "env": 67,
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 6.5799946784973145,
+          "max_forward": 3.404153823852539,
+          "max_lateral": 0.6863176822662354,
+          "final_forward": 3.404153823852539,
+          "mean_speed_error": 0.24557726085186005
+        },
+        {
+          "env": 70,
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 5.89999532699585,
+          "max_forward": 3.4113340377807617,
+          "max_lateral": 0.45530104637145996,
+          "final_forward": 3.4113340377807617,
+          "mean_speed_error": 0.23545537889003754
+        }
+      ],
+      "success_rate": 0.75
+    },
+    {
+      "terrain": "stairs",
+      "column": 0,
+      "difficulty": 0.858,
+      "speed": 1.2,
+      "parameters": {
+        "step_height_range": 0.07006000000000001,
+        "step_width": 0.6,
+        "step_signs": [
+          -1
+        ],
+        "axis": "x",
+        "platform_size": 3.0,
+        "height_offset": 0.0,
+        "roughness": null
+      },
+      "episodes": [
+        {
+          "env": 50,
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 6.279994964599609,
+          "max_forward": 3.4125213623046875,
+          "max_lateral": 0.900285005569458,
+          "final_forward": 3.4125213623046875,
+          "mean_speed_error": 0.6466630697250366
+        },
+        {
+          "env": 53,
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 4.839996337890625,
+          "max_forward": 3.413985252380371,
+          "max_lateral": 1.1202726364135742,
+          "final_forward": 3.413985252380371,
+          "mean_speed_error": 0.47355255484580994
+        },
+        {
+          "env": 56,
+          "success": false,
+          "failed": true,
+          "timeout": false,
+          "duration": 6.839994430541992,
+          "max_forward": 3.351808547973633,
+          "max_lateral": 0.8279728889465332,
+          "final_forward": 2.9755373001098633,
+          "mean_speed_error": 0.6510424613952637
+        },
+        {
+          "env": 59,
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 5.719995498657227,
+          "max_forward": 3.4090280532836914,
+          "max_lateral": 0.44484686851501465,
+          "final_forward": 3.4090280532836914,
+          "mean_speed_error": 0.5948483347892761
+        },
+        {
+          "env": 62,
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 4.939996242523193,
+          "max_forward": 3.413503646850586,
+          "max_lateral": 0.5582163333892822,
+          "final_forward": 3.413503646850586,
+          "mean_speed_error": 0.522392988204956
+        },
+        {
+          "env": 65,
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 4.859996318817139,
+          "max_forward": 3.406200408935547,
+          "max_lateral": 0.2594141960144043,
+          "final_forward": 3.406200408935547,
+          "mean_speed_error": 0.5158044099807739
+        },
+        {
+          "env": 68,
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 4.939996242523193,
+          "max_forward": 3.413066864013672,
+          "max_lateral": 0.18091583251953125,
+          "final_forward": 3.413066864013672,
+          "mean_speed_error": 0.547809898853302
+        },
+        {
+          "env": 71,
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 5.2999958992004395,
+          "max_forward": 3.4016780853271484,
+          "max_lateral": 0.5911898612976074,
+          "final_forward": 3.4016780853271484,
+          "mean_speed_error": 0.5701454281806946
+        }
+      ],
+      "success_rate": 0.875
+    },
+    {
+      "terrain": "stairs",
+      "column": 1,
+      "difficulty": 0.858,
+      "speed": 0.5,
+      "parameters": {
+        "step_height_range": 0.07006000000000001,
+        "step_width": 0.6,
+        "step_signs": [
+          1
+        ],
+        "axis": "x",
+        "platform_size": 3.0,
+        "height_offset": 0.0,
+        "roughness": null
+      },
+      "episodes": [
+        {
+          "env": 72,
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 6.979994297027588,
+          "max_forward": 3.40230655670166,
+          "max_lateral": 0.13241958618164062,
+          "final_forward": 3.40230655670166,
+          "mean_speed_error": 0.12132180482149124
+        },
+        {
+          "env": 75,
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 7.719993591308594,
+          "max_forward": 3.402353286743164,
+          "max_lateral": 0.1864004135131836,
+          "final_forward": 3.402353286743164,
+          "mean_speed_error": 0.17490877211093903
+        },
+        {
+          "env": 78,
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 8.019993782043457,
+          "max_forward": 3.4001636505126953,
+          "max_lateral": 0.14287853240966797,
+          "final_forward": 3.4001636505126953,
+          "mean_speed_error": 0.14210502803325653
+        },
+        {
+          "env": 81,
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 6.859994411468506,
+          "max_forward": 3.403559684753418,
+          "max_lateral": 0.3352394104003906,
+          "final_forward": 3.403559684753418,
+          "mean_speed_error": 0.13756050169467926
+        },
+        {
+          "env": 84,
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 6.959994316101074,
+          "max_forward": 3.4107847213745117,
+          "max_lateral": 0.201873779296875,
+          "final_forward": 3.4107847213745117,
+          "mean_speed_error": 0.12932667136192322
+        },
+        {
+          "env": 87,
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 8.340001106262207,
+          "max_forward": 3.410066604614258,
+          "max_lateral": 0.14612483978271484,
+          "final_forward": 3.410066604614258,
+          "mean_speed_error": 0.15386439859867096
+        },
+        {
+          "env": 90,
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 7.47999382019043,
+          "max_forward": 3.4012365341186523,
+          "max_lateral": 0.10192298889160156,
+          "final_forward": 3.4012365341186523,
+          "mean_speed_error": 0.15245003998279572
+        },
+        {
+          "env": 93,
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 6.659994602203369,
+          "max_forward": 3.4093780517578125,
+          "max_lateral": 0.12447071075439453,
+          "final_forward": 3.4093780517578125,
+          "mean_speed_error": 0.13377124071121216
+        }
+      ],
+      "success_rate": 1.0
+    },
+    {
+      "terrain": "stairs",
+      "column": 1,
+      "difficulty": 0.858,
+      "speed": 0.8,
+      "parameters": {
+        "step_height_range": 0.07006000000000001,
+        "step_width": 0.6,
+        "step_signs": [
+          1
+        ],
+        "axis": "x",
+        "platform_size": 3.0,
+        "height_offset": 0.0,
+        "roughness": null
+      },
+      "episodes": [
+        {
+          "env": 73,
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 4.91999626159668,
+          "max_forward": 3.418360710144043,
+          "max_lateral": 0.13159847259521484,
+          "final_forward": 3.418360710144043,
+          "mean_speed_error": 0.19638964533805847
+        },
+        {
+          "env": 76,
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 4.979996204376221,
+          "max_forward": 3.4112634658813477,
+          "max_lateral": 0.25653839111328125,
+          "final_forward": 3.4112634658813477,
+          "mean_speed_error": 0.22665280103683472
+        },
+        {
+          "env": 79,
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 4.439996719360352,
+          "max_forward": 3.4025020599365234,
+          "max_lateral": 0.5959320068359375,
+          "final_forward": 3.4025020599365234,
+          "mean_speed_error": 0.17952591180801392
+        },
+        {
+          "env": 82,
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 4.659996509552002,
+          "max_forward": 3.411250114440918,
+          "max_lateral": 0.3480796813964844,
+          "final_forward": 3.411250114440918,
+          "mean_speed_error": 0.18118014931678772
+        },
+        {
+          "env": 85,
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 4.519996643066406,
+          "max_forward": 3.4111480712890625,
+          "max_lateral": 0.2398223876953125,
+          "final_forward": 3.4111480712890625,
+          "mean_speed_error": 0.18403860926628113
+        },
+        {
+          "env": 88,
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 4.939996242523193,
+          "max_forward": 3.4043025970458984,
+          "max_lateral": 0.33396339416503906,
+          "final_forward": 3.4043025970458984,
+          "mean_speed_error": 0.20327487587928772
+        },
+        {
+          "env": 91,
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 4.859996318817139,
+          "max_forward": 3.4083776473999023,
+          "max_lateral": 0.18140888214111328,
+          "final_forward": 3.4083776473999023,
+          "mean_speed_error": 0.1981644332408905
+        },
+        {
+          "env": 94,
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 4.939996242523193,
+          "max_forward": 3.4011945724487305,
+          "max_lateral": 0.10586738586425781,
+          "final_forward": 3.4011945724487305,
+          "mean_speed_error": 0.20278553664684296
+        }
+      ],
+      "success_rate": 1.0
+    },
+    {
+      "terrain": "stairs",
+      "column": 1,
+      "difficulty": 0.858,
+      "speed": 1.2,
+      "parameters": {
+        "step_height_range": 0.07006000000000001,
+        "step_width": 0.6,
+        "step_signs": [
+          1
+        ],
+        "axis": "x",
+        "platform_size": 3.0,
+        "height_offset": 0.0,
+        "roughness": null
+      },
+      "episodes": [
+        {
+          "env": 74,
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 3.359997510910034,
+          "max_forward": 3.4080018997192383,
+          "max_lateral": 0.1814737319946289,
+          "final_forward": 3.4080018997192383,
+          "mean_speed_error": 0.29003962874412537
+        },
+        {
+          "env": 77,
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 3.259997606277466,
+          "max_forward": 3.408140182495117,
+          "max_lateral": 0.17737579345703125,
+          "final_forward": 3.408140182495117,
+          "mean_speed_error": 0.2549858093261719
+        },
+        {
+          "env": 80,
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 3.4599974155426025,
+          "max_forward": 3.414961814880371,
+          "max_lateral": 0.10655403137207031,
+          "final_forward": 3.414961814880371,
+          "mean_speed_error": 0.30791500210762024
+        },
+        {
+          "env": 83,
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 3.359997510910034,
+          "max_forward": 3.4210290908813477,
+          "max_lateral": 0.5955915451049805,
+          "final_forward": 3.4210290908813477,
+          "mean_speed_error": 0.2665218412876129
+        },
+        {
+          "env": 86,
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 3.419997453689575,
+          "max_forward": 3.413376808166504,
+          "max_lateral": 0.42497920989990234,
+          "final_forward": 3.413376808166504,
+          "mean_speed_error": 0.2786523103713989
+        },
+        {
+          "env": 89,
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 3.5999972820281982,
+          "max_forward": 3.4172744750976562,
+          "max_lateral": 0.13715267181396484,
+          "final_forward": 3.4172744750976562,
+          "mean_speed_error": 0.3113318979740143
+        },
+        {
+          "env": 92,
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 3.359997510910034,
+          "max_forward": 3.4047670364379883,
+          "max_lateral": 0.3123817443847656,
+          "final_forward": 3.4047670364379883,
+          "mean_speed_error": 0.2485113888978958
+        },
+        {
+          "env": 95,
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 3.2799975872039795,
+          "max_forward": 3.4076948165893555,
+          "max_lateral": 0.10725593566894531,
+          "final_forward": 3.4076948165893555,
+          "mean_speed_error": 0.24765141308307648
+        }
+      ],
+      "success_rate": 1.0
+    },
+    {
+      "terrain": "stairs",
+      "column": 0,
+      "difficulty": 1.0,
+      "speed": 0.5,
+      "parameters": {
+        "step_height_range": 0.08,
+        "step_width": 0.6,
+        "step_signs": [
+          -1
+        ],
+        "axis": "x",
+        "platform_size": 3.0,
+        "height_offset": 0.0,
+        "roughness": null
+      },
+      "episodes": [
+        {
+          "env": 96,
+          "success": false,
+          "failed": true,
+          "timeout": false,
+          "duration": 9.22002124786377,
+          "max_forward": 1.4075603485107422,
+          "max_lateral": 0.6970701217651367,
+          "final_forward": 1.1405773162841797,
+          "mean_speed_error": 0.3350300192832947
+        },
+        {
+          "env": 99,
+          "success": false,
+          "failed": true,
+          "timeout": false,
+          "duration": 4.719996452331543,
+          "max_forward": 0.8664264678955078,
+          "max_lateral": 1.204113483428955,
+          "final_forward": 0.5222854614257812,
+          "mean_speed_error": 0.23151203989982605
+        },
+        {
+          "env": 102,
+          "success": false,
+          "failed": false,
+          "timeout": false,
+          "duration": 15.000153541564941,
+          "max_forward": 3.3070316314697266,
+          "max_lateral": 1.1176409721374512,
+          "final_forward": 3.2542171478271484,
+          "mean_speed_error": 0.22780680656433105
+        },
+        {
+          "env": 105,
+          "success": false,
+          "failed": false,
+          "timeout": false,
+          "duration": 15.000153541564941,
+          "max_forward": 2.670196533203125,
+          "max_lateral": 2.243429660797119,
+          "final_forward": 2.4255447387695312,
+          "mean_speed_error": 0.24660350382328033
+        },
+        {
+          "env": 108,
+          "success": false,
+          "failed": true,
+          "timeout": false,
+          "duration": 5.199995994567871,
+          "max_forward": 1.3600616455078125,
+          "max_lateral": 0.576141357421875,
+          "final_forward": 0.9539794921875,
+          "mean_speed_error": 0.20611728727817535
+        },
+        {
+          "env": 111,
+          "success": false,
+          "failed": true,
+          "timeout": false,
+          "duration": 7.459993839263916,
+          "max_forward": 1.4965686798095703,
+          "max_lateral": 1.4217374324798584,
+          "final_forward": 1.1889667510986328,
+          "mean_speed_error": 0.26418337225914
+        },
+        {
+          "env": 114,
+          "success": false,
+          "failed": true,
+          "timeout": false,
+          "duration": 6.1199951171875,
+          "max_forward": 1.4429969787597656,
+          "max_lateral": 1.5875964164733887,
+          "final_forward": 1.2718486785888672,
+          "mean_speed_error": 0.2489049732685089
+        },
+        {
+          "env": 117,
+          "success": false,
+          "failed": true,
+          "timeout": false,
+          "duration": 5.559995651245117,
+          "max_forward": 0.8783149719238281,
+          "max_lateral": 1.0711796283721924,
+          "final_forward": 0.2823486328125,
+          "mean_speed_error": 0.2709249258041382
+        }
+      ],
+      "success_rate": 0.0
+    },
+    {
+      "terrain": "stairs",
+      "column": 0,
+      "difficulty": 1.0,
+      "speed": 0.8,
+      "parameters": {
+        "step_height_range": 0.08,
+        "step_width": 0.6,
+        "step_signs": [
+          -1
+        ],
+        "axis": "x",
+        "platform_size": 3.0,
+        "height_offset": 0.0,
+        "roughness": null
+      },
+      "episodes": [
+        {
+          "env": 97,
+          "success": false,
+          "failed": true,
+          "timeout": false,
+          "duration": 6.039995193481445,
+          "max_forward": 2.0078601837158203,
+          "max_lateral": 0.9494242668151855,
+          "final_forward": 1.9158096313476562,
+          "mean_speed_error": 0.4002341032028198
+        },
+        {
+          "env": 100,
+          "success": false,
+          "failed": true,
+          "timeout": false,
+          "duration": 6.979994297027588,
+          "max_forward": 2.27978515625,
+          "max_lateral": 0.6251163482666016,
+          "final_forward": 2.172454833984375,
+          "mean_speed_error": 0.4491744339466095
+        },
+        {
+          "env": 103,
+          "success": false,
+          "failed": true,
+          "timeout": false,
+          "duration": 3.49999737739563,
+          "max_forward": 1.4163894653320312,
+          "max_lateral": 0.992957592010498,
+          "final_forward": 1.1335258483886719,
+          "mean_speed_error": 0.371195912361145
+        },
+        {
+          "env": 106,
+          "success": false,
+          "failed": true,
+          "timeout": false,
+          "duration": 2.4999983310699463,
+          "max_forward": 1.1122322082519531,
+          "max_lateral": 1.0417580604553223,
+          "final_forward": 1.1122322082519531,
+          "mean_speed_error": 0.4221177101135254
+        },
+        {
+          "env": 109,
+          "success": false,
+          "failed": true,
+          "timeout": false,
+          "duration": 9.700032234191895,
+          "max_forward": 2.130298614501953,
+          "max_lateral": 1.5531868934631348,
+          "final_forward": 1.6722450256347656,
+          "mean_speed_error": 0.4643923342227936
+        },
+        {
+          "env": 112,
+          "success": false,
+          "failed": true,
+          "timeout": false,
+          "duration": 2.019998788833618,
+          "max_forward": 1.1041927337646484,
+          "max_lateral": 0.5743045806884766,
+          "final_forward": 1.1041927337646484,
+          "mean_speed_error": 0.3202230632305145
+        },
+        {
+          "env": 115,
+          "success": false,
+          "failed": true,
+          "timeout": false,
+          "duration": 1.9799987077713013,
+          "max_forward": 0.8902873992919922,
+          "max_lateral": 0.7232770919799805,
+          "final_forward": 0.6981391906738281,
+          "mean_speed_error": 0.32837265729904175
+        },
+        {
+          "env": 118,
+          "success": false,
+          "failed": true,
+          "timeout": false,
+          "duration": 8.7000093460083,
+          "max_forward": 2.2301597595214844,
+          "max_lateral": 0.9015750885009766,
+          "final_forward": 2.2301597595214844,
+          "mean_speed_error": 0.5198896527290344
+        }
+      ],
+      "success_rate": 0.0
+    },
+    {
+      "terrain": "stairs",
+      "column": 0,
+      "difficulty": 1.0,
+      "speed": 1.2,
+      "parameters": {
+        "step_height_range": 0.08,
+        "step_width": 0.6,
+        "step_signs": [
+          -1
+        ],
+        "axis": "x",
+        "platform_size": 3.0,
+        "height_offset": 0.0,
+        "roughness": null
+      },
+      "episodes": [
+        {
+          "env": 98,
+          "success": false,
+          "failed": true,
+          "timeout": false,
+          "duration": 6.919994354248047,
+          "max_forward": 2.0663700103759766,
+          "max_lateral": 1.322824478149414,
+          "final_forward": 1.7837390899658203,
+          "mean_speed_error": 0.7934090495109558
+        },
+        {
+          "env": 101,
+          "success": false,
+          "failed": true,
+          "timeout": false,
+          "duration": 1.8599988222122192,
+          "max_forward": 1.0066757202148438,
+          "max_lateral": 0.8856065273284912,
+          "final_forward": 0.8488693237304688,
+          "mean_speed_error": 0.5869802832603455
+        },
+        {
+          "env": 104,
+          "success": false,
+          "failed": true,
+          "timeout": false,
+          "duration": 3.7599971294403076,
+          "max_forward": 1.554046630859375,
+          "max_lateral": 0.731306791305542,
+          "final_forward": 1.005575180053711,
+          "mean_speed_error": 0.6018569469451904
+        },
+        {
+          "env": 107,
+          "success": false,
+          "failed": true,
+          "timeout": false,
+          "duration": 2.3599984645843506,
+          "max_forward": 1.0396957397460938,
+          "max_lateral": 0.9909398555755615,
+          "final_forward": 0.7329330444335938,
+          "mean_speed_error": 0.7103882431983948
+        },
+        {
+          "env": 110,
+          "success": false,
+          "failed": true,
+          "timeout": false,
+          "duration": 2.3799984455108643,
+          "max_forward": 1.0415401458740234,
+          "max_lateral": 1.1007864475250244,
+          "final_forward": 0.6667270660400391,
+          "mean_speed_error": 0.6877179741859436
+        },
+        {
+          "env": 113,
+          "success": false,
+          "failed": true,
+          "timeout": false,
+          "duration": 3.439997434616089,
+          "max_forward": 1.5698280334472656,
+          "max_lateral": 0.6141483783721924,
+          "final_forward": 1.4513816833496094,
+          "mean_speed_error": 0.7327631115913391
+        },
+        {
+          "env": 116,
+          "success": false,
+          "failed": true,
+          "timeout": false,
+          "duration": 1.999998688697815,
+          "max_forward": 1.2348213195800781,
+          "max_lateral": 0.8220071792602539,
+          "final_forward": 1.2348213195800781,
+          "mean_speed_error": 0.6495184898376465
+        },
+        {
+          "env": 119,
+          "success": false,
+          "failed": true,
+          "timeout": false,
+          "duration": 1.7599989175796509,
+          "max_forward": 1.2909698486328125,
+          "max_lateral": 0.5067052841186523,
+          "final_forward": 1.2909698486328125,
+          "mean_speed_error": 0.5805203914642334
+        }
+      ],
+      "success_rate": 0.0
+    },
+    {
+      "terrain": "stairs",
+      "column": 1,
+      "difficulty": 1.0,
+      "speed": 0.5,
+      "parameters": {
+        "step_height_range": 0.08,
+        "step_width": 0.6,
+        "step_signs": [
+          1
+        ],
+        "axis": "x",
+        "platform_size": 3.0,
+        "height_offset": 0.0,
+        "roughness": null
+      },
+      "episodes": [
+        {
+          "env": 120,
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 6.419994831085205,
+          "max_forward": 3.4073543548583984,
+          "max_lateral": 0.1634540557861328,
+          "final_forward": 3.4073543548583984,
+          "mean_speed_error": 0.16519661247730255
+        },
+        {
+          "env": 123,
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 6.999994277954102,
+          "max_forward": 3.4029197692871094,
+          "max_lateral": 0.17351150512695312,
+          "final_forward": 3.4029197692871094,
+          "mean_speed_error": 0.18823078274726868
+        },
+        {
+          "env": 126,
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 8.239998817443848,
+          "max_forward": 3.402862548828125,
+          "max_lateral": 0.5307674407958984,
+          "final_forward": 3.402862548828125,
+          "mean_speed_error": 0.18660812079906464
+        },
+        {
+          "env": 129,
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 7.8599934577941895,
+          "max_forward": 3.4071121215820312,
+          "max_lateral": 0.2839174270629883,
+          "final_forward": 3.4071121215820312,
+          "mean_speed_error": 0.1856939047574997
+        },
+        {
+          "env": 132,
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 6.6999945640563965,
+          "max_forward": 3.409097671508789,
+          "max_lateral": 0.2130413055419922,
+          "final_forward": 3.409097671508789,
+          "mean_speed_error": 0.18636155128479004
+        },
+        {
+          "env": 135,
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 7.779993534088135,
+          "max_forward": 3.4085845947265625,
+          "max_lateral": 0.2018585205078125,
+          "final_forward": 3.4085845947265625,
+          "mean_speed_error": 0.18575650453567505
+        },
+        {
+          "env": 138,
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 6.559994697570801,
+          "max_forward": 3.402345657348633,
+          "max_lateral": 0.5571184158325195,
+          "final_forward": 3.402345657348633,
+          "mean_speed_error": 0.16712376475334167
+        },
+        {
+          "env": 141,
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 7.199994087219238,
+          "max_forward": 3.410381317138672,
+          "max_lateral": 0.3049468994140625,
+          "final_forward": 3.410381317138672,
+          "mean_speed_error": 0.1760631650686264
+        }
+      ],
+      "success_rate": 1.0
+    },
+    {
+      "terrain": "stairs",
+      "column": 1,
+      "difficulty": 1.0,
+      "speed": 0.8,
+      "parameters": {
+        "step_height_range": 0.08,
+        "step_width": 0.6,
+        "step_signs": [
+          1
+        ],
+        "axis": "x",
+        "platform_size": 3.0,
+        "height_offset": 0.0,
+        "roughness": null
+      },
+      "episodes": [
+        {
+          "env": 121,
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 5.019996166229248,
+          "max_forward": 3.4190406799316406,
+          "max_lateral": 0.2708415985107422,
+          "final_forward": 3.4190406799316406,
+          "mean_speed_error": 0.21604230999946594
+        },
+        {
+          "env": 124,
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 4.499996662139893,
+          "max_forward": 3.4177932739257812,
+          "max_lateral": 0.4041175842285156,
+          "final_forward": 3.4177932739257812,
+          "mean_speed_error": 0.19284620881080627
+        },
+        {
+          "env": 127,
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 4.899996280670166,
+          "max_forward": 3.4085750579833984,
+          "max_lateral": 0.4265575408935547,
+          "final_forward": 3.4085750579833984,
+          "mean_speed_error": 0.24427393078804016
+        },
+        {
+          "env": 130,
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 4.819996356964111,
+          "max_forward": 3.4038333892822266,
+          "max_lateral": 0.31334400177001953,
+          "final_forward": 3.4038333892822266,
+          "mean_speed_error": 0.18830744922161102
+        },
+        {
+          "env": 133,
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 4.839996337890625,
+          "max_forward": 3.403657913208008,
+          "max_lateral": 0.26902294158935547,
+          "final_forward": 3.403657913208008,
+          "mean_speed_error": 0.23640190064907074
+        },
+        {
+          "env": 136,
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 4.699996471405029,
+          "max_forward": 3.409238815307617,
+          "max_lateral": 0.4421415328979492,
+          "final_forward": 3.409238815307617,
+          "mean_speed_error": 0.2080221325159073
+        },
+        {
+          "env": 139,
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 4.579996585845947,
+          "max_forward": 3.400421142578125,
+          "max_lateral": 0.13187408447265625,
+          "final_forward": 3.400421142578125,
+          "mean_speed_error": 0.2376231998205185
+        },
+        {
+          "env": 142,
+          "success": false,
+          "failed": true,
+          "timeout": false,
+          "duration": 2.019998788833618,
+          "max_forward": 2.059825897216797,
+          "max_lateral": 0.2220907211303711,
+          "final_forward": 2.059825897216797,
+          "mean_speed_error": 0.2709658741950989
+        }
+      ],
+      "success_rate": 0.875
+    },
+    {
+      "terrain": "stairs",
+      "column": 1,
+      "difficulty": 1.0,
+      "speed": 1.2,
+      "parameters": {
+        "step_height_range": 0.08,
+        "step_width": 0.6,
+        "step_signs": [
+          1
+        ],
+        "axis": "x",
+        "platform_size": 3.0,
+        "height_offset": 0.0,
+        "roughness": null
+      },
+      "episodes": [
+        {
+          "env": 122,
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 4.0199971199035645,
+          "max_forward": 3.4052371978759766,
+          "max_lateral": 0.34094905853271484,
+          "final_forward": 3.4052371978759766,
+          "mean_speed_error": 0.42378440499305725
+        },
+        {
+          "env": 125,
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 3.5799973011016846,
+          "max_forward": 3.4073238372802734,
+          "max_lateral": 0.4566621780395508,
+          "final_forward": 3.4073238372802734,
+          "mean_speed_error": 0.3113633394241333
+        },
+        {
+          "env": 128,
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 3.419997453689575,
+          "max_forward": 3.406890869140625,
+          "max_lateral": 0.39762020111083984,
+          "final_forward": 3.406890869140625,
+          "mean_speed_error": 0.2778041362762451
+        },
+        {
+          "env": 131,
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 3.439997434616089,
+          "max_forward": 3.411039352416992,
+          "max_lateral": 0.133056640625,
+          "final_forward": 3.411039352416992,
+          "mean_speed_error": 0.30083736777305603
+        },
+        {
+          "env": 134,
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 3.49999737739563,
+          "max_forward": 3.4063949584960938,
+          "max_lateral": 0.760951042175293,
+          "final_forward": 3.4063949584960938,
+          "mean_speed_error": 0.2806600034236908
+        },
+        {
+          "env": 137,
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 3.439997434616089,
+          "max_forward": 3.4205265045166016,
+          "max_lateral": 0.5478782653808594,
+          "final_forward": 3.4205265045166016,
+          "mean_speed_error": 0.2895176410675049
+        },
+        {
+          "env": 140,
+          "success": true,
+          "failed": false,
+          "timeout": true,
+          "duration": 3.6399972438812256,
+          "max_forward": 3.400226593017578,
+          "max_lateral": 0.14321422576904297,
+          "final_forward": 3.400226593017578,
+          "mean_speed_error": 0.3326645493507385
+        },
+        {
+          "env": 143,
+          "success": false,
+          "failed": true,
+          "timeout": false,
+          "duration": 1.939998745918274,
+          "max_forward": 2.3783702850341797,
+          "max_lateral": 0.20119476318359375,
+          "final_forward": 2.3783702850341797,
+          "mean_speed_error": 0.37135395407676697
+        }
+      ],
+      "success_rate": 0.875
+    }
+  ],
+  "notes": "Deterministic actors, first episode only, fixed forward commands. No pushes, mass/friction randomization or observation noise; initial jitter retained. Success requires forward exit without falling or exceeding lateral corridor."
+}

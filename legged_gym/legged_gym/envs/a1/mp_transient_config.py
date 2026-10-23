@@ -168,9 +168,7 @@ class MotorPrimitivesCfg(BaseConfig):
         class scales:
             tracking_lin_vel = 30.
             ang_vel_xy = -0.5
-            # action_rate_omega = -0.1
             orientation_yaw = -1.
-            # action_rate_mu = -0.1
             exceed_torque_limits_l1norm = -0.4
             dof_vel_limits = -0.4
 

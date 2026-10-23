@@ -529,7 +529,7 @@ class MotorPrimitives(BaseTask):
 
         if self.cfg.env.play:
             if self.episode_length_buf[0] < 245:
-                self.commands[:, 0] = 1.5
+                self.commands[:, 0] = 0.5
             else:
                 self.commands[:, 0] = 2.
             self.commands[env_ids, 1] = -0.
@@ -567,7 +567,7 @@ class MotorPrimitives(BaseTask):
             self.phase_history.append(self.ID.X[:, 1, :].detach().cpu().numpy())
             self.amplitude_history.append((torch.clip(self.ID.X[:, 0, :], self.ID.mu_low, self.ID.mu_up)).detach().cpu().numpy())
             self.amplitude_dot_history.append(self.ID.X_dot[:, 0, :].detach().cpu().numpy())
-            self.mu_history.append(np.sqrt(self.ID._mu.detach().cpu().numpy()))
+            self.mu_history.append(np.sqrt(self.ID._mu_x.detach().cpu().numpy()))
             self.omega_history.append(self.ID.X_dot[:, 1, :].detach().cpu().numpy())
             self.x_history.append(xs.detach().cpu().numpy())
             self.z_history.append(zs.detach().cpu().numpy())
@@ -719,6 +719,12 @@ class MotorPrimitives(BaseTask):
         self.rigid_body_state = gymtorch.wrap_tensor(rigid_body_state)[:self.num_envs * self.num_bodies, :]
  
         self.ID = Intrinsic_Dynamics(time_step=self.sim_params.dt,num_envs=self.num_envs,device=self.device)
+        oscillator_type = self.cfg.control.oscillator_type
+        self.ID.oscillator = getattr(self.ID, oscillator_type)
+        self.ID._MAX_STEP_LEN = self.cfg.asset.max_step_length
+        self.ID._GROUND_CLEARANCE = self.cfg.asset.ground_clearance
+        self.ID._GROUND_PENETRATION = self.cfg.asset.ground_penetration
+
         self.actions_slow = torch.zeros(self.num_envs, 8, device=self.device, dtype=torch.float)
         self.last_actions_slow = torch.zeros_like(self.actions_slow)
 
@@ -994,7 +1000,9 @@ class MotorPrimitives(BaseTask):
 
     def _reward_ref_motion(self):
         joint_ids = torch.tensor([1,2,4,5,7,8,10,11], device=self.device)
-        end_states = self.rigid_body_state.view(self.num_envs, self.num_bodies, -1)[:, self.feet_indices, :3].reshape(-1,12)
+        end_states = self.rigid_body_state.view(self.num_envs, self.num_bodies, -1)[:, self.feet_indices, :3]
+        end_states[:, :, :2] -= self.root_states[:, None, :2]
+        end_states = end_states.reshape(-1,12)
         rewards, _, _ = self.imitation_task.rewards_adaptive(self.dof_pos, self.dof_vel, self.root_states[:,0:3],\
                                                 self.root_states[:,3:7], self.root_states[:,7:], end_states,\
                                                 self.motion_label,
@@ -1018,10 +1026,14 @@ class MotorPrimitives(BaseTask):
 
     def _reward_action_rate_omega(self):
         # Penalize changes in actions
+        actions = self.actions[:, 4:8]
+        mean_action = actions.mean(dim=1, keepdim=True)
+        penalty = torch.square(actions - mean_action).sum(dim=1)
         return torch.sum(torch.square(self.last_actions[:,4:-4] - self.actions[:,4:-4]), dim=1)
 
     def _reward_action_rate_mu(self):
         # Penalize changes in actions
+        front_rear_error = (torch.square(self.actions[:,:1] - self.actions[:,1:2]) + torch.square(self.actions[:,2:3] - self.actions[:,3:4])).squeeze()
         return torch.sum(torch.square(self.last_actions[:,:4] - self.actions[:,:4]), dim=1)
         return (torch.square(self.actions[:,:1] - self.actions[:,1:2]) + torch.square(self.actions[:,2:3] - self.actions[:,3:4])).squeeze() + torch.sum(torch.square(self.last_actions[:,:4] - self.actions[:,:4]), dim=1)
 
