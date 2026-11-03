@@ -28,8 +28,11 @@
 #
 # Copyright (c) 2021 ETH Zurich, Nikita Rudin
 
+import math
+
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 from torch.distributions import Normal, Categorical
 
 from .actors import MLPActor, MLPActor_TWIN_output_head, get_activation
@@ -43,6 +46,7 @@ from .reservoir_actors import (
 
 )
 from .snn import SNNActor, SNNActor_TWIN_output_head, SNNActor_SINGLE_output_head
+from .terrain_scan_encoder import TerrainEncodedActor
 
 ACTOR_REGISTRY = {
     "mlp": MLPActor,
@@ -96,6 +100,11 @@ class ActorCritic(nn.Module):
         snn_reset_mode="subtract",
         snn_input_scale=1.0,
         train_reservoir=False,
+        squash_actions=False,
+        min_action_std=0.05,
+        max_action_std=0.6,
+        terrain_scan_shape=None,
+        terrain_encoder_dim=0,
         **kwargs,
     ):
         try:
@@ -116,6 +125,15 @@ class ActorCritic(nn.Module):
 
         self.mlp_input_dim_a = num_actor_obs
         self.mlp_input_dim_c = num_critic_obs
+        if terrain_scan_shape is not None:
+            if actor_class is not SNNActor or terrain_encoder_dim < 3:
+                raise ValueError('dense terrain encoder requires the SNN modulation actor')
+            scan_dim = math.prod(terrain_scan_shape)
+            compact_actor_obs = num_actor_obs - scan_dim + terrain_encoder_dim
+            if compact_actor_obs <= terrain_encoder_dim:
+                raise ValueError('dense terrain scan exceeds actor observation size')
+        else:
+            compact_actor_obs = num_actor_obs
 
         if actor_class is MLPActor:
             actor = actor_class(
@@ -126,7 +144,7 @@ class ActorCritic(nn.Module):
             )
         elif actor_class is SNNActor:
             actor = actor_class(
-                input_dim=num_actor_obs,
+                input_dim=compact_actor_obs,
                 hidden_dims=actor_hidden_dims,
                 output_dim=num_actions,
                 num_snn_steps=num_snn_steps,
@@ -163,6 +181,9 @@ class ActorCritic(nn.Module):
                 snn_input_scale=snn_input_scale,
                 train_reservoir=train_reservoir,
             )
+        if terrain_scan_shape is not None:
+            actor = TerrainEncodedActor(actor, num_actor_obs,
+                                        terrain_scan_shape, terrain_encoder_dim)
         self.actor_type = actor_type
         self.actor = actor
         self.is_reservoir = getattr(actor, "is_reservoir", False)
@@ -181,6 +202,11 @@ class ActorCritic(nn.Module):
         print(f"Critic MLP: {self.critic}")
 
         self.std = nn.Parameter(init_noise_std * torch.ones(num_actions))
+        self.squash_actions = bool(squash_actions)
+        self.min_action_std = float(min_action_std)
+        self.max_action_std = float(max_action_std)
+        if self.squash_actions and not (0 < self.min_action_std <= self.max_action_std):
+            raise ValueError("squashed action std bounds must satisfy 0 < min <= max")
         self.distribution = None
 
     @staticmethod
@@ -212,6 +238,14 @@ class ActorCritic(nn.Module):
 
     @property
     def entropy(self):
+        if self.squash_actions:
+            # Entropy in the controller's action space, including the tanh
+            # change of variables. rsample keeps gradients through the mean.
+            latent = self.distribution.rsample()
+            log_jacobian = 2.0 * (
+                math.log(2.0) - latent - F.softplus(-2.0 * latent)
+            )
+            return (self.distribution.entropy() + log_jacobian).sum(dim=-1)
         return self.distribution.entropy().sum(dim=-1)
 
     def update_distribution(self, observations, reservoir_states=None):
@@ -224,6 +258,9 @@ class ActorCritic(nn.Module):
             )
         else:
             mean = self.actor(observations)
+        if self.squash_actions:
+            with torch.no_grad():
+                self.std.clamp_(self.min_action_std, self.max_action_std)
         self.distribution = Normal(
             mean,
             mean * 0.0 + self.std,
@@ -237,11 +274,20 @@ class ActorCritic(nn.Module):
             reservoir_states,
         )
         actions = self.distribution.sample()
+        if self.squash_actions:
+            actions = torch.tanh(actions).clamp(-1.0 + 1e-6, 1.0 - 1e-6)
         if self.is_reservoir:
             return actions.detach(), next_states
         return actions
 
     def get_actions_log_prob(self, actions):
+        if self.squash_actions:
+            bounded = actions.clamp(-1.0 + 1e-6, 1.0 - 1e-6)
+            latent = torch.atanh(bounded)
+            return (
+                self.distribution.log_prob(latent)
+                - torch.log1p(-bounded.square())
+            ).sum(dim=-1)
         return self.distribution.log_prob(actions).sum(dim=-1)
 
     def act_inference(
@@ -253,8 +299,10 @@ class ActorCritic(nn.Module):
         if self.is_reservoir:
             if reservoir_states is None:
                 raise ValueError("reservoir_states are required.")
-            return self.actor(observations, reservoir_states)
-        return self.actor(observations)
+            mean, next_states = self.actor(observations, reservoir_states)
+            return (torch.tanh(mean) if self.squash_actions else mean), next_states
+        mean = self.actor(observations)
+        return torch.tanh(mean) if self.squash_actions else mean
 
     def act_for_ppo_update(self, observations, reservoir_states):
         if not self.is_reservoir:
@@ -265,18 +313,24 @@ class ActorCritic(nn.Module):
             observations,
             reservoir_states,
         )
+        if self.squash_actions:
+            with torch.no_grad():
+                self.std.clamp_(self.min_action_std, self.max_action_std)
         self.distribution = Normal(
             mean,
             mean * 0.0 + self.std,
             validate_args=False,
         )
-        return self.distribution.sample()
+        actions = self.distribution.sample()
+        if self.squash_actions:
+            actions = torch.tanh(actions).clamp(-1.0 + 1e-6, 1.0 - 1e-6)
+        return actions
 
     def evaluate(self, critic_observations, **kwargs):
         return self.critic(critic_observations)
 
 class ActorCriticDiscrete(ActorCritic):
-    def __init__(self, num_actor_obs, num_critic_obs, num_actions_1, num_actions_2, actor_hidden_dims=(256, 256, 256), critic_hidden_dims=(256, 256, 256), activation="elu", init_noise_std=1, high_actor_type="mlp_twin_ouput", reservoir_dim=16, reservoir_connectivity=0.5, spectral_radius=0.9, reservoir_input_scale=0.5, reservoir_bias_scale=0.1, num_reservoir_steps=3, leak_rate=0.5, reservoir_activation="tanh", reservoir_lif_beta=0.9, reservoir_lif_threshold=1, reservoir_surrogate_alpha=5, reservoir_reset_mode="subtract", readout_hidden_dims=(32, ), readout_activation="elu", include_input_in_readout=False, num_snn_steps=4, snn_lif_beta=0.9, snn_lif_threshold=1, snn_surrogate_alpha=5, snn_reset_mode="subtract", snn_input_scale=1, train_reservoir=False, **kwargs):
+    def __init__(self, num_actor_obs, num_critic_obs, num_actions_1, num_actions_2, actor_hidden_dims=(256, 256, 256), critic_hidden_dims=(256, 256, 256), activation="elu", init_noise_std=1, high_actor_type="mlp_twin_ouput", primitive_uniform_mix=0., primitive_temperature=1., command_obs_start=None, reservoir_dim=16, reservoir_connectivity=0.5, spectral_radius=0.9, reservoir_input_scale=0.5, reservoir_bias_scale=0.1, num_reservoir_steps=3, leak_rate=0.5, reservoir_activation="tanh", reservoir_lif_beta=0.9, reservoir_lif_threshold=1, reservoir_surrogate_alpha=5, reservoir_reset_mode="subtract", readout_hidden_dims=(32, ), readout_activation="elu", include_input_in_readout=False, num_snn_steps=4, snn_lif_beta=0.9, snn_lif_threshold=1, snn_surrogate_alpha=5, snn_reset_mode="subtract", snn_input_scale=1, train_reservoir=False, height_edge_head=False, terrain_encoder_dim=0, terrain_scan_shape=None, **kwargs):
         try:
             actor_class = ACTOR_REGISTRY[high_actor_type]
         except (KeyError, TypeError):
@@ -285,6 +339,10 @@ class ActorCriticDiscrete(ActorCritic):
                 f"Unsupported actor_type {high_actor_type!r}. "
                 f"Expected one of: {supported}."
             ) from None
+        if ((height_edge_head or terrain_encoder_dim or terrain_scan_shape is not None
+             or command_obs_start is not None)
+                and actor_class is not LIFReservoirSNNReadoutActor_SINGLE_output_head):
+            raise ValueError('terrain or command readout options require the single-output LIF reservoir actor')
 
         if kwargs:
             print(
@@ -292,6 +350,12 @@ class ActorCriticDiscrete(ActorCritic):
                 f"be ignored for compatibility: {list(kwargs)}"
             )
         nn.Module.__init__(self)
+        if not math.isfinite(primitive_uniform_mix) or not 0 <= primitive_uniform_mix < 1:
+            raise ValueError('primitive_uniform_mix must be in [0, 1)')
+        if not math.isfinite(primitive_temperature) or primitive_temperature <= 0:
+            raise ValueError('primitive_temperature must be positive and finite')
+        self.primitive_uniform_mix = float(primitive_uniform_mix)
+        self.primitive_temperature = float(primitive_temperature)
 
         self.actor_class = actor_class
         self.mlp_input_dim_a = num_actor_obs
@@ -386,6 +450,10 @@ class ActorCriticDiscrete(ActorCritic):
                 snn_reset_mode=snn_reset_mode,
                 snn_input_scale=snn_input_scale,
                 train_reservoir=train_reservoir,
+                height_edge_head=height_edge_head,
+                terrain_encoder_dim=terrain_encoder_dim,
+                terrain_scan_shape=terrain_scan_shape,
+                command_obs_start=command_obs_start,
             )
 
         self.actor_type = high_actor_type
@@ -421,6 +489,15 @@ class ActorCriticDiscrete(ActorCritic):
             # return entropy_2
             return entropy_1 + entropy_2
 
+    def _gait_distribution(self, logits):
+        logits = logits / self.primitive_temperature
+        if self.primitive_uniform_mix == 0:
+            return Categorical(logits=logits)
+        probabilities = F.softmax(logits, dim=-1)
+        probabilities = (1. - self.primitive_uniform_mix) * probabilities
+        probabilities = probabilities + self.primitive_uniform_mix / logits.shape[-1]
+        return Categorical(probs=probabilities)
+
     def update_distribution(self, observations, reservoir_states=None):
         if self.is_reservoir:
             if reservoir_states is None:
@@ -430,20 +507,20 @@ class ActorCriticDiscrete(ActorCritic):
                     observations,
                     reservoir_states,
                 )
-                self.distribution_1 = Categorical(logits=logits_1)
+                self.distribution_1 = self._gait_distribution(logits_1)
                 return reservoir_states, logits_1
             elif self.actor_class is LIFReservoirSNNReadoutActor_TWIN_output_head:                
                 logits_1, logits_2, reservoir_states = self.actor(
                     observations,
                     reservoir_states,
                 )
-                self.distribution_1 = Categorical(logits=logits_1)
+                self.distribution_1 = self._gait_distribution(logits_1)
                 self.distribution_2 = Categorical(logits=logits_2)
                 return reservoir_states, logits_1, logits_2
         else:
             if self.actor_class is SNNActor_SINGLE_output_head:
                 logits_1 = self.actor(observations)
-                self.distribution_1 = Categorical(logits=logits_1)
+                self.distribution_1 = self._gait_distribution(logits_1)
                 return logits_1
 
     def act(self, observations, reservoir_states=None, **kwargs):
@@ -519,11 +596,18 @@ class ActorCriticDiscrete(ActorCritic):
                 observations,
                 reservoir_states,
             )
-            self.distribution_1 = Categorical(logits=logits_1)
+            if hasattr(self.actor, 'terrain_readout_head'):
+                logits_1 = logits_1 + self.actor.terrain_logits_from_observation(
+                    observations)
+            if hasattr(self.actor, 'command_readout_head'):
+                logits_1 = logits_1 + self.actor.command_logits_from_observation(
+                    observations)
+            self.distribution_1 = self._gait_distribution(logits_1)
         elif self.actor_class is LIFReservoirSNNReadoutActor_TWIN_output_head:
             logits_1, logits_2 = self.actor.readout_process(
                 observations,
                 reservoir_states,
             )
-            self.distribution_1 = Categorical(logits=logits_1)
+            self.distribution_1 = self._gait_distribution(logits_1)
             self.distribution_2 = Categorical(logits=logits_2)
+        return logits_1

@@ -1,4 +1,4 @@
-"""Explicitly migrate or continue a dynamical proprio policy, then train a bounded run."""
+"""Continue an 18-action dynamical proprio policy, then train a bounded run."""
 import argparse
 import hashlib
 import json
@@ -18,7 +18,6 @@ from legged_gym.envs.a1.mp_proprio_terrain import MotorPrimitives
 from legged_gym.envs.a1.mp_proprio_terrain_config import AdaptiveMotorPrimitivesCfg, AdaptiveMotorPrimitivesCfgPPO
 from legged_gym.utils import load_run_config
 from legged_gym.utils.helpers import class_to_dict, set_seed
-from legged_gym.utils.equilibrium_migration import migrate_state_dict, migrate_modal_state_dict, with_timing_prior
 from rsl_rl.runners.multi_interoceptive_policy_runner import MultiInteroceptivePolicyRunner
 
 
@@ -36,14 +35,9 @@ def main():
     p.add_argument('--terrain-cols', type=int, help='Set enough columns to retain both directions when changing mixture weights.')
     p.add_argument('--vertical-stairs', action='store_true',
                    help='Explicitly train with true stair risers at every height, including legacy source configs.')
-    p.add_argument('--new-action-std', type=float, default=.2)
     p.add_argument('--legacy-stroke', action='store_true', help='Ablation: retain the old horizontal phase mapping.')
-    p.add_argument('--modal-actions', action='store_true', help='Explicitly migrate Cartesian equilibrium actions to coordinated v3 modes.')
-    p.add_argument('--modal-std-factors', nargs=4, type=float, help='Scale exploration for common/front-back/left-right/diagonal modes on each axis.')
     p.add_argument('--task-aligned-selection', action='store_true',
                    help='Train gait selection on the same task/safety rewards as modulation. Otherwise preserve source configuration.')
-    p.add_argument('--timing-prior', nargs=3, type=float, metavar=('FREQUENCY_SCALE', 'DUTY_OFFSET', 'CLEARANCE'),
-                   help='Explicitly reset lift/timing policy heads to constant physical targets; changes initial behavior.')
     p.add_argument('--entropy-coef', type=float,
                    help='Override the PPO entropy coefficient for this continuation.')
     p.add_argument('--modulation-std-scale', type=float,
@@ -61,16 +55,12 @@ def main():
     cfg, train = load_run_config(AdaptiveMotorPrimitivesCfg(), AdaptiveMotorPrimitivesCfgPPO(),
                                 args.checkpoint.resolve().parent)
     source_version = cfg.env.action_space
-    if source_version not in ('cpg_equilibrium_v1', 'cpg_equilibrium_v2', 'cpg_modal_equilibrium_v3'):
-        p.error('Only equilibrium v1/v2 or modal v3 checkpoints are supported')
-    modal = args.modal_actions or source_version == 'cpg_modal_equilibrium_v3'
-    cfg.env.action_space = 'cpg_modal_equilibrium_v3' if modal else 'cpg_equilibrium_v2'
-    if args.modal_std_factors is not None:
-        if not modal or not all(0 < x < float('inf') for x in args.modal_std_factors):
-            p.error('modal-std-factors requires modal actions and four positive finite factors')
-    cfg.env.num_modulation_params, cfg.env.num_actions = 22, 23
-    cfg.env.num_controller_observations = 72
-    cfg.env.num_observations, cfg.env.num_privileged_obs = 132, 139
+    if source_version not in ('cpg_equilibrium_v3', 'cpg_modal_equilibrium_v4'):
+        p.error('Only new 18-action equilibrium v3 or modal v4 checkpoints are supported')
+    modal = source_version == 'cpg_modal_equilibrium_v4'
+    cfg.env.num_modulation_params, cfg.env.num_actions = 18, 19
+    cfg.env.num_controller_observations = 46
+    cfg.env.num_observations, cfg.env.num_privileged_obs = 102, 109
     cfg.env.num_envs = args.num_envs
     cfg.env.play = False
     if args.vertical_stairs:
@@ -100,7 +90,7 @@ def main():
     train.runner.resume = False
     train.runner.max_iterations = args.iterations
     train.runner.save_interval = 10
-    train.runner.run_name = 'A1MPproprioterrain-modal-v3' if modal else 'A1MPproprioterrain-equilibrium-v2'
+    train.runner.run_name = 'A1MPproprioterrain-modal-v4' if modal else 'A1MPproprioterrain-equilibrium-v3'
     args.output.mkdir(parents=True)
     config = {**class_to_dict(cfg), **class_to_dict(train)}
     (args.output / 'config.json').write_text(json.dumps(config, indent=2) + '\n')
@@ -130,16 +120,6 @@ def main():
             (False, 'modulation_param_model_state_dict', runner.modulation_param_actor_critic),
         ]:
             weights = source[key]
-            if source_version == 'cpg_equilibrium_v1':
-                weights = migrate_state_dict(weights, model.state_dict(), high=high, new_std=args.new_action_std)
-            if modal and source_version != 'cpg_modal_equilibrium_v3':
-                weights = migrate_modal_state_dict(weights, high=high)
-            if not high and args.modal_std_factors is not None:
-                weights['std'][4:16] *= weights['std'].new_tensor(args.modal_std_factors).repeat(3)
-            if not high and args.timing_prior is not None:
-                weights = with_timing_prior(weights, cfg.control.timing,
-                                            cfg.asset.ground_clearance, args.timing_prior,
-                                            args.new_action_std)
             if not high and args.modulation_std_scale is not None:
                 weights['std'] = weights['std'] * args.modulation_std_scale
             model.load_state_dict(weights, strict=True)

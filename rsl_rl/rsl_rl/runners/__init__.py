@@ -37,4 +37,3 @@ from .low_policy_runner import LowPolicyRunner
 from .high_policy_runner import HighPolicyRunner
 from .interoceptive_policy_runner import InteroceptivePolicyRunner
 from .multi_interoceptive_policy_runner import MultiInteroceptivePolicyRunner
-from .full_policy_runner import FullPolicyRunner

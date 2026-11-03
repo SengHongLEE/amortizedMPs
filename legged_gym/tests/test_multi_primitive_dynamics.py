@@ -14,45 +14,133 @@ Multi = dynamics.Multi_Primitive_Dynamics
 
 
 class MultiPrimitiveTests(unittest.TestCase):
+    def test_pronk_preloads_then_extends_until_takeoff_and_retracts_in_flight(self):
+        obj = Multi(num_envs=2, device='cpu', max_stance_extension=.04)
+        obj._gait_ids[:] = torch.tensor([4, 1])
+        obj.X[:, 1] = torch.tensor([0., 1. / 3., 2. / 3., 1.])
+        command = torch.zeros(2, 3)
+
+        def feet(phase):
+            vertical_phase = torch.full((2, 4), phase)
+            return obj._foot_trajectory(command, vertical_phase)[2].clone()
+
+        baseline = feet(torch.pi)[0]
+        preload = feet(1.25 * torch.pi)[0]
+        mid_push = feet(1.5 * torch.pi)[0]
+        late_push = feet(1.75 * torch.pi)[0]
+        takeoff = feet(2 * torch.pi)[0]
+        first_flight = feet(0.)[0]
+        tucked = feet(.2 * torch.pi)[0]
+        torch.testing.assert_close(baseline, torch.full((4,), -obj._robot_height))
+        self.assertTrue((preload > baseline).all())
+        self.assertTrue((preload > mid_push).all())
+        self.assertTrue((mid_push > late_push).all())
+        self.assertTrue((late_push > takeoff).all())
+        torch.testing.assert_close(takeoff, -obj._robot_height - .04 * obj.X[0, 1])
+        torch.testing.assert_close(first_flight, takeoff)
+        self.assertTrue((tucked > first_flight).all())
+        torch.testing.assert_close(feet(torch.pi)[1],
+                                   torch.full((4,), -obj._robot_height))
+
+    def test_pronk_swing_clearance_remains_controllable_with_zero_push_limit(self):
+        obj = Multi(num_envs=1, device='cpu', max_stance_extension=0.)
+        obj._gait_ids[:] = 4
+        obj.X[:, 1] = obj.mu_up
+        z = obj._foot_trajectory(torch.zeros(1, 3),
+                                 torch.full((1, 4), .5 * torch.pi))[2]
+        torch.testing.assert_close(z, torch.full((1, 4),
+                                   -obj._robot_height + obj.max_clearance))
+
+    def test_stance_extension_records_the_active_height_amplitude(self):
+        obj = Multi(num_envs=1, device='cpu', max_stance_extension=.04)
+        actions = torch.zeros(1, 10)
+        actions[0, 0] = 4
+        actions[0, 5:9] = 1.
+        for _ in range(40):
+            obj.intrinsic_dynamics(actions, torch.zeros(1, 3))
+        self.assertTrue((obj.stance_extension > 0.).all())
+        self.assertTrue((obj.stance_extension <= .04).all())
+
+    def test_stance_extension_tracks_each_leg_across_gaits(self):
+        obj = Multi(num_envs=3, device='cpu', time_step=.01,
+                    max_stance_extension=.04)
+        obj.oscillator = lambda: None
+        actions = torch.zeros(3, 10)
+        actions[:, 0] = torch.tensor([4., 4., 1.])
+        obj.X[:, 1] = torch.tensor([1., 0., 1.])[:, None]
+        obj.X[:, 2] = 1.75 * torch.pi
+        command = torch.zeros(3, 3)
+
+        first_z = obj.intrinsic_dynamics(actions, command)[2]
+        torch.testing.assert_close(obj.stance_extension[:, 0], torch.tensor([.04, 0., .04]))
+        self.assertLess(first_z[0, 0].item(), first_z[1, 0].item())
+
+        actions[0, 0] = 1
+        switched_z = obj.intrinsic_dynamics(actions, command)[2]
+        torch.testing.assert_close(switched_z[0], switched_z[2])
+        self.assertLess(switched_z[0, 0].item(), switched_z[1, 0].item())
+        obj.reset([0])
+        torch.testing.assert_close(obj.stance_extension[0], torch.zeros(4))
+
+    def test_pronk_candidate_synchronizes_all_legs_with_longer_stance(self):
+        obj = Multi(num_envs=2, device='cpu')
+        self.assertEqual(obj.primitive_names[:4], ('walk', 'trot', 'canter', 'bound'))
+        self.assertEqual(obj.primitive_names[4], 'pronk')
+        torch.testing.assert_close(obj._primitive_phases[4], torch.zeros(4))
+        self.assertAlmostEqual(obj._primitive_duty_factors[4].item(), .45)
+        self.assertAlmostEqual(obj._primitive_frequencies[4].item(), 6.)
+        actions = torch.zeros(2, 10)
+        actions[0, 0] = 4
+        actions[1, 0] = 3
+        for _ in range(500):
+            obj.intrinsic_dynamics(actions, torch.zeros(2, 3))
+        pronk_phase = obj.X[0, 2]
+        phase_error = obj.wrap_to_pi(pronk_phase - pronk_phase[0])
+        self.assertLess(phase_error.abs().max().item(), 1.e-3)
+
     def test_z_support_fraction_matches_each_primitive(self):
         for device in (['cpu', 'cuda'] if torch.cuda.is_available() else ['cpu']):
             samples = 1000
-            obj = Multi(num_envs=6 * samples, device=device)
+            obj = Multi(num_envs=5 * samples, device=device)
             # Freeze integration to sample the actual output mapping over a cycle.
             obj.oscillator = lambda: None
             phases = (torch.arange(samples, device=device) + .5) * (2 * torch.pi / samples)
-            obj.X[:, 2] = phases.repeat(6)[:, None]
+            obj.X[:, 2] = phases.repeat(5)[:, None]
             obj.X[:, 1] = .15
             obj.stance_extension[:] = .02
-            actions = torch.zeros(6 * samples, 10, device=device)
-            actions[:, 0] = torch.arange(6, device=device).repeat_interleave(samples)
-            z = obj.intrinsic_dynamics(actions, torch.zeros(6 * samples, 3, device=device))[2]
-            fraction = (z[:, 0] < -obj._robot_height).float().view(6, samples).mean(1)
-            expected = torch.tensor([.6, .5, .5, .45, .4, .35], device=device)
-            torch.testing.assert_close(fraction, expected)
+            actions = torch.zeros(5 * samples, 10, device=device)
+            actions[:, 0] = torch.arange(5, device=device).repeat_interleave(samples)
+            z = obj.intrinsic_dynamics(actions, torch.zeros(5 * samples, 3, device=device))[2]
+            fraction = (z[:, 0] < -obj._robot_height).float().view(5, samples).mean(1)
+            expected = torch.tensor([.6, .5, .45, .4], device=device)
+            torch.testing.assert_close(fraction[:4], expected)
+            self.assertGreater(fraction[4].item(), 0.)
+            self.assertLess(fraction[4].item(), .45)
+            original_fraction = fraction.clone()
             # Switching IDs immediately changes the selected duty factors.
             actions[:, 0] = actions[:, 0].roll(samples)
-            z = obj.intrinsic_dynamics(actions, torch.zeros(6 * samples, 3, device=device))[2]
-            fraction = (z[:, 0] < -obj._robot_height).float().view(6, samples).mean(1)
-            torch.testing.assert_close(fraction, expected.roll(1))
+            z = obj.intrinsic_dynamics(actions, torch.zeros(5 * samples, 3, device=device))[2]
+            fraction = (z[:, 0] < -obj._robot_height).float().view(5, samples).mean(1)
+            torch.testing.assert_close(fraction, original_fraction.roll(1))
 
     def test_z_duty_boundaries_and_amplitude(self):
-        obj = Multi(num_envs=6, device='cpu')
+        obj = Multi(num_envs=5, device='cpu')
         obj.oscillator = lambda: None
-        beta = torch.tensor([.6, .5, .5, .45, .4, .35])
+        beta = torch.tensor([.6, .5, .45, .4, .45])
         touchdown = 2 * torch.pi * (1 - beta)
-        obj.X[:, 2] = torch.stack((torch.zeros(6), touchdown / 2, touchdown,
+        obj.X[:, 2] = torch.stack((torch.zeros(5), touchdown / 2, touchdown,
                                    touchdown + torch.pi * beta), dim=1)
-        obj.X[:, 1] = .15
+        obj.X[:, 1] = (obj.mu_low + obj.mu_up) / 2
         obj.stance_extension[:] = .02
-        actions = torch.zeros(6, 5)
-        actions[:, 0] = torch.arange(6)
-        z = obj.intrinsic_dynamics(actions, torch.zeros(6, 3))[2]
-        expected = torch.tensor([-.3, -.15, -.3, -.32]).expand(6, -1)
-        torch.testing.assert_close(z, expected)
+        actions = torch.zeros(5, 10)
+        actions[:, 0] = torch.arange(5)
+        z = obj.intrinsic_dynamics(actions, torch.zeros(5, 3))[2]
+        expected = torch.tensor([-.3, -.15, -.3, -.31]).expand(4, -1)
+        torch.testing.assert_close(z[:4], expected)
+        self.assertGreater(z[4, 3].item(), -.31)
         for eps in (-1.e-6, 1.e-6):
             obj.X[:, 2] = (touchdown[:, None] + eps).expand(-1, 4)
-            z = obj.intrinsic_dynamics(actions, torch.zeros(6, 3))[2]
+            z = obj.intrinsic_dynamics(actions, torch.zeros(5, 3))[2]
             torch.testing.assert_close(z, torch.full_like(z, -.3), atol=1.e-6, rtol=0)
 
     def test_switch_restarts_only_reference_clock_once(self):
@@ -111,7 +199,7 @@ class MultiPrimitiveTests(unittest.TestCase):
         for device in (['cpu', 'cuda'] if torch.cuda.is_available() else ['cpu']):
             obj = Multi(num_envs=4, device=device, time_step=.0025)
             singles = [Multi(device=device, time_step=.0025) for _ in range(4)]
-            actions = torch.zeros(4, 5, device=device)
+            actions = torch.zeros(4, 10, device=device)
             actions[:, 0] = torch.arange(4, device=device)
             actions[:, 4] = torch.linspace(-1, 1, 4, device=device)
             command = torch.tensor([[1., 0., .2]], device=device).expand(4, -1)
@@ -131,7 +219,7 @@ class MultiPrimitiveTests(unittest.TestCase):
 
     def test_partial_and_empty_reset(self):
         obj = Multi(num_envs=3, device='cpu')
-        actions = torch.ones(3, 5)
+        actions = torch.ones(3, 10)
         actions[:, 0] = torch.tensor([1., 2., 3.])
         obj.intrinsic_dynamics(actions, torch.ones(3, 3), foot_contact=torch.ones(3, 4, dtype=torch.bool))
         before = {key: value.clone() for key, value in vars(obj).items() if isinstance(value, torch.Tensor)}
@@ -152,7 +240,11 @@ class MultiPrimitiveTests(unittest.TestCase):
             actions[0, 0] = index
             with self.assertRaises(ValueError):
                 obj.intrinsic_dynamics(actions, torch.zeros(1, 3))
-        for actions, command in ((torch.zeros(1, 4), torch.zeros(1, 3)), (torch.zeros(2, 10), torch.zeros(1, 3)), (torch.zeros(10), torch.zeros(1, 3)), (torch.zeros(1, 10), torch.zeros(1, 2))):
+        for actions, command in ((torch.zeros(1, 4), torch.zeros(1, 3)),
+                                 (torch.zeros(1, 8), torch.zeros(1, 3)),
+                                 (torch.zeros(2, 10), torch.zeros(1, 3)),
+                                 (torch.zeros(10), torch.zeros(1, 3)),
+                                 (torch.zeros(1, 10), torch.zeros(1, 2))):
             with self.assertRaises(ValueError):
                 obj.intrinsic_dynamics(actions, command)
 
@@ -165,7 +257,7 @@ class MultiPrimitiveTests(unittest.TestCase):
 
     def test_continuous_actions_are_clipped_without_clipping_gait_id(self):
         obj, reference = Multi(device='cpu'), Multi(device='cpu')
-        actions = torch.tensor([[3., -2., 2., -3., 3.]])
+        actions = torch.tensor([[3., -2., 2., -3., 3., 0., 0., 0., 0., 0.]])
         clipped = actions.clone()
         clipped[:, 1:] = clipped[:, 1:].clamp(-1, 1)
         actual = obj.intrinsic_dynamics(actions, torch.ones(1, 3))

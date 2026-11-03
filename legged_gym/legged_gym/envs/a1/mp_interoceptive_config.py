@@ -93,7 +93,7 @@ class MotorPrimitivesCfg(BaseConfig):
         decimation= 10
         cycle = 2
 
-        gait_type = 'walk' #walk, pace, trot, canter, gallop
+        gait_type = 'gallop' #walk, pace, trot, canter, bound, gallop
 
         if gait_type == 'canter' or gait_type == 'bound' or gait_type == 'gallop':
             update_cycle = 5
@@ -160,14 +160,13 @@ class MotorPrimitivesCfg(BaseConfig):
             action_rate = -0.1
             exceed_torque_limits_l1norm = -0.4
             dof_vel_limits = -0.4
-            # stance_slip = -0.2
-            # touchdown_impact = -0.002
 
             tracking_lin_vel = 3.
             tracking_ang_vel = 1.5
 
         task_rewards = ['tracking_lin_vel', 'tracking_ang_vel']
-        modulation_param_rewards = ['tracking_lin_vel', 'tracking_ang_vel', 'ang_vel_xy', 'action_rate', 'exceed_torque_limits_l1norm', 'dof_vel_limits']
+        modulation_param_rewards = ['tracking_lin_vel', 'tracking_ang_vel', 'ang_vel_xy', 
+                                    'action_rate', 'exceed_torque_limits_l1norm', 'dof_vel_limits']
         only_positive_rewards = False # if true negative total rewards are clipped at zero (avoids early termination problems)
         tracking_sigma = 0.25 # tracking reward = exp(-error^2/sigma)
         soft_dof_vel_limit = .9
@@ -305,7 +304,7 @@ class MotorPrimitivesCfgPPO(BaseConfig):
         policy_class_name = 'ActorCritic'
         algorithm_class_name = 'PPOevent'
 
-        num_steps_per_env = 5  #24 # per iteration  24
+        num_steps_per_env = 10  #24 # per iteration  24
         max_iterations = 200 # number of policy updates
         # logging
         save_interval = 5 # check for potential saves every this many iterations

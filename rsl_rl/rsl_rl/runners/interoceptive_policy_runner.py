@@ -101,7 +101,7 @@ class InteroceptivePolicyRunner(OnPolicyRunner):
         self.tot_time = 0
         self.current_learning_iteration = 0
 
-        self.num = 0
+        self.count = 0
 
         _, _ = self.env.reset()
 
@@ -130,7 +130,8 @@ class InteroceptivePolicyRunner(OnPolicyRunner):
         update_env_ids = next_update_env_ids[
             self.env.behavior_quality[next_update_env_ids] < self.env.cfg.control.update_quality_threshold
         ]
-        if getattr(self, "reservoir_states", None) is not None:
+        # update_env_ids = next_update_env_ids
+        if self.modulation_param_reservoir_states is not None:
             actions, reservoir_states = policy(obs[update_env_ids,-1], self.modulation_param_reservoir_states[update_env_ids])
             self.modulation_param_reservoir_states[update_env_ids] = reservoir_states
         else:
@@ -139,19 +140,17 @@ class InteroceptivePolicyRunner(OnPolicyRunner):
         self.last_actions[update_env_ids] = self.actions[update_env_ids]
         self.actions[update_env_ids] = actions
         self.env.actions_diff[update_env_ids] = torch.sum(torch.square(self.last_actions[update_env_ids] - self.actions[update_env_ids]), dim=1)
- 
-        self.env.update_idx_buffer.append([self.update_cycle.cpu().numpy()])
 
         if update_env_ids.numel() > 0:
-            self.num += 1
-        print(self.num)
-
+            self.count += 1
+        print(self.count)
+ 
         obs, privileged_obs, rewards, dones, infos = self.env.step(self.actions)
 
         critic_obs = privileged_obs if privileged_obs is not None else obs[:,-1]
         obs, critic_obs, dones = obs.to(self.device), critic_obs.to(self.device), dones.to(self.device)
 
-        if getattr(self, "eservoir_states", None) is not None:
+        if self.modulation_param_reservoir_states is not None:
             self.modulation_param_reservoir_states[dones] = 0.0
 
         return obs, critic_obs, rewards, dones, infos
@@ -225,11 +224,12 @@ class InteroceptivePolicyRunner(OnPolicyRunner):
                 mean_value_loss, mean_surrogate_loss = self.modulation_param_alg.update()
                 learn_stop = time.time()
                 learn_time = learn_stop - learn_start
+                it += 1
+                self.current_learning_iteration += 1
                 if self.log_dir is not None:
-                    it += 1
                     self.log(locals())
-                if it % self.save_interval == 0:
-                    self.save_model(self.log_dir, it)
+                    if it % self.save_interval == 0:
+                        self.save_model(self.log_dir, self.current_learning_iteration)
 
                 collection_start = time.time()
                 ep_infos.clear()
@@ -237,7 +237,8 @@ class InteroceptivePolicyRunner(OnPolicyRunner):
             if it >= tot_iter:
                 break
 
-        self.save_model(self.log_dir, it)       
+        if self.log_dir is not None:
+            self.save_model(self.log_dir, self.current_learning_iteration)
         self.final_log()
 
     def low_learn(self, obs, critic_obs, acc_rewards, cur_reward_sum, cur_episode_length, ep_infos, ep_counts, rewbuffer, lenbuffer):
@@ -408,7 +409,9 @@ class InteroceptivePolicyRunner(OnPolicyRunner):
                 self.modulation_param_alg.optimizer.load_state_dict(
                     loaded_dict['optimizer_state_dict']
                 )
-        self.current_learning_iteration = loaded_dict['iter']
+        filename = re.fullmatch(r"model_\d+_(\d+)\.pt", Path(path).name)
+        self.current_learning_iteration = max(
+            int(loaded_dict['iter']), int(filename.group(1)) if filename else 0)
         return loaded_dict.get('infos')
 
     def get_inference_policy(self, device=None):

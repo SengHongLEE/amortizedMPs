@@ -1,188 +1,182 @@
 # License: see [LICENSE, LICENSES/legged_gym/LICENSE]
+"""Play an archived policy using the environment configuration saved with its run."""
 
-from legged_gym import LEGGED_GYM_ROOT_DIR
-import os
-
-import isaacgym
-from legged_gym.envs import *
-from legged_gym.utils import  get_args, export_policy_as_jit, task_registry, Logger, load_run_config
-
-import numpy as np
+import isaacgym  # Import before torch or any module importing torch.
 import torch
-import torch.distributions as dist
-from pathlib import Path
 
-import time
+from legged_gym.envs import task_registry
+from legged_gym.utils import get_args
+from legged_gym.utils.load_config import prepare_resume_configs
+from legged_gym.utils.inference_forward_hold import (
+    ForwardHoldConfig, InferenceForwardHold, format_policy_update_frequency)
+
+
+def configure_forward_hold_scan(args, env_cfg):
+    """Opt in to the 10 Hz scan required by adaptive MP_full inference."""
+    if not getattr(args, 'adaptive_forward', False):
+        return
+    if args.task != 'MP_full_a1':
+        raise ValueError('adaptive forward/hold is available only for MP_full_a1')
+    env_cfg.terrain.scan_period_steps = 5
+
+
+def configure_composite_terrain(env_cfg, terrain_rows, difficulty=1.0,
+                                terrain_params=None, num_envs=None):
+    """Arrange named terrains along world x for one continuous checkpoint run.
+
+    ``terrain_rows`` gives the forward traversal order. ``difficulty`` is in
+    [0, 1]. ``terrain_params`` extends the archived parameters by terrain type
+    or named variant (for example, ``gap_single``). A ``gap_single`` row is
+    centered by default in this playback layout. A ``hurdle`` row has one
+    centered obstacle by default.
+    By default, one robot starts in the first row. ``num_envs`` can start more
+    robots on the same course. The configuration is changed in place.
+    """
+    rows = list(terrain_rows)
+    if not rows:
+        raise ValueError('terrain_rows must contain at least one terrain')
+    if not 0 <= difficulty <= 1:
+        raise ValueError('difficulty must be within [0, 1]')
+    if num_envs is None:
+        num_envs = 1
+    if isinstance(num_envs, bool) or not isinstance(num_envs, int) or num_envs < 1:
+        raise ValueError('num_envs must be a positive integer')
+
+    terrain = env_cfg.terrain
+    if terrain.mesh_type not in ('trimesh', 'heightfield'):
+        raise ValueError('composite terrain requires trimesh or heightfield')
+    terrain.selected = None
+    terrain.selected_kwargs = None
+    terrain.terrain_columns = None
+    terrain.terrain_rows = rows
+    terrain.num_rows = len(rows)
+    terrain.num_cols = 1
+    terrain.difficulty_range = [difficulty, difficulty]
+    terrain.difficulty_mode = 'linear'
+    terrain.row_difficulties = None
+    terrain.curriculum = False
+    terrain.curriculum_min_level = 0
+    terrain.curriculum_max_level = None
+    terrain.fixed_terrain_level = 0
+    env_cfg.env.episode_length_s = max(
+        env_cfg.env.episode_length_s, len(rows) * terrain.terrain_length / .5)
+    if 'gap_single' in rows:
+        variant = terrain.terrain_variants.get('gap_single')
+        if variant is None:
+            raise ValueError('gap_single requires a registered terrain variant')
+        variant.setdefault('params', {})['single_position'] = 'center'
+    if 'hurdle' in rows:
+        terrain.terrain_params.setdefault('hurdle', {})['pattern'] = 'single'
+    if terrain_params is not None:
+        for kind, params in terrain_params.items():
+            if kind in terrain.terrain_variants:
+                terrain.terrain_variants[kind].setdefault('params', {}).update(params)
+            else:
+                terrain.terrain_params.setdefault(kind, {}).update(params)
+    env_cfg.env.num_envs = num_envs
+
+
 def play(args):
-    env_cfg, train_cfg = task_registry.get_cfgs(name=args.task)
-
-    log_root = Path(LEGGED_GYM_ROOT_DIR) / "logs" / train_cfg.runner.experiment_name
-
-    if args.load_run is None or args.load_run == "-1":
-        run_dir = sorted(
-            p for p in log_root.iterdir()
-            if p.is_dir() and (p / "config.json").exists()
-        )[-1]
-    else:
-        run_dir = Path(args.load_run)
-        if not run_dir.is_absolute():
-            run_dir = log_root / run_dir
-
-    env_cfg, train_cfg = load_run_config(env_cfg, train_cfg, run_dir)
-
-    # override some parameters for testing
-    number_of_robots = 1 #
-    env_cfg.env.num_envs = min(env_cfg.env.num_envs,number_of_robots)
+    env_cfg, train_cfg = task_registry.get_cfgs(args.task)
+    args.resume = True
+    env_cfg, train_cfg = prepare_resume_configs(args.task, env_cfg, train_cfg, args)
+    configure_forward_hold_scan(args, env_cfg)
     env_cfg.env.play = True
-    # env_cfg.terrain.border_size = 1.
-
-    #stiffness
-    # env_cfg.terrain.terrain_length = 5.
-    # env_cfg.terrain.terrain_width = 5.
-
-    # go2
-    # env_cfg.terrain.terrain_length = 5.
-    # env_cfg.terrain.terrain_width = 2.    
-    
-    #hurdle
-    # env_cfg.terrain.terrain_length = 3.
-    # env_cfg.terrain.terrain_width = 15.     
-
-    #gap
-    # env_cfg.terrain.terrain_length = 1.
-    # env_cfg.terrain.terrain_width = 6.   
-    
     env_cfg.noise.add_noise = False
-    env_cfg.noise.noise_level = 0.1
-    env_cfg.control.varied = False
-    # env_cfg.control.cycle = 1
-    env_cfg.domain_rand.randomize_friction = False
-    env_cfg.domain_rand.randomize_base_mass = True
-    tmp = 0.
-    env_cfg.domain_rand.added_mass_range = [tmp, tmp]    
     env_cfg.domain_rand.push_robots = False
-    env_cfg.domain_rand.push_interval_s = 2.    #0.03 0.01
-    env_cfg.domain_rand.max_push_vel_xy = 1.    #0.03 0.01
-    env_cfg.commands.save_data = False #number of robot should be one
-    env_cfg.commands.resampling_time = 2
-    env_cfg.env.play = True 
-    env_cfg.env.episode_length_s = 10
 
-    # This task keeps its configured terrain rows/types, including fixed evaluation levels.
-    if env_cfg.terrain.mesh_type == 'trimesh':
-        env_cfg.terrain.selected = 'stairs'
-        env_cfg.terrain.difficulty_range = [1.,1.]
-        env_cfg.terrain.num_rows = 1
-        env_cfg.terrain.num_cols = 1
-        env_cfg.env.episode_length_s = 100
+    if args.task == 'MP_full_a1' and env_cfg.terrain.mesh_type in ('trimesh', 'heightfield'):
+        env_cfg.terrain.terrain_length = 6.
+        configure_composite_terrain(
+            env_cfg,
+            # Robot starts in row 0 and travels through these terrains in order.
+            terrain_rows=['flat', 'rough_slope', 'ramp', 'gap_continuous',
+                          'gap_single', 'hurdle', 'pit', 'flat'],
+            difficulty=1.0,
+            # Playback overrides for every row; ranges run from easy to hard.
+            terrain_params={
+                'flat': {'height': 0.},
+                'rough_slope': {'slope_range': [0.02, 0.20], 'slope_signs': [-1, 1],
+                                'height_range': [0.005, 0.025], 'height_step': 0.005,
+                                'downsampled_scale': 0.3},
+                'ramp': {'slope_range': [0.02, 0.30], 'slope_signs': [-1, 1],
+                         'center_platform': True},
+                'gap_continuous': {'pattern': 'centered', 'width_range': [0.1, 0.25],
+                                   'depth_range': [0.6, 0.6], 'num_gaps': 2,
+                                   'platform_size': 1.},
+                # In single/center mode, spacing is required but does not move the gap or hurdle.
+                'gap_single': {'pattern': 'single', 'single_position': 'center',
+                               'width_range': [0.1, 0.5], 'depth_range': [0.6, 0.6],
+                               'spacing': 3., 'platform_size': 3.},
+                'hurdle': {'pattern': 'single', 'width_range': [0.2, 0.2],
+                           'height_range': [0.05, 0.2], 'spacing': 4.},
+                'stairs': {'step_height_range': [0.01, 0.1], 'step_width': 0.3,
+                           'mesh_vertical_faces': True, 'step_signs': [-1, 1]},
+                'pit': {'size_range': [4., 4.], 'depth_range': [0.1, 0.2]},
+            },
+            num_envs=args.num_envs,
+        )
+    else:
+        env_cfg.env.num_envs = 1 if args.num_envs is None else args.num_envs
 
-        number_of_robots = 1 #
-        env_cfg.env.num_envs = number_of_robots
-
-    env_cfg.viewer.pos = [0., -2., 1.4]  # [m]
-    env_cfg.viewer.lookat = [0., 0., .3]  # [m]
-
-    train_cfg.runner.checkpoint = -1
-    train_cfg.runner.load_run = -1
-
-    # prepare environment
-    env, _ = task_registry.make_env(name=args.task, args=args, env_cfg=env_cfg)
+    env, env_cfg = task_registry.make_env(args.task, args=args, env_cfg=env_cfg)
+    runner, _ = task_registry.make_alg_runner(
+        env, name=args.task, args=args, train_cfg=train_cfg,
+        env_cfg=env_cfg, save_cfg=False)
+    if getattr(args, 'adaptive_forward', False):
+        runner.inference_forward_hold = InferenceForwardHold(
+            ForwardHoldConfig(gait_max_skips=args.gait_max_skips,
+                              modulation_max_skips=args.modulation_max_skips,
+                              horizontal_rate_limit=args.horizontal_rate_limit,
+                              modulation_horizontal_rate_limit=args.modulation_horizontal_rate_limit,
+                              extero_edge_trigger=args.extero_edge_trigger,
+                              terrain_edge_height_m=args.terrain_edge_height_m,
+                              filter_normal_sway=args.filter_normal_sway),
+            env.scan_cache.x, env.scan_cache.y, env.num_envs, env.device)
+    policy = runner.get_inference_policy(device=env.device)
     obs = env.get_observations()
-    print('obs',obs)
-
-    # load policy
-    train_cfg.runner.resume = True
-    ppo_runner, train_cfg = task_registry.make_alg_runner(env=env, name=args.task, args=args, train_cfg=train_cfg, env_cfg=env_cfg, save_cfg= False)
-    policy = ppo_runner.get_inference_policy(device=env.device)
-    if args.task == 'MP_interoceptive_a1' or args.task == 'MP_refmotion_a1':
-        policy = ppo_runner.get_inference_policy(device=env.device)
-    elif args.task in ('MP_multi_primitive_a1', 'MP_pro_terrain_a1', 'MP_pro_terrain_v2_a1', 'MP_pro_terrain_modal_a1'):
-        primitive_selection_actor, modulation_parameter_actor = ppo_runner.get_inference_policy(device=env.device)
-    elif args.task in ('MP_full_a1'):
-        primitive_selection_actor, modulation_parameter_actor, ee_equilibrium_actor = ppo_runner.get_inference_policy(device=env.device)
-    
-    elif args.task == 'MP_preset_a1' or args.task == 'MP_refmotion_a1' or args.task == 'MP_interoceptive_a1':
-        low_map = torch.tensor(
-            env.cfg.control.low_freq_idx,
-            device=ppo_runner.low_update_cycle.device,
-            dtype=ppo_runner.low_update_cycle.dtype,
-        )
-        low_update_freq_idx = (ppo_runner.low_update_cycle.unsqueeze(-1) == low_map).long().argmax(dim=-1)
-        # cycles = low_update_freq_idx.unsqueeze(-1)
-        # cycles = cycles.unsqueeze(1).expand(
-        #     -1, obs.size(1), -1
-        # )
-        # obs = torch.cat((obs, cycles), dim=-1)
-        high_policy, policy = ppo_runner.get_inference_policy(device=env.device)
-    elif args.task == 'MP_omega_a1':
-        cycles = torch.stack((ppo_runner.mu_update_cycle, ppo_runner.omega_update_cycle),
-            dim=-1) 
-        cycles = cycles.unsqueeze(1).expand(
-            -1, obs.size(1), -1
-        )
-        obs = torch.cat((obs, cycles), dim=-1)
-        omega_policy = ppo_runner.get_inference_policy(device=env.device)
-    elif args.task == 'MP_adaptive_a1' or 'MP_transient_a1':
-        cycles = torch.stack((ppo_runner.mu_update_cycle, ppo_runner.omega_update_cycle),
-            dim=-1) 
-        cycles = cycles.unsqueeze(1).expand(
-            -1, obs.size(1), -1
-        )
-        obs = torch.cat((obs, cycles), dim=-1)
-        high_policy, mu_policy, omega_policy, hip_policy = ppo_runner.get_inference_policy(device=env.device)
-
-    # export policy as a jit module (used to run it from C++)
-    if EXPORT_POLICY:
-        path = os.path.join(LEGGED_GYM_ROOT_DIR, 'logs', train_cfg.runner.experiment_name, 'exported', 'policies')
-        export_policy_as_jit(ppo_runner.alg.actor_critic, path)
-        print('Exported policy as jit script to: ', path)
-
-    logger = Logger(env.dt)
-    stop_rew_log = 488# env.max_episode_length + 1 # number of steps before print average episode rewards
-    camera_position = np.array(env_cfg.viewer.pos, dtype=np.float64)
-    camera_direction = np.array(env_cfg.viewer.lookat) - np.array(env_cfg.viewer.pos)
-    img_idx = 0
+    two_policy = args.task == "MP_full_a1" or isinstance(policy, tuple)
+    report_policy_updates = args.task == "MP_full_a1"
+    forward_counts = {'gait': 0, 'modulation': 0}
+    episode_forward_counts = {
+        actor: torch.zeros(env.num_envs, device=env.device, dtype=torch.long)
+        for actor in forward_counts} if report_policy_updates else {}
+    episode_steps = (torch.zeros(env.num_envs, device=env.device, dtype=torch.long)
+                     if report_policy_updates else None)
+    episode_numbers = [1] * env.num_envs if report_policy_updates else []
+    active_env_steps = 0
+    try:
+        while True:
+            if two_policy:
+                obs, _, _, dones, _ = runner.inference_rollout(obs, *policy)
+                if report_policy_updates:
+                    episode_steps += 1
+                    for actor in forward_counts:
+                        selected = runner.last_inference_decisions[actor]['forward']
+                        forward_counts[actor] += selected.numel()
+                        episode_forward_counts[actor][selected] += 1
+                    active_env_steps += env.num_envs
+                    for env_id in torch.nonzero(dones, as_tuple=False).flatten().tolist():
+                        summary = format_policy_update_frequency(
+                            episode_forward_counts['gait'][env_id].item(),
+                            episode_forward_counts['modulation'][env_id].item(),
+                            episode_steps[env_id].item(), env.dt)
+                        print(f'env {env_id} episode {episode_numbers[env_id]}: {summary}', flush=True)
+                        episode_numbers[env_id] += 1
+                        episode_steps[env_id] = 0
+                        for actor in episode_forward_counts:
+                            episode_forward_counts[actor][env_id] = 0
+            elif args.task in ("MP_interoceptive_a1", "MP_refmotion_pace_a1", "MP_refmotion_trot_a1", "MP_refmotion_canter_a1"):
+                obs, _, _, _, _ = runner.inference_rollout(obs, policy)
+            else:
+                actions = policy(obs[:, -1] if obs.ndim == 3 else obs)
+                obs, _, _, _, _ = env.step(actions)
+    except KeyboardInterrupt:
+        if report_policy_updates:
+            print(format_policy_update_frequency(
+                forward_counts['gait'], forward_counts['modulation'],
+                active_env_steps, env.dt), flush=True)
 
 
-
-    number_of_samples = 1000000
-    for i in range(1*int(number_of_samples)):
-        if args.task == 'MP_interoceptive_a1' or args.task == 'MP_refmotion_a1':
-            obs, _, rews, dones, infos = ppo_runner.inference_rollout(obs, policy)
-        elif args.task in ('MP_multi_primitive_a1', 'MP_pro_terrain_a1', 'MP_pro_terrain_v2_a1', 'MP_pro_terrain_modal_a1'):
-            obs, _, rews, dones, infos = ppo_runner.inference_rollout(obs, primitive_selection_actor, modulation_parameter_actor)
-        elif args.task in ('MP_full_a1'):
-            obs, _, rews, dones, infos = ppo_runner.inference_rollout(obs, primitive_selection_actor, modulation_parameter_actor, ee_equilibrium_actor)
-        elif args.task == 'MP_preset_a1' or args.task == 'MP_refmotion_a1' or args.task == 'MP_interoceptive_a1':
-            obs, _, rews, dones, infos = ppo_runner.inference_rollout(obs, rews, high_policy, policy)
-        elif args.task == 'MP_omega_a1':
-            obs, _, rews, dones, infos = ppo_runner.inference_rollout(obs, omega_policy)
-        elif args.task == 'MP_adaptive_a1' or 'MP_transient_a1':
-            obs, _, rews, dones, infos = ppo_runner.inference_rollout(obs, high_policy, mu_policy, omega_policy, hip_policy)
-        else:
-            actions = policy(obs.detach())
-            obs, _, rews, dones, infos = env.step(actions.detach())
-        if RECORD_FRAMES:
-                filename = os.path.join(LEGGED_GYM_ROOT_DIR, 'logs', train_cfg.runner.experiment_name, 'exported', 'frames', f"{img_idx}.png")
-                print(filename)
-                env.gym.write_viewer_image_to_file(env.viewer, filename)
-                img_idx += 1 
-        if MOVE_CAMERA:
-            camera_vel = np.array([1., 1., 0.]) * env.base_lin_vel[0,:].cpu().numpy()
-            camera_position += camera_vel * env.dt
-            env.set_camera(camera_position, camera_position + camera_direction)
-
-        # if  0 < i < stop_rew_log:
-        #     if infos["episode"]:
-        #         num_episodes = torch.sum(env.reset_buf).item()
-        #         if num_episodes>0:
-        #             logger.log_rewards(infos["episode"], num_episodes)
-        # elif i==stop_rew_log:
-        #     logger.print_rewards()
- 
-if __name__ == '__main__':
-    EXPORT_POLICY = False
-    RECORD_FRAMES = False
-    MOVE_CAMERA = False
-    args = get_args()
-    play(args)
+if __name__ == "__main__":
+    play(get_args())

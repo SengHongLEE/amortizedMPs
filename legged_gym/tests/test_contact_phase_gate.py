@@ -24,7 +24,7 @@ class GateTests(unittest.TestCase):
         old, old_gate = self.make(0)
         old._kuramoto_reflex_substep = old_gate.original_step
         new, gate = self.make(0)
-        a = torch.zeros(2, 23)
+        a = torch.zeros(2, 19)
         a[:, 0] = 2
         for _ in range(100):
             x = torch.stack(old.intrinsic_dynamics(a, torch.zeros(2, 3)), -1)

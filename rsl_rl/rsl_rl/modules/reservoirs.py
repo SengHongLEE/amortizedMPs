@@ -375,8 +375,19 @@ class LIFReservoir(_FixedReservoirBase):
         self,
         observations: torch.Tensor,
         states: torch.Tensor,
+        detach_state: bool = True,
     ) -> torch.Tensor:
-        # self._validate_inputs(observations, states)
+        if observations.ndim == 2:
+            self._validate_inputs(observations, states)
+            observations = observations.unsqueeze(1)
+        elif observations.ndim == 3:
+            if observations.shape[-1] != self.input_dim:
+                raise ValueError('observation feature dimension does not match reservoir input')
+            self._validate_states(states)
+            if observations.shape[0] != states.shape[0]:
+                raise ValueError('observation and state batch sizes differ')
+        else:
+            raise ValueError('LIF reservoir observations must be [N, D] or [N, T, D]')
         membrane, spikes = states.chunk(2, dim=-1)
 
         T = observations.size(dim=1)
@@ -388,10 +399,9 @@ class LIFReservoir(_FixedReservoirBase):
                 membrane,
             )
 
-        return torch.cat(
-            (membrane.detach(), spikes.detach()),
-            dim=-1,
-        )
+        if detach_state:
+            membrane, spikes = membrane.detach(), spikes.detach()
+        return torch.cat((membrane, spikes), dim=-1)
 
     def features_from_state(
         self,

@@ -53,6 +53,106 @@ class TerrainConfigurationTests(unittest.TestCase):
         self.assertGreater(np.ptp(side[0, :]), 0)
         self.assertEqual(np.ptp(side[:, 0]), 0)
 
+    def test_explicit_rows_form_one_forward_course(self):
+        names = ['flat', 'hurdle', 'gap', 'stairs']
+        try:
+            terrain = self.make(selected=None, num_rows=len(names), num_cols=1,
+                                terrain_columns=None, terrain_rows=names,
+                                difficulty_range=[1., 1.])
+        except ValueError as exc:
+            self.fail(f'explicit terrain rows must generate one course: {exc}')
+        self.assertEqual(terrain.terrain_names[:, 0].tolist(), names)
+        np.testing.assert_allclose(terrain.env_origins[:, 0, 0],
+                                   (np.arange(len(names)) + .5) * terrain.env_length)
+        self.assertEqual(np.ptp(self.tile(terrain, 0, 0)), 0)
+        self.assertGreater(np.max(self.tile(terrain, 1, 0)), 0)
+        self.assertLess(np.min(self.tile(terrain, 2, 0)), 0)
+        self.assertGreater(np.ptp(self.tile(terrain, 3, 0)), 0)
+
+        with self.assertRaisesRegex(ValueError, 'terrain_rows'):
+            self.make(selected=None, num_rows=4, num_cols=1,
+                      terrain_columns=None, terrain_rows=['flat'])
+
+    def test_explicit_row_seams_match_at_lane_center(self):
+        terrain = self.make(selected=None, num_rows=4, num_cols=1,
+                            terrain_columns=None,
+                            terrain_rows=['rough_slope', 'ramp', 'gap', 'hurdle'],
+                            difficulty_range=[1., 1.])
+        center_y = terrain.border + terrain.width_per_env_pixels // 2
+        for row in range(1, 4):
+            seam_x = terrain.border + row * terrain.length_per_env_pixels
+            difference = abs(int(terrain.heightsamples[seam_x, center_y])
+                             - int(terrain.heightsamples[seam_x - 1, center_y]))
+            self.assertLessEqual(difference, 1)
+
+    def test_centered_single_gap_leaves_landing_before_next_hurdle(self):
+        try:
+            terrain = self.make(
+                selected=None, num_rows=3, num_cols=1, terrain_columns=None,
+                terrain_rows=['flat', 'gap_single', 'hurdle'],
+                terrain_length=8., terrain_width=8., difficulty_range=[1., 1.],
+                terrain_variants={'gap_single': {'type': 'gap', 'params': {
+                    'pattern': 'single', 'single_position': 'center',
+                    'width_range': .4, 'depth_range': .6,
+                    'spacing': 3., 'platform_size': 3.}}},
+                terrain_params={'hurdle': {'pattern': 'uniform', 'spacing': 4.,
+                                           'width_range': .2, 'height_range': .1}})
+        except ValueError as exc:
+            self.fail(f'centered single gap must be configurable: {exc}')
+        center_y = terrain.width_per_env_pixels // 2
+        gap = np.flatnonzero(self.tile(terrain, 1, 0)[:, center_y] < 0)
+        hurdle = np.flatnonzero(self.tile(terrain, 2, 0)[:, center_y] > 0)
+        self.assertEqual(gap[0] + gap[-1] + 1, terrain.length_per_env_pixels)
+        landing = (terrain.length_per_env_pixels + hurdle[0] - gap[-1] - 1)
+        self.assertGreaterEqual(landing * terrain.horizontal_scale, 5.)
+
+    def test_centered_counted_gaps_use_platform_size_between_gaps(self):
+        for platform_size, expected_starts in ((1., [23, 35]), (2., [18, 40])):
+            with self.subTest(platform_size=platform_size):
+                terrain = self.make(
+                    selected='gap_continuous', num_rows=1, num_cols=1,
+                    terrain_length=6., terrain_width=8., origin_sample_size=1.,
+                    terrain_variants={'gap_continuous': {'type': 'gap', 'params': {
+                        'pattern': 'centered', 'num_gaps': 2, 'width_range': .2,
+                        'depth_range': .6, 'platform_size': platform_size}}})
+                profile = self.tile(terrain)[:, terrain.width_per_env_pixels // 2]
+                below = profile < 0
+                starts = np.flatnonzero(below & ~np.r_[False, below[:-1]])
+                ends = np.flatnonzero(below & ~np.r_[below[1:], False]) + 1
+                np.testing.assert_array_equal(starts, expected_starts)
+                np.testing.assert_array_equal(ends - starts, [2, 2])
+                self.assertEqual(starts[1] - ends[0], round(platform_size / terrain.horizontal_scale))
+                self.assertEqual(starts[0], terrain.length_per_env_pixels - ends[-1])
+
+    def test_centered_counted_gaps_reject_oversized_sequence(self):
+        with self.assertRaisesRegex(ValueError, 'cannot fit'):
+            self.make(selected='gap_continuous', num_rows=1, num_cols=1,
+                      terrain_length=6., terrain_width=8.,
+                      terrain_variants={'gap_continuous': {'type': 'gap', 'params': {
+                          'pattern': 'centered', 'num_gaps': 4, 'width_range': .5,
+                          'depth_range': .6, 'platform_size': 1.5}}})
+
+    def test_centered_gap_pattern_requires_a_count(self):
+        with self.assertRaisesRegex(ValueError, 'requires num_gaps'):
+            self.make(selected='gap_continuous', num_rows=1, num_cols=1,
+                      terrain_length=6., terrain_width=8.,
+                      terrain_variants={'gap_continuous': {'type': 'gap', 'params': {
+                          'pattern': 'centered', 'width_range': .2,
+                          'depth_range': .6, 'platform_size': 1.}}})
+
+    def test_single_hurdle_has_one_centered_obstacle(self):
+        terrain = self.make(
+            selected=None, num_rows=3, num_cols=1, terrain_columns=None,
+            terrain_rows=['flat', 'hurdle', 'stairs'],
+            terrain_length=8., terrain_width=8., difficulty_range=[1., 1.],
+            terrain_params={'hurdle': {'pattern': 'single', 'spacing': 4.,
+                                       'width_range': .2, 'height_range': .1}})
+        center_y = terrain.width_per_env_pixels // 2
+        obstacle = np.flatnonzero(self.tile(terrain, 1, 0)[:, center_y] > 0)
+        self.assertEqual(len(obstacle), round(.2 / terrain.horizontal_scale))
+        self.assertEqual(obstacle[0] + obstacle[-1] + 1,
+                         terrain.length_per_env_pixels)
+
     def test_partial_parameters_and_unknown_keys(self):
         self.make(selected='rough', terrain_params={'rough': {'height_range': .03}})
         with self.assertRaisesRegex(ValueError, 'heigth_range'):

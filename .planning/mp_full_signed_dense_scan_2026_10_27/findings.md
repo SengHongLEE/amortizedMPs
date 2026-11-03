@@ -1,0 +1,10 @@
+# Findings
+
+- Legacy scan has 12 x 5 points over 0.15–2.45 m, 60 scalar heights, and five-frame history. The three-cell minimum preserves negative gaps and can erase a narrow positive hurdle.
+- Checkpoint 380 comparison: hurdle visible on 123/216 selector ticks; gap 318/318. Flattening scan flips 0/123 hurdle gait choices and 141/318 gap choices.
+- Existing `terrain_encoder_dim` supports only the 162-input selector with 12 x 5 input and is disabled in the saved training config. Its encoder does not receive gradient through the reservoir unless its opt-in flag is set; the modulator has no encoder.
+- New variant samples 33 x 7 = 231 terrain locations over 0.1–3.3 m and ±0.3 m. It preserves local height minima/maxima separately and pools to two 16 x 5 channels = 160 actor scan scalars. Actor observations are 262 dimensions instead of 162. Each policy has a separate learned 160-to-32 terrain encoder; the critic receives 269 raw dimensions.
+- Static real-terrain check at difficulty 0.5 and 16 fixed poses 0.5–1.5 m before a hurdle: legacy three-cell min sees positive height at 7/16 poses; new dense signed scan sees it at 16/16. The new scan also sees a 0.6 m gap at 16/16 matched-distance poses.
+- Both actor encoders receive gradient in unit tests. Sixteen-environment GPU simulation and one PPO learning iteration completed. Legacy checkpoint 380 still loads strictly.
+- PPO correctness: selector update uses `actor.readout_process(latest_observation, saved_updated_reservoir_state)`, so trainable features hidden only in the reservoir update cannot learn. The final design feeds fixed x-profile extrema to the reservoir and adds trainable 2D scan encoder logits directly; PPO replay recomputes that same direct term from the saved latest observation.
+- Six short flat-terrain PPO updates changed both learned encoders, confirming real optimizer participation. Short all-hurdle runs initially failed to fill the selector event buffer because a random policy fell early; this was a test condition, not the encoder path.

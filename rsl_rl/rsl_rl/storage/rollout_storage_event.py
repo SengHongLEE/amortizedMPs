@@ -408,6 +408,7 @@ class RolloutStorage_event_discrete(RolloutStorage_event):
             self.env_ids = None
             self.step_ids = None
             self.reservoir_states = None
+            self.context_targets = None
 
         def clear(self):
             self.__init__()
@@ -436,6 +437,8 @@ class RolloutStorage_event_discrete(RolloutStorage_event):
             *logits_shape,
             device=self.device,
         )
+        self.context_targets = torch.full(
+            (self.capacity,), -1, dtype=torch.long, device=self.device)
 
 
     def add_start_transitions(self, transition):
@@ -456,6 +459,10 @@ class RolloutStorage_event_discrete(RolloutStorage_event):
             )
         self.actions[idx].copy_(transition.actions[:batch_size])
         self.logits[idx].copy_(transition.logits[:batch_size])
+        if transition.context_targets is None:
+            self.context_targets[idx].fill_(-1)
+        else:
+            self.context_targets[idx].copy_(transition.context_targets[:batch_size])
         self.values[idx].copy_(transition.values[:batch_size])
         self.actions_log_prob[idx].copy_(
             transition.actions_log_prob[:batch_size].view(-1, 1)
@@ -505,6 +512,7 @@ class RolloutStorage_event_discrete(RolloutStorage_event):
         returns = self.returns[:batch_size]
         old_actions_log_prob = self.actions_log_prob[:batch_size]
         advantages = self.advantages[:batch_size]
+        context_targets = self.context_targets[:batch_size]
         old_mu = self.mu[:batch_size]
         old_sigma = self.sigma[:batch_size]
 
@@ -531,7 +539,7 @@ class RolloutStorage_event_discrete(RolloutStorage_event):
                 old_sigma_batch = old_sigma[batch_idx]
 
                 yield obs_batch, critic_observations_batch, actions_batch, logits_batch, target_values_batch, advantages_batch, returns_batch, \
-                       old_actions_log_prob_batch, old_mu_batch, old_sigma_batch, (None, None), None
+                       old_actions_log_prob_batch, old_mu_batch, old_sigma_batch, (None, None), context_targets[batch_idx]
                 
 
     def reservoir_mini_batch_generator(self, num_mini_batches, num_epochs=8):
@@ -551,6 +559,7 @@ class RolloutStorage_event_discrete(RolloutStorage_event):
         returns = self.returns[:batch_size]
         old_actions_log_prob = self.actions_log_prob[:batch_size]
         advantages = self.advantages[:batch_size]
+        context_targets = self.context_targets[:batch_size]
         old_mu = self.mu[:batch_size]
         old_sigma = self.sigma[:batch_size]
         reservoir_states = self.reservoir_states[:batch_size]
@@ -579,4 +588,4 @@ class RolloutStorage_event_discrete(RolloutStorage_event):
                 reservoir_states_batch = reservoir_states[batch_idx]
 
                 yield obs_batch, critic_observations_batch, actions_batch,logits_batch, target_values_batch, advantages_batch, returns_batch, \
-                       old_actions_log_prob_batch, old_mu_batch, old_sigma_batch, reservoir_states_batch, None
+                       old_actions_log_prob_batch, old_mu_batch, old_sigma_batch, reservoir_states_batch, context_targets[batch_idx]

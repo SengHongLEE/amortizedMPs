@@ -77,44 +77,32 @@ def parse_sim_params(args, cfg):
     return sim_params
 
 def get_load_path(root, pattern, load_run=-1, checkpoint=-1):
-    try:
-        runs = os.listdir(root)
-        #TODO sort by date to handle change of month
-        runs.sort()
-        if 'exported' in runs: runs.remove('exported')
-        last_run = os.path.join(root, runs[-1])
-    except:
-        raise ValueError("No runs in this directory: " + root)
-    if load_run==-1:
-        load_run = last_run
+    if load_run in (-1, "-1"):
+        if not os.path.isdir(root):
+            raise FileNotFoundError(f"No runs in this directory: {root}")
+        runs = sorted(entry.path for entry in os.scandir(root)
+                      if entry.is_dir() and entry.name != "exported")
+        if not runs:
+            raise FileNotFoundError(f"No runs in this directory: {root}")
+        run_dir = runs[-1]
     else:
-        load_run = os.path.join(root, load_run)
+        run_dir = os.path.join(root, str(load_run))
+    if not os.path.isdir(run_dir):
+        raise FileNotFoundError(f"Run directory does not exist: {run_dir}")
 
-    if checkpoint==-1:
-
-        models = [
-            file
-            for file in os.listdir(load_run)
-            if pattern.match(file)
-        ]
-
+    models = [file for file in os.listdir(run_dir) if pattern.fullmatch(file)]
+    if checkpoint == -1:
         if not models:
-            raise FileNotFoundError(f"No valid model files found in {load_run}")
-
-        model = max(
-            models,
-            key=lambda filename: int(pattern.match(filename).group(1))
-        )
-
-
-        # models = [file for file in os.listdir(load_run) if 'model' in file]
-        # models.sort(key=lambda m: '{0:0>15}'.format(m))
-        # model = models[-1]
+            raise FileNotFoundError(f"No valid model files found in {run_dir}")
+        model = max(models, key=lambda file: int(pattern.fullmatch(file).group(1)))
     else:
-        model = "model_{}.pt".format(checkpoint) 
-
-    load_path = os.path.join(load_run, model)
-    return load_path
+        matches = [file for file in models
+                   if int(pattern.fullmatch(file).group(1)) == checkpoint]
+        if len(matches) != 1:
+            raise FileNotFoundError(
+                f"Expected one checkpoint with index {checkpoint} in {run_dir}; found {len(matches)}")
+        model = matches[0]
+    return os.path.join(run_dir, model)
 
 def update_cfg_from_args(env_cfg, cfg_train, args):
     # seed
@@ -130,6 +118,10 @@ def update_cfg_from_args(env_cfg, cfg_train, args):
             cfg_train.runner.max_iterations = args.max_iterations
         if args.resume:
             cfg_train.runner.resume = args.resume
+        if getattr(args, 'reset_primitive_selection', False):
+            if not args.resume:
+                raise ValueError('--reset_primitive_selection requires --resume')
+            cfg_train.runner.reset_primitive_selection_on_resume = True
         if args.experiment_name is not None:
             cfg_train.runner.experiment_name = args.experiment_name
         if args.run_name is not None:
@@ -145,6 +137,8 @@ def get_args():
     custom_parameters = [
         {"name": "--task", "type": str, "default": "anymal_c_flat", "help": "Resume training or start testing from a checkpoint. Overrides config file if provided."},
         {"name": "--resume", "action": "store_true", "default": False,  "help": "Resume training from a checkpoint"},
+        {"name": "--reset_primitive_selection", "action": "store_true", "default": False,
+         "help": "When resuming, initialize a new primitive selection policy while loading the low policy"},
         {"name": "--experiment_name", "type": str,  "help": "Name of the experiment to run or load. Overrides config file if provided."},
         {"name": "--run_name", "type": str,  "help": "Name of the run. Overrides config file if provided."},
         {"name": "--load_run", "type": str,  "help": "Name of the run to load when resume=True. If -1: will load the last run. Overrides config file if provided."},
@@ -154,6 +148,30 @@ def get_args():
         {"name": "--horovod", "action": "store_true", "default": False, "help": "Use horovod for multi-gpu training"},
         {"name": "--rl_device", "type": str, "default": "cuda:0", "help": 'Device used by the RL algorithm, (cpu, gpu, cuda:0, cuda:1 etc..)'},
         {"name": "--num_envs", "type": int, "help": "Number of environments to create. Overrides config file if provided."},
+        {"name": "--adaptive_forward", "action": "store_true", "default": False,
+         "help": "Enable inference-only forward/hold for MP_full_a1 playback."},
+        {"name": "--gait_max_skips", "type": int, "default": 2,
+         "help": "Maximum consecutive scheduled gait updates to hold during adaptive playback."},
+        {"name": "--modulation_max_skips", "type": int, "default": 3,
+         "help": "Maximum consecutive scheduled modulation updates to hold during adaptive playback."},
+        {"name": "--horizontal_rate_limit", "type": float, "default": 2.0,
+         "help": "Inference-only horizontal angular velocity trigger in rad/s for adaptive MP_full_a1 playback."},
+        {"name": "--modulation_horizontal_rate_limit", "type": float, "default": 4.0,
+         "help": "Override only the modulation actor horizontal angular velocity trigger in rad/s."},
+        {"name": "--extero_edge_trigger", "action": "store_true",
+         "help": "Use the default abrupt-terrain-edge trigger during adaptive playback."},
+        {"name": "--no_extero_edge_trigger", "action": "store_true",
+         "help": "Disable the default abrupt-terrain-edge trigger during adaptive playback."},
+        {"name": "--terrain_edge_height_m", "type": float, "default": 0.035,
+         "help": "Minimum adjacent scan-row height jump in metres for an extero terrain edge."},
+        {"name": "--filter_normal_sway", "action": "store_true", "default": False,
+         "help": "Filter ordinary horizontal angular velocity oscillation during adaptive MP_full_a1 playback."},
+        {"name": "--tracking_linear_error_limit", "type": float, "default": 0.6,
+         "help": "Filtered planar linear velocity tracking error trigger in m/s."},
+        {"name": "--tracking_yaw_error_limit", "type": float, "default": 0.6,
+         "help": "Filtered yaw angular velocity tracking error trigger in rad/s."},
+        {"name": "--no_tracking_error_trigger", "action": "store_true",
+         "help": "Disable inference-only command tracking error triggers."},
         {"name": "--seed", "type": int, "help": "Random seed. Overrides config file if provided."},
         {"name": "--max_iterations", "type": int, "help": "Maximum number of training iterations. Overrides config file if provided."},
     ]
@@ -161,6 +179,7 @@ def get_args():
     args = gymutil.parse_arguments(
         description="RL Policy",
         custom_parameters=custom_parameters)
+    args.extero_edge_trigger = args.extero_edge_trigger or not args.no_extero_edge_trigger
 
     # name allignment
     args.sim_device_id = args.compute_device_id

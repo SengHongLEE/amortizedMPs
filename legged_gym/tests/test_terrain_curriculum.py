@@ -17,7 +17,7 @@ def options(**overrides):
                   curriculum_promote_distance=2.5, curriculum_promote_ratio=.8,
                   curriculum_demote_ratio=.5, fixed_terrain_level=None,
                   max_init_terrain_level=None, terrain_length=8., terrain_width=8.,
-                  boundary_margin=.6, spawn_xy_jitter=.1)
+                  boundary_margin=.6, spawn_xy_jitter=.1, border_size=4.)
     values.update(overrides)
     return SimpleNamespace(**values)
 
@@ -74,6 +74,30 @@ class CurriculumTests(unittest.TestCase):
                  torch.zeros(6, dtype=torch.bool), torch.ones(6))
         self.assertEqual(c.levels.tolist(), [4] * 6)
 
+    def test_safe_tile_crossing_is_credited_when_a_later_tile_causes_a_fall(self):
+        c = self.make()
+        c.command_distance[:] = 3.
+        c.command_displacement[:, 0] = 3.
+        c.observe_position(torch.tensor([[2.8, 0.]] * 6),
+                           torch.tensor([True, False, False, False, False, False]))
+        c.command_distance[:] = 5.
+        c.command_displacement[:, 0] = 5.
+        c.update(torch.arange(6), torch.tensor([[3., 0.]] * 6),
+                 torch.ones(6, dtype=torch.bool), torch.ones(6))
+        self.assertEqual(c.levels.tolist(), [5, 3, 3, 3, 3, 3])
+        c.reset(torch.tensor([0]), torch.zeros(1, 2))
+        self.assertEqual(c.max_progress[0].item(), 0.)
+
+    def test_second_band_can_be_required_before_advanced_curriculum_promotion(self):
+        c = self.make(curriculum_promote_distance=4.25)
+        c.command_distance[:] = 5.
+        c.command_displacement[:, 0] = 5.
+        c.observe_position(torch.tensor([[4.3, 0.]] * 6),
+                           torch.tensor([True, False, False, False, False, False]))
+        c.update(torch.arange(6), torch.tensor([[4.5, 0.]] * 6),
+                 torch.ones(6, dtype=torch.bool), torch.ones(6))
+        self.assertEqual(c.levels.tolist(), [5, 3, 3, 3, 3, 3])
+
     def test_levels_clamp_and_partial_reset(self):
         c = self.make(curriculum_min_level=1, curriculum_max_level=5)
         c.levels[:] = torch.tensor([5, 1, 3, 3, 3, 3])
@@ -120,7 +144,7 @@ class CurriculumTests(unittest.TestCase):
     def test_invalid_settings_and_unsorted_rows_fail_early(self):
         for kwargs in (dict(curriculum='false'), dict(curriculum_initial_level=10),
                        dict(curriculum_min_level=2), dict(fixed_terrain_level=10),
-                       dict(curriculum_promote_distance=4.),
+                       dict(curriculum_promote_distance=8.),
                        dict(curriculum_promote_ratio=float('nan')),
                        dict(curriculum_demote_ratio=.9),
                        dict(difficulty_mode='random')):
@@ -150,6 +174,95 @@ class CurriculumTests(unittest.TestCase):
         self.assertEqual(env.terrain_failure_buf.tolist(), [True, False, True, False])
         self.assertEqual(env.time_out_buf.tolist(), [False, True, False, True])
         self.assertTrue(env.reset_buf.all())
+
+    def test_mp_full_crosses_tile_before_episode_ends(self):
+        from test_interoceptive_rewards import load_class
+        Environment = load_class('mp_full.py', 'MotorPrimitives', {'check_termination'})
+        env = Environment()
+        env.cfg = SimpleNamespace(terrain=SimpleNamespace(
+            mesh_type='trimesh', num_rows=10, num_cols=2, boundary_margin=.6))
+        env.terrain = SimpleNamespace(env_length=8., env_width=8.)
+        env.root_states = torch.zeros(4, 13)
+        env.root_states[:, 2] = .32
+        env.root_states[:, 0] = torch.tensor([9., 79.5, 9., 9.])
+        env.root_states[:, 1] = 4.
+        env.env_origins = torch.tensor([[4., 4., 0.]] * 4)
+        env.contact_forces = torch.zeros(4, 1, 3)
+        env.contact_forces[2, 0, 2] = 2.
+        env.termination_contact_indices = [0]
+        env.episode_length_buf = torch.tensor([10, 10, 10, 101])
+        env.max_episode_length = 100
+        env._get_terrain_heights = lambda xy: torch.zeros(len(xy))
+
+        env.check_termination()
+
+        self.assertEqual(env.reset_buf.tolist(), [False, True, True, True])
+        self.assertEqual(env.time_out_buf.tolist(), [False, True, False, True])
+        self.assertEqual(env.terrain_failure_buf.tolist(), [False, False, True, False])
+
+    def test_mp_full_episode_terrain_metrics_use_completed_envs_and_end_position(self):
+        from test_interoceptive_rewards import load_class
+        Environment = load_class('mp_full.py', 'MotorPrimitives', {'_terrain_episode_metrics'})
+        env = Environment()
+        env.cfg = SimpleNamespace(terrain=SimpleNamespace(num_rows=3))
+        env.terrain = SimpleNamespace(env_length=8., terrain_names=np.array([['gap', 'hurdle']]))
+        env.root_states = torch.zeros(3, 13)
+        env.root_states[:, 0] = torch.tensor([9., 19., 4.])
+        env.terrain_levels = torch.tensor([1, 1, 0])
+        env.terrain_types = torch.tensor([0, 1, 0])
+        env.device = 'cpu'
+        env.terrain_difficulties = torch.tensor([[.1, .2], [.5, .6], [.9, 1.]])
+        env.terrain_failure_buf = torch.tensor([False, True, False])
+        ids = torch.tensor([0, 1])
+
+        result = env._terrain_episode_metrics(ids, torch.tensor([0, 2]))
+
+        self.assertAlmostEqual(result['terrain_start_level'].item(), 1.)
+        self.assertAlmostEqual(result['terrain_start_difficulty'].item(), .55)
+        self.assertAlmostEqual(result['terrain_end_row'].item(), 1.5)
+        self.assertAlmostEqual(result['terrain_promoted_rate'].item(), .5)
+        self.assertAlmostEqual(result['terrain_demoted_rate'].item(), .5)
+        self.assertAlmostEqual(result['terrain_gap_promoted_rate'].item(), 1.)
+        self.assertAlmostEqual(result['terrain_hurdle_demoted_rate'].item(), 1.)
+        self.assertAlmostEqual(result['terrain_gap_failure_rate'].item(), 0.)
+        self.assertAlmostEqual(result['terrain_hurdle_failure_rate'].item(), 1.)
+        self.assertAlmostEqual(result['terrain_promoted_after_failure_rate'].item(), 0.)
+        env.terrain_failure_buf[0] = True
+        result = env._terrain_episode_metrics(ids, torch.tensor([0, 2]))
+        self.assertAlmostEqual(result['terrain_promoted_after_failure_rate'].item(), .5)
+        self.assertAlmostEqual(result['terrain_gap_promoted_after_failure_rate'].item(), 1.)
+
+    def test_mp_full_gap_curriculum_keeps_nonzero_exposure(self):
+        from test_interoceptive_rewards import load_class
+        Environment = load_class('mp_full.py', 'MotorPrimitives', {
+            '_clamp_hazard_curriculum_levels'})
+        env = Environment()
+        env.cfg = SimpleNamespace(terrain=SimpleNamespace(
+            curriculum=True, curriculum_gap_min_level=1))
+        env._gap_columns = torch.tensor([False, True, False])
+        env.terrain_types = torch.tensor([0, 1, 1, 2])
+        env.terrain_levels = torch.tensor([0, 0, 1, 0])
+        env._clamp_hazard_curriculum_levels(torch.arange(4))
+        self.assertEqual(env.terrain_levels.tolist(), [0, 1, 1, 0])
+        env.cfg.terrain.curriculum = False
+        env.terrain_levels[1] = 0
+        env._clamp_hazard_curriculum_levels(torch.arange(4))
+        self.assertEqual(env.terrain_levels[1].item(), 0)
+
+    def test_mp_full_reserves_half_gap_columns_for_medium_difficulty(self):
+        from test_interoceptive_rewards import load_class
+        Environment = load_class('mp_full.py', 'MotorPrimitives', {
+            '_clamp_hazard_curriculum_levels'})
+        env = Environment()
+        env.cfg = SimpleNamespace(terrain=SimpleNamespace(
+            curriculum=True, curriculum_gap_min_level=1,
+            curriculum_gap_medium_min_level=4,
+            curriculum_gap_medium_columns=2))
+        env._gap_columns = torch.tensor([False, True, True, False, True, True])
+        env.terrain_types = torch.tensor([1, 2, 4, 5])
+        env.terrain_levels = torch.zeros(4, dtype=torch.long)
+        env._clamp_hazard_curriculum_levels(torch.arange(4))
+        self.assertEqual(env.terrain_levels.tolist(), [1, 1, 4, 4])
 
 
 if __name__ == '__main__':

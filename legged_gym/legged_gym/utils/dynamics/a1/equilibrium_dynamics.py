@@ -15,13 +15,15 @@ class EquilibriumPrimitiveDynamics(Multi_Primitive_Dynamics):
     """
 
     ACTION_SPACE = 'cpg_equilibrium_v1'
-    NUM_ACTIONS = 18
-    NUM_OBSERVATIONS = 70
+    NUM_ACTIONS = 17
+    NUM_OBSERVATIONS = 44
 
     def __init__(self, equilibrium_cfg, **kwargs):
         super().__init__(**kwargs)
         cfg = equilibrium_cfg
         self.offset_limits = self._positive_xyz(cfg.offset_limits, 'offset_limits')
+        rear_x_range = getattr(cfg, 'rear_x_offset_range', (-float(self.offset_limits[0]), 0.))
+        self.rear_x_offset_range = tuple(float(value) for value in rear_x_range)
         self.swing_velocity_limits = self._positive_xyz(
             cfg.swing_velocity_limits, 'swing_velocity_limits')
         self.stance_velocity_limits = self._positive_xyz(
@@ -38,6 +40,8 @@ class EquilibriumPrimitiveDynamics(Multi_Primitive_Dynamics):
         self.offset = torch.zeros(self.num_envs, 4, 3, device=self._device)
         self.offset_velocity = torch.zeros_like(self.offset)
         self.offset_target = torch.zeros_like(self.offset)
+        self.offset[:, 2:, 0] = self.rear_x_offset_range[1]
+        self.offset_target[:, 2:, 0] = self.rear_x_offset_range[1]
 
     def _positive_xyz(self, values, name):
         result = torch.as_tensor(values, dtype=torch.float, device=self._device)
@@ -53,6 +57,8 @@ class EquilibriumPrimitiveDynamics(Multi_Primitive_Dynamics):
             self.offset[env_ids] = 0.
             self.offset_velocity[env_ids] = 0.
             self.offset_target[env_ids] = 0.
+            self.offset[env_ids, 2:, 0] = self.rear_x_offset_range[1]
+            self.offset_target[env_ids, 2:, 0] = self.rear_x_offset_range[1]
 
     @torch.no_grad()
     def _kuramoto_reflex_substep(self, dt):
@@ -132,9 +138,6 @@ class EquilibriumPrimitiveDynamics(Multi_Primitive_Dynamics):
         self.omega = omega / (2.0 * np.pi)  # legacy: Hz
 
         # Same substep for BOTH phase and amplitude -- no dt mismatch.
-        target_nominal_clearance = (self.max_clearance - 0.1) * ((torch.sqrt(self.nominal_clearance.clamp_min(0.0)) - self.mu_low) / (self.mu_up - self.mu_low)).clamp(0.0, 1.0) + 0.1
-        target_z = target_nominal_clearance
-        self._mu_z = target_z.square()
         sqrt_mu = torch.stack([
             torch.sqrt(self._mu_x.clamp_min(0.0)),
             torch.sqrt(self._mu_z.clamp_min(0.0)),
@@ -155,13 +158,20 @@ class EquilibriumPrimitiveDynamics(Multi_Primitive_Dynamics):
 
     @torch.no_grad()
     def intrinsic_dynamics(self, actions, command, foot_contact=None, contact_forces=None):
-        if actions.shape != (self.num_envs, EquilibriumPrimitiveDynamics.NUM_ACTIONS):
+        if actions.shape not in ((self.num_envs, EquilibriumPrimitiveDynamics.NUM_ACTIONS),
+                                 (self.num_envs, EquilibriumPrimitiveDynamics.NUM_ACTIONS + 1)):
             raise ValueError('equilibrium actions must have shape [num_envs, 17]')
         nominal = torch.stack(super().intrinsic_dynamics(
             actions[:, :9], command, foot_contact, contact_forces), dim=-1)
 
         equilibrium_x = self._scale_helper(actions[:, 9:13], self.mu_low ** 2, self.mu_up ** 2)
+        # equilibrium_x = torch.ones_like(actions[:, 9:13]) * self.offset_limits[0]
+        # equilibrium_x[:,:2] += 0.05
         target_equilibrium_x = (self.offset_limits[0]) * (2 * ((torch.sqrt(equilibrium_x.clamp_min(0.0)) - self.mu_low) / (self.mu_up - self.mu_low)).clamp(0.0, 1.0) - 1)
+        target_equilibrium_x[:,:2] = target_equilibrium_x[:,:2].clip(min=-0.05)
+        rear_lower, rear_upper = self.rear_x_offset_range
+        target_equilibrium_x[:,2:] = rear_lower + 0.5 * (
+            actions[:, 11:13].clamp(-1., 1.) + 1.) * (rear_upper - rear_lower)
         self.offset_target[:,:,:1].copy_(
             target_equilibrium_x.reshape(-1, 1, 4).transpose(1, 2))
 
@@ -170,7 +180,8 @@ class EquilibriumPrimitiveDynamics(Multi_Primitive_Dynamics):
             equilibrium_y.reshape(-1, 1, 4).transpose(1, 2))
 
         equilibrium_z = self._scale_helper(actions[:, 13:17], self.mu_low ** 2, self.mu_up ** 2)
-        target_equilibrium_z = (self.offset_limits[2]) * ((torch.sqrt(equilibrium_z.clamp_min(0.0)) - self.mu_low) / (self.mu_up - self.mu_low)).clamp(0.0, 1.0)
+        # equilibrium_z = torch.ones_like(actions[:, 10:14]) * self.offset_limits[2]
+        target_equilibrium_z = ((self.offset_limits[2]) * (2 * ((torch.sqrt(equilibrium_z.clamp_min(0.0)) - self.mu_low) / (self.mu_up - self.mu_low)).clamp(0.0, 1.0) - 1))
         self.offset_target[:,:,2:].copy_(
            target_equilibrium_z.reshape(-1, 1, 4).transpose(1, 2))
 
@@ -189,7 +200,7 @@ class EquilibriumPrimitiveDynamics(Multi_Primitive_Dynamics):
 
         steps = max(1, math.ceil(self._dt / .001))
         dt = self._dt / steps
-        for _ in range(2 * steps):
+        for _ in range(steps):
             acceleration = (omega**2 * (self.offset_target - self.offset)
                             - 2. * omega * self.offset_velocity)
             acceleration = torch.clamp(
@@ -198,6 +209,7 @@ class EquilibriumPrimitiveDynamics(Multi_Primitive_Dynamics):
                 self.offset_velocity + dt * acceleration, -speed_limit, speed_limit)
             candidate = self.offset + dt * velocity
             bounded = torch.clamp(candidate, -self.offset_limits, self.offset_limits)
+            bounded[:, 2:, 0].clamp_(*self.rear_x_offset_range)
             # Anti-windup at position limits. A contact transition may also
             # instantly reduce speed; acceleration limits apply between gates.
             self.offset_velocity.copy_(torch.where(
@@ -216,12 +228,12 @@ class EquilibriumPrimitiveDynamics(Multi_Primitive_Dynamics):
         amplitude_rate_scale = amplitude_scale * (self._OSCILLATOR_GAIN / 2.)
         return torch.cat((
             phase.sin(), phase.cos(),                       # 8
-            self.phi[:, :1].sin(), self.phi[:, :1].cos(),      # 2 (shared clock)
+            # self.phi[:, :1].sin(), self.phi[:, :1].cos(),      # 2 (shared clock)
             (self.X[:, :2] / amplitude_scale).flatten(1),     # 8
-            (self.X_dot[:, :2] / amplitude_rate_scale).flatten(1),  # 8
+            # (self.X_dot[:, :2] / amplitude_rate_scale).flatten(1),  # 8
             self.phase_correction / self.omega_g,            # 4
-            self.q_early, self.q_late, self.q_obstacle,       # 12
-            self.stance_extension / max(self.max_stance_extension, 1e-6),  # 4
+            # self.q_early, self.q_late, self.q_obstacle,       # 12
+            # self.stance_extension / max(self.max_stance_extension, 1e-6),  # 4
             (self.offset / self.offset_limits).transpose(1, 2).flatten(1),  # 12
             (self.offset_velocity / self.swing_velocity_limits).transpose(1, 2).flatten(1),  # 12
         ), dim=-1)
@@ -236,17 +248,12 @@ class EquilibriumPrimitiveDynamics(Multi_Primitive_Dynamics):
         return bounded
 
 
-class AdaptiveEquilibriumDynamics(EquilibriumPrimitiveDynamics):
-    """v1 plus four lift targets, a clock multiplier and a stance-duty offset.
+class _LegacyAdaptiveEquilibriumDynamics(EquilibriumPrimitiveDynamics):
+    """v1 plus a clock multiplier and a stance-duty offset."""
 
-    New actions are neutral at zero. Timing parameters follow a first-order
-    dynamical system; lift uses the existing second-order amplitude dynamics.
-    All state is proprioceptive/controller-internal, without terrain lookahead.
-    """
-
-    ACTION_SPACE = 'cpg_equilibrium_v2'
-    NUM_ACTIONS = 23
-    NUM_OBSERVATIONS = 72
+    ACTION_SPACE = 'cpg_equilibrium_v3'
+    NUM_ACTIONS = 19
+    NUM_OBSERVATIONS = 46
 
     def __init__(self, timing_cfg, **kwargs):
         super().__init__(**kwargs)
@@ -258,7 +265,6 @@ class AdaptiveEquilibriumDynamics(EquilibriumPrimitiveDynamics):
         self.frequency_range = interval(cfg.frequency_scale_range, 'frequency_scale_range')
         self.duty_offset_range = interval(cfg.duty_offset_range, 'duty_offset_range')
         self.duty_range = interval(cfg.duty_factor_range, 'duty_factor_range')
-        self.clearance_range = interval(cfg.clearance_range, 'clearance_range')
         self.timing_tau = float(cfg.time_constant)
         if not (0 < self.frequency_range[0] <= 1 <= self.frequency_range[1] <= 2):
             raise ValueError('frequency_scale_range must contain neutral 1 within (0, 2]')
@@ -266,8 +272,6 @@ class AdaptiveEquilibriumDynamics(EquilibriumPrimitiveDynamics):
             raise ValueError('duty_offset_range must contain neutral 0')
         if not (0 < self.duty_range[0] < self.duty_range[1] < 1):
             raise ValueError('duty_factor_range must lie strictly inside (0, 1)')
-        if not (0 < self.clearance_range[0] <= self.nominal_clearance_single <= self.clearance_range[1] <= self.max_clearance):
-            raise ValueError('clearance_range must contain nominal clearance and not exceed max_clearance')
         if not math.isfinite(self.timing_tau) or self.timing_tau <= 0:
             raise ValueError('time_constant must be positive and finite')
         self.align_stroke = bool(cfg.align_stroke)
@@ -297,16 +301,13 @@ class AdaptiveEquilibriumDynamics(EquilibriumPrimitiveDynamics):
     @torch.no_grad()
     def intrinsic_dynamics(self, actions, command, foot_contact=None, contact_forces=None):
         if actions.shape != (self.num_envs, self.NUM_ACTIONS):
-            raise ValueError('adaptive equilibrium actions must have shape [num_envs, 23]')
+            raise ValueError('adaptive equilibrium actions must have shape [num_envs, 19]')
         a = actions[:, 17:].clamp(-1., 1.)
-        lift = self._neutral_map(a[:, :4], self.clearance_range[0],
-                                 self.nominal_clearance_single, self.clearance_range[1])
-        frequency = self._neutral_map(a[:, 4:5], self.frequency_range[0], 1., self.frequency_range[1])
-        duty = self._neutral_map(a[:, 5:6], self.duty_offset_range[0], 0., self.duty_offset_range[1])
+        frequency = self._neutral_map(a[:, :1], self.frequency_range[0], 1., self.frequency_range[1])
+        duty = self._neutral_map(a[:, 1:2], self.duty_offset_range[0], 0., self.duty_offset_range[1])
         rate = -math.expm1(-self._dt / self.timing_tau)
         self.frequency_scale.lerp_(frequency, rate)
         self.duty_offset.lerp_(duty, rate)
-        self.nominal_clearance.copy_(lift)
         return super().intrinsic_dynamics(actions[:, :17], command, foot_contact, contact_forces)
 
     def controller_observations(self):
@@ -318,14 +319,14 @@ class AdaptiveEquilibriumDynamics(EquilibriumPrimitiveDynamics):
         return torch.cat((super().controller_observations(), frequency, duty), dim=-1)
 
 
-class ModalEquilibriumDynamics(AdaptiveEquilibriumDynamics):
+class ModalEquilibriumDynamics(_LegacyAdaptiveEquilibriumDynamics):
     """Axis-wise common/front-back/left-right/diagonal equilibrium modes.
 
     The four modes span the same four leg targets. Saturation happens after
     conversion to Cartesian targets, preserving physical position/speed bounds.
     This changes coordinates and exploration structure, not nominal trajectories.
     """
-    ACTION_SPACE = 'cpg_modal_equilibrium_v3'
+    ACTION_SPACE = 'cpg_modal_equilibrium_v4'
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -336,7 +337,7 @@ class ModalEquilibriumDynamics(AdaptiveEquilibriumDynamics):
     @torch.no_grad()
     def intrinsic_dynamics(self, actions, command, foot_contact=None, contact_forces=None):
         if actions.shape != (self.num_envs, self.NUM_ACTIONS):
-            raise ValueError('modal equilibrium actions must have shape [num_envs, 23]')
+            raise ValueError('modal equilibrium actions must have shape [num_envs, 19]')
         cartesian = actions.clone()
         cartesian[:, 5:17] = (actions[:, 5:17].reshape(-1, 3, 4) @ self.mode_to_leg.T).flatten(1)
         return super().intrinsic_dynamics(cartesian, command, foot_contact, contact_forces)
@@ -402,3 +403,7 @@ def bounded_inverse_kinematics(feet, robot, joint_limits, margin,
         side * l1 * h.sin() + sagittal_z * h.cos(),
     ), -1)
     return q.flatten(1), achieved
+
+
+# Preserve the public import path for MP_full_a1 and archived checkpoints.
+from .adaptive_equilibrium_dynamics import AdaptiveEquilibriumDynamics

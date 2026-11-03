@@ -78,50 +78,50 @@ def main():
     if args.candidates < 1 or args.repeats < 1 or args.seconds <= 0 or not 0 <= args.stance_extension <= .08:
         p.error('Require positive candidates/repeats/seconds and stance-extension in [0,.08]')
     cfg, _ = load_run_config(MotorPrimitivesCfg(), MotorPrimitivesCfgPPO(), args.run)
-    if cfg.env.action_space != 'cpg_equilibrium_v2':
-        p.error('A v2 configuration is required')
+    if cfg.env.action_space != 'cpg_equilibrium_v3':
+        p.error('A new 18-action v3 configuration is required')
     grid = []
-    for gait, scale, duty, lift, amplitude, bx, bz in itertools.product(
-            [0, 2], [.4, .55, .7], [0., .1, .2], [.08, .11, .14, .17],
+    for gait, scale, duty, amplitude, bx, bz in itertools.product(
+            [0, 2], [.4, .55, .7], [0., .1, .2],
             [.4, .6, .8], [-.02, 0., .02], [-.02, 0., .02]):
         base_frequency, base_duty = (6., .6) if gait == 0 else (8., .5)
         actual_duty = min(base_duty + duty, .8)
         if (1 - actual_duty) / (base_frequency * scale) < .06:
             continue
-        grid.append(dict(gait=gait, scale=scale, duty=duty, lift=lift, amplitude=amplitude, bx=bx, bz=bz))
+        grid.append(dict(gait=gait, scale=scale, duty=duty, amplitude=amplitude, bx=bx, bz=bz))
     if args.impedance_scan:
-        grid = [dict(gait=gait, scale=scale, duty=duty, lift=lift, amplitude=amplitude,
+        grid = [dict(gait=gait, scale=scale, duty=duty, amplitude=amplitude,
                      bx=0., bz=0., stiffness=stiffness, damping=damping)
-                for gait, scale, duty, lift, amplitude, stiffness, damping in itertools.product(
-                    [0, 2], [.4, .55], [0., .1, .2], [.11, .17], [.6, .8], [20., 40., 60., 100.], [.5, 1., 2.])]
+                for gait, scale, duty, amplitude, stiffness, damping in itertools.product(
+                    [0, 2], [.4, .55], [0., .1, .2], [.6, .8], [20., 40., 60., 100.], [.5, 1., 2.])]
     if args.posture_scan or args.posture_deadband_scan:
         bases = [
-            dict(gait=0, scale=.4, duty=.2, lift=.17, amplitude=.8, bx=0., bz=.02),
-            dict(gait=0, scale=.55, duty=.1, lift=.11, amplitude=.6, bx=0., bz=0.),
-            dict(gait=2, scale=.4, duty=.2, lift=.11, amplitude=.6, bx=0., bz=.02),
-            dict(gait=2, scale=.55, duty=.1, lift=.14, amplitude=.8, bx=-.02, bz=.02),
+            dict(gait=0, scale=.4, duty=.2, amplitude=.8, bx=0., bz=.02),
+            dict(gait=0, scale=.55, duty=.1, amplitude=.6, bx=0., bz=0.),
+            dict(gait=2, scale=.4, duty=.2, amplitude=.6, bx=0., bz=.02),
+            dict(gait=2, scale=.55, duty=.1, amplitude=.8, bx=-.02, bz=.02),
         ]
         grid = [dict(base, posture_gain=gain, stance_z_speed=speed, equilibrium_frequency=frequency)
                 for base, gain, speed, frequency in itertools.product(bases, [0., 1., 2., 4.],
                                                                     [.08, .2, .4], [3., 6.])]
         if args.posture_deadband_scan:
             bases.extend([
-                dict(gait=0, scale=.55, duty=.1, lift=.11, amplitude=.8, bx=0., bz=0.),
-                dict(gait=2, scale=.4, duty=.1, lift=.11, amplitude=.8, bx=0., bz=0.),
+                dict(gait=0, scale=.55, duty=.1, amplitude=.8, bx=0., bz=0.),
+                dict(gait=2, scale=.4, duty=.1, amplitude=.8, bx=0., bz=0.),
             ])
             grid = [dict(base, posture_gain=gain, posture_deadband=deadband,
                          stance_z_speed=speed, equilibrium_frequency=frequency)
                     for base, gain, deadband, speed, frequency in itertools.product(
                         bases, [1., 2., 4.], [0., .1, .2], [.2, .4], [3., 6.])]
     if args.validate_posture_best:
-        grid = [dict(gait=2, scale=.55, duty=.1, lift=.14, amplitude=.8, bx=-.02, bz=.02,
+        grid = [dict(gait=2, scale=.55, duty=.1, amplitude=.8, bx=-.02, bz=.02,
                      posture_gain=gain, stance_z_speed=.08, equilibrium_frequency=3.)
                 for gain in [0., 1., 2., 4.]]
     if args.task_impedance_scan:
         bases = [
-            dict(gait=0, scale=.4, duty=.1, lift=.14, amplitude=.8, bx=0., bz=0.),
-            dict(gait=2, scale=.4, duty=.1, lift=.14, amplitude=.8, bx=0., bz=0.),
-            dict(gait=2, scale=.55, duty=.1, lift=.14, amplitude=.8, bx=0., bz=0.),
+            dict(gait=0, scale=.4, duty=.1, amplitude=.8, bx=0., bz=0.),
+            dict(gait=2, scale=.4, duty=.1, amplitude=.8, bx=0., bz=0.),
+            dict(gait=2, scale=.55, duty=.1, amplitude=.8, bx=0., bz=0.),
         ]
         grid = [dict(base, foot_stiffness=kp, foot_damping=kd, gravity_compensation=gravity,
                      velocity_feedforward=velocity)
@@ -130,18 +130,14 @@ def main():
     rng = np.random.RandomState(args.seed)
     selected = rng.choice(len(grid), size=min(args.candidates, len(grid)), replace=False)
     candidates = [grid[i] for i in selected]
-    actions = np.zeros((len(candidates), 23), dtype=np.float32)
+    actions = np.zeros((len(candidates), 19), dtype=np.float32)
     for i, c in enumerate(candidates):
         actions[i, 0] = c['gait']
         actions[i, 1:5] = 2 * c['amplitude'] ** 2 - 1.
         actions[i, 5:9] = c['bx'] / cfg.control.equilibrium.offset_limits[0]
         actions[i, 13:17] = c['bz'] / cfg.control.equilibrium.offset_limits[2]
-        neutral = cfg.asset.ground_clearance
-        span = (cfg.control.timing.clearance_range[1] - neutral if c['lift'] >= neutral
-                else neutral - cfg.control.timing.clearance_range[0])
-        actions[i, 17:21] = (c['lift'] - neutral) / span
-        actions[i, 21] = (c['scale'] - 1.) / (1. - cfg.control.timing.frequency_scale_range[0])
-        actions[i, 22] = c['duty'] / cfg.control.timing.duty_offset_range[1]
+        actions[i, 17] = (c['scale'] - 1.) / (1. - cfg.control.timing.frequency_scale_range[0])
+        actions[i, 18] = c['duty'] / cfg.control.timing.duty_offset_range[1]
     assert np.max(np.abs(actions[:, 1:])) <= 1.
     set_seed(args.seed)
     cfg.env.num_envs = 2 * len(candidates) * args.repeats

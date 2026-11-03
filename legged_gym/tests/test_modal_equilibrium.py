@@ -23,12 +23,12 @@ class ModalTests(unittest.TestCase):
             raise Captured()
         env = cls()
         env.ID, env.device = obj, 'cpu'
-        env.actions = torch.zeros(2, 23)
+        env.actions = torch.zeros(2, 19)
         env.cfg = SimpleNamespace(normalization=SimpleNamespace(clip_actions=1.))
         env.terrain_curriculum = SimpleNamespace(accumulate=capture)
         env.commands, env.root_states, env.dt = torch.zeros(2, 3), torch.zeros(2, 13), .02
-        original = torch.zeros(2, 23)
-        original[:, 0] = torch.tensor([2., 5.])
+        original = torch.zeros(2, 19)
+        original[:, 0] = torch.tensor([2., 3.])
         original[0, 5:9] = torch.tensor([3., -2., .4, .1])
         original[1, 13:17] = torch.tensor([4., 4., -4., -4.])
         original[:, 1] = 2.
@@ -50,7 +50,7 @@ class ModalTests(unittest.TestCase):
             timing_cfg=timing_config(), equilibrium_cfg=Config.control.equilibrium,
             num_envs=6, device='cpu', nominal_clearance=.15, max_clearance=.2)
         self.assertTrue(hasattr(obj, 'continuous_action_change_cost'), 'Missing coordinate-invariant action-rate cost')
-        original = torch.randn(6, 22)
+        original = torch.randn(6, 18)
         modal = original.clone()
         modal[:, 4:16] = (original[:, 4:16].reshape(-1, 3, 4) @ obj.mode_to_leg / 4).flatten(1)
         torch.testing.assert_close(obj.continuous_action_change_cost(torch.zeros_like(modal), modal),
@@ -67,8 +67,8 @@ class ModalTests(unittest.TestCase):
         torch.manual_seed(23)
         command = torch.tensor([[.5, 0., .2]]).expand(6, -1)
         for _ in range(80):
-            original = torch.randn(6, 23) * 1.4
-            original[:, 0] = torch.arange(6)
+            original = torch.randn(6, 19) * 1.4
+            original[:, 0] = torch.arange(6) % 4
             modal = original.clone()
             modal[:, 5:17] = (original[:, 5:17].reshape(-1, 3, 4) @ h / 4).flatten(1)
             force = torch.rand(6, 4) * 3
@@ -84,13 +84,17 @@ class ModalTests(unittest.TestCase):
         obj = mod.ModalEquilibriumDynamics(
             timing_cfg=timing_config(), equilibrium_cfg=Config.control.equilibrium,
             num_envs=2, device='cpu', nominal_clearance=.15, max_clearance=.2)
-        actions = torch.zeros(2, 23)
+        actions = torch.zeros(2, 19)
         actions[0, 14] = .5
         actions[1, 13:17] = 10.
         obj.intrinsic_dynamics(actions, torch.zeros(2, 3))
-        torch.testing.assert_close(obj.offset_target[0, :, 2], torch.tensor([.02, .02, -.02, -.02]))
+        torch.testing.assert_close(obj.offset_target[0, 0, 2], obj.offset_target[0, 1, 2])
+        torch.testing.assert_close(obj.offset_target[0, 2, 2], obj.offset_target[0, 3, 2])
+        self.assertGreater(obj.offset_target[0, 0, 2], obj.offset_target[0, 2, 2])
         self.assertTrue((obj.offset_target.abs() <= obj.offset_limits).all())
-        torch.testing.assert_close(obj.offset_target[1, :, 2], torch.tensor([.04, 0., 0., 0.]))
+        self.assertEqual(obj.offset_target[1, 0, 2], obj.offset_limits[2])
+        torch.testing.assert_close(obj.offset_target[1, 1:, 2],
+                                   obj.offset_target[1, 1, 2].expand(3))
 
 
 if __name__ == '__main__':

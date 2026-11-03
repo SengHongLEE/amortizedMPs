@@ -19,7 +19,7 @@ class HorizontalTests(unittest.TestCase):
                        num_envs=2, device='cpu', nominal_clearance=.15, max_clearance=.2)
         old, new = cls(**options), cls(**options)
         probe = helper.HorizontalObstacleProbe(new)
-        action = torch.zeros(2, 23)
+        action = torch.zeros(2, 19)
         action[:, 0] = 2
         for _ in range(50):
             force = torch.zeros(2, 4, 3)

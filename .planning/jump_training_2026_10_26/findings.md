@@ -1,0 +1,40 @@
+# 发现
+
+- 2026-10-26 17:48 CST：无训练进程；GPU 752 MiB/24 GiB。现有最新常规训练到 model_30_310.pt。
+- 默认 MP_full_a1 为 5 原语、19 总 action（1 离散+18 连续），第 5 个 pronk 索引为 4；现有训练器和评测器都按 env.num_primitives 生成离散输出/指标。
+- `Multi_Primitive_Dynamics._foot_trajectory` 在 gait 4 使用 pronk 周期轨迹，必须从实验控制器绕开；其他四种保持现有脚轨迹。
+- `ContactJumpReflex` 已有单次预压—蹬伸—腾空—收腿—恢复状态机，最早的 oracle arm 探针在旧 checkpoint 下未见整体收益。新实验要让离散策略自行选择 jump，且允许策略离开 jump 后再选以处理连续障碍。
+- 默认训练入口 `task_registry` 指向旧 `MotorPrimitives`；独立 launcher 可在进程内注册新 task，不修改默认注册。旧评测器需要实验版环境类才能正确解释第 5 原语。
+- 新实验 `MP_full_jump_a1` 保持 19 总 action / 18 连续 action、5 原语，索引 4 明确为 jump；前四个步态表数值一致。训练 manifest 与 config 均记录 `contact_reflex_v1`。
+- 16 环境 1 轮真实 PPO smoke 已保存 `model_0_1.pt`；独立评测可加载并生成报告，普通 pronk checkpoint 被拒绝。该 smoke 的确定性策略未选择 jump，0/8 通过，不作为性能结论。
+- 2026-10-26 17:54 CST 启动 4096 环境、310 次更新、seed 1 的正式训练，PID 2136720，exec session 28401；最新观察仍存活，GPU 用量约 6 GiB。
+- 正式训练首轮完成实际 PPO 更新：294,912 timesteps，iteration time 28.20 s，checkpoint/manifest 路径 `legged_gym/logs/A1/1026_17-54-09_A1MPfull-v3-18D-psF_3.333e+00-mpF_1.667e+01-MF_1e+03-noResume-jump5-noPronk/`。评测并行时 GPU 用量约 9.6 GiB。
+- `model_30_310.pt` pronk 基线在 96 环境配对评测（难度 0.5/0.75、1.2 m/s、seed123、每组合16样本、first_band）得到：gap_single 28/32、gap_continuous 26/32、hurdle 23/32；0.5 难度几乎饱和（16/16、16/16、15/16），0.75 难度分别 12/16、10/16、8/16。初始状态 SHA 前缀 59d4e1e2。
+- 另启第二障碍带基线，检验连续越障，避免只看第一障碍带高估通过率。
+- 第二障碍带 5 s 截止对 hurdle 明显过短（基线仅 2/32，而 10 s 时 19/32）；正式第二障碍带比较改用 10 s。10 s pronk 基线：gap_single 28/32、gap_continuous 19/32、hurdle 19/32，初始状态与第一带评测 SHA 全同。
+- 新 jump checkpoint `model_0_10.pt` 的难度 0.75 / 24 环境诊断：gap_single 0/8、gap_continuous 0/8、hurdle 4/8；确定性 actor 在 24/24 环境均未选择 jump，因此记录 0 次进入预压/离地。仅 10 次更新，不能作最终性能判断；后续必须复查是否学会使用 jump。
+- `model_1_20.pt` 强制索引 4 的 8 环境物理检查：8/8 进入预压、8/8 四足无接触、8/8 落地；两条抽样轨迹最大竖直速度约 1.54/1.95 m/s，六个状态都出现。此检查证明 jump 动作链可执行，不代表选择策略或越障成功（此检查第一障碍带为 0/8）。
+- 基线和 jump 训练配置对比：seed1、4096 环境及其它既有参数一致；差异仅第5原语步长系数 0.5→1.0、jump variant 标记、run_name、声明的训练轮数。基线 checkpoint 实际为第310次更新。
+- 第二评测种子 321 的 pronk 基线：第一障碍带 5 s 为 gap_single 28/32、gap_continuous 23/32、hurdle 24/32；第二障碍带 10 s 为 28/32、18/32、23/32。后续 jump 模型要在相同种子和场景下评测，检查初始状态 SHA。
+- `model_4_50.pt` 在 seed123、96 环境、相同初始状态 SHA 的第一障碍带评测：gap_single 15/32（基线 28/32）、gap_continuous 9/32（基线 26/32）、hurdle 20/32（基线 23/32）。确定性策略仍在 96/96 环境只选择 canter，第5个 jump 的选择比例及进入预压/离地次数都是 0；差异主要来自新训练的其它参数权重，不能归因于 jump。
+- 当前离散 PPO 配置熵系数为 0.001；训练时采用 Categorical 随机采样，确定性评测按 logits argmax。早期评测中所有环境 argmax=canter，需继续观察后期是否发生原语切换。
+- 第100次更新 `model_9_100.pt` 在 seed123、96 环境、完全相同初始状态的第一障碍带评测：gap_single 20/32（pronk 28/32）、gap_continuous 15/32（26/32）、hurdle 20/32（23/32）。96/96 确定性环境仍只选 canter，jump 选择、预压、离地全为 0。较第50次的 gap 有改善，但未超越基线，也尚未真正使用新原语。
+- 真实评测状态 logits 诊断：jump 第100次更新在 305 次离散决策中 canter 平均概率 0.99006、jump 0.000161，全部 argmax=canter；原始 pronk 第310次更新在 415 次决策中 canter 0.999569、pronk 0.0000136，全部 argmax=canter。故并非 argmax 将微小差距放大，也不是 jump 替换才产生的偏好；第五原语在两套训练中均基本失去选择概率。
+- `PPOevent_discrete.act` 使用 Categorical 采样，`act_inference` 使用 logits argmax；训练 runner 将离散动作写入环境 action，并累计该 actor 对应奖励，尚未发现 actor 参数更新但动作不生效的链路错误。`_reward_pi_g_utility` 的 gait-switch 惩罚只在换步态后的一个环境 step 生效，因为 `post_physics_step` 每步同步 `last_actions`。
+- jump 第100次更新的脉冲特征诊断：693 次真实离散决策，32 个 reservoir spike 特征中 30 个曾变化，出现 175 种特征组合，平均激活率 0.325。故 reservoir 并非死输出；但 readout 配置 `include_input_in_readout=False`，没有观测直达通道，且训练配置 `entropy_coef=0.001`。这些可能限制探索，因果关系尚需对照实验。
+- 原始 pronk 最终 checkpoint 的纯评测参数消融：同 seed123、相同 96 个初始状态，canter 步长系数按训练设定 1.5 时首次障碍带 77/96，通过评测覆盖到 1.0 时仅 1/96（gap_single 0/32、continuous 0/32、hurdle 1/32）。证明已训练组合高度依赖 canter 长步幅；由于是训练后干预，不能单独推断初始偏好形成的因果原因。
+- 第10次更新、难度0.75的 48 环境真实仿真诊断：704 次离散决策的平均概率为 walk 4.15%、trot 16.24%、canter 41.56%、bound 34.19%、jump 3.86%，虽然 argmax 全为 canter。第100次更新 canter 99.01%、jump 0.016%，故训练过程把尚有探索的初期策略推向 canter 模式坍缩，网络并非从初始化起完全无多样性。
+- 为检查熵系数因果作用，另起独立进程（PID 2145704）在相同 seed1、4096 环境、原 controller/terrain/步长参数上训练100轮，只在进程内把 `algorithm.entropy_coef` 从0.001覆盖为0.02，run_name加 `entropy002`。配置快照已验证写入0.02；默认配置和已有脚本未改。
+- 主实验第150次更新的 seed123、96 环境首次障碍带结果：gap_single 22/32、gap_continuous 24/32、hurdle 21/32，低于 pronk 基线 28/32、26/32、23/32；相同初始状态 SHA，96 环境全程只选 canter，jump 预压/腾空均为0。另在难度0.75的48环境里，690 次真实决策的平均概率 canter 99.698%、jump 0.00499%，全部 argmax=canter；特征仍有30/32维变化。由于第5原语事实上没有获得探索，主实验在保存第150轮 checkpoint 和配对报告后主动早停；后续第200/250/310轮评测等待器已自然结束，不能宣称完成310轮训练。
+- 用户进一步要求验证 canter 专属长步幅是否导致选择偏好。另起只改变 `asset.gait_step_length_scales` 第2索引 1.5→1.0 的独立 jump 训练（PID 2146868，seed1、4096环境、熵系数仍0.001，目标100轮）；config 快照已确认三组训练仅按预期差异配置。训练后评测是这个问题的必要因果对照，之前的评测时消融不足以证明训练偏好成因。
+- 步长组第10轮与主实验第10轮相同48环境/seed123/初始状态SHA（`3c1d9b31...`）的真实 logits 对照：原组 canter 41.56%、bound 34.19%、jump 3.86%，704次 argmax 全canter；步长组 canter 25.71%、bound 45.31%、jump 3.52%，701次 argmax 全bound。单变量训练对照支持 canter 的 1.5 倍摆幅是**早期偏好**的重要原因，但只是把选择重心转移至 bound，不能据此推断 jump 会被选或通过率提高。
+- 熵系数组第10轮同48环境真实 logits：canter 45.30%、bound 32.13%、jump 4.10%，617次 argmax 全canter。与主实验第10轮 jump 3.86%接近；高熵能否阻止后期坍缩尚未验证。
+- 熵系数组第50轮同 seed123、同96初始状态首次带：gap_single 21/32、continuous 8/32、hurdle 22/32，对应原组同轮次15/32、9/32、20/32；仍96/96只选canter、0 jump事件。另48环境703次真实决策的平均概率 canter72.06%、bound22.31%、jump0.138%，argmax全部canter。原组第50轮同设置 logits 正在补测。
+- 原熵组第50轮同48环境702次真实决策概率：canter97.4499%、bound1.5419%、jump0.0618%，全部argmax canter。故高熵0.02相较0.001确实延缓 canter 集中并使 jump 概率约翻倍，但0.138%仍不足以令确定性策略跳跃。
+- 等步长组第50轮同seed123、96初始状态：gap_single 0/32、continuous 0/32、hurdle 14/32，96环境只选bound，jump事件0。原步长组同轮次15/32、9/32、20/32。另48环境701次真实决策的平均概率 bound98.107%、canter1.132%、jump0.0599%，argmax全bound。单变量消除了 canter 偏好，但出现 bound 模式坍缩，且 gap 能力退化；jump 的探索概率几乎与原组第50轮0.0618%相同。
+- 用户补充要求回查 jump 状态机是否真的有稳定越障能力。新增独立 `probe_mp_full_jump_oracle.py`，在第一障碍边缘前给索引4一次控制步的真值位置选择脉冲，随后由原状态机的接触/相位信号触发，不改现有训练/评测脚本。难度0.75、每地形8例的同初始状态小样本：基线单次gap3/8、连续gap2/8、hurdle6/8；0.35m oracle jump 分别0/8、1/8、2/8；24次脉冲仅17次预压、15次腾空、14次落地。gap 单次多数在边缘之后才预压；hurdle 多在边缘前约0.15m落地。正在用96环境扫描0.15/0.35/0.55/0.75m。
+- V1 全部96环境扫描最终数据：0.15/0.35/0.55/0.75m 的单次gap分别19/17/11/0、连续gap18/13/6/0、hurdle17/9/7/7（各32）；基线22/24/21。保持15步选择后仍无优势。故V1物理轨迹不足，而非只是policy没选。
+- V2 50ms预压易错过canter后脚接触，缩到20ms可把24环境腾空20→23，max COM vz中位约1.1–1.3m/s；但gap基本仍失败。请求/可达足端误差通常近零、峰值2–3cm，不能把失败完全归因于IK裁剪。V2 PUSH/FLIGHT覆盖x/z，实时连续调制无效。
+- V3 原语仍为离散索引4、18连续动作不变；六组摘要在contact触发时锁存跳跃轨迹，底层CPG保留进入前的助跑步态。seed123旧V1 checkpoint助跑+0.55m真值触发+固定向量[1,1,-.5,1,1,-1]：难单gap7→11/16、难hurdle7→11/16，易连续gap15→6/16；96总分67→65。seed321难单gap6→9/16、难连续gap7→4/16；总分68→65。局部收益但不稳定。
+- V3 从零训练20轮：采样jump约19.8%→0.59%；第10轮确定性全bound、第20轮全canter，96环境均0 jump。第20轮单次gap17/32、连续gap4/32、hurdle22/32。这是policy选择/探索失败，不能把oracle收益记作学到的策略成绩，也不能断言V3所有调制向量物理不可行。
+- V3 seed123 的直接连续调制消融（同96环境、相同旧V1助跑策略与0.55m真值触发，均96/96跳跃）：旧连续头11/96、全0动作30/96、固定[1,1,-.5,1,1,-1]为65/96，原canter不跳67/96。锁存参数随动作变化，故连续策略未优化与固定轨迹物理缺陷可分辨；但固定向量仍不是稳定全地形改进。

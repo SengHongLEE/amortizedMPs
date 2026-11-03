@@ -29,9 +29,11 @@ DEFAULT_PARAMS = {
     'stepping_stones': {'stone_size_range': [.8, .3], 'stone_distance_range': [.1, .3],
                         'height_range': [.0, .05], 'depth_range': [.2, .6]},
     'wave': {'amplitude_range': [.02, .15], 'num_waves': 3},
-    'gap': {'width_range': [.1, .5], 'depth_range': [.2, .6], 'spacing': 1.5},
+    'gap': {'width_range': [.1, .5], 'depth_range': [.2, .6], 'spacing': 1.5,
+            'pattern': 'mirrored', 'num_gaps': None, 'single_position': 'after_platform'},
     'pit': {'size_range': [2.5, 3.], 'depth_range': [.1, .5]},
-    'hurdle': {'width_range': [.2, .3], 'height_range': [.05, .2], 'spacing': 1.5},
+    'hurdle': {'width_range': [.2, .3], 'height_range': [.05, .2], 'spacing': 1.5,
+               'pattern': 'mirrored'},
     'beam': {'width_range': [1., .3], 'depth_range': [.2, .6]},
 }
 COMMON_PARAMS = {'axis': 'x', 'platform_size': None, 'height_offset': 0., 'roughness': None}
@@ -98,6 +100,48 @@ def _sdk_length(value, scale):
     return np.nextafter(cells * scale, np.inf) if cells else 0.
 
 
+def obstacle_bands(length, horizontal_scale, params, kind):
+    """Return obstacle [start, end) intervals in local travel-axis cells."""
+    width = int(round(params['width_range'] / horizontal_scale))
+    count = (params.get('num_gaps') if kind == 'gap'
+             and params['pattern'] in ('uniform', 'centered') else None)
+    if count is not None:
+        if params['pattern'] == 'centered':
+            platform = int(round(params['platform_size'] / horizontal_scale))
+            span = count * width + (count - 1) * platform
+            if span > length:
+                return []
+            first = (length - span) // 2
+            return [(first + index * (width + platform),
+                     first + index * (width + platform) + width)
+                    for index in range(count)]
+        stride = length / count
+        # Keep the tile centre on a landing segment for either parity.
+        phase = stride / 2 if count % 2 == 0 else 1
+        starts = [round(phase + index * stride) for index in range(count)]
+        return [(start, start + width) for start in starts if start + width <= length]
+    stride = int(round(params['spacing'] / horizontal_scale))
+    if kind == 'hurdle' and params['pattern'] == 'single':
+        start = (length - width) // 2
+        return [(start, start + width)]
+    if kind == 'gap' and params['pattern'] == 'single':
+        if params['single_position'] == 'center':
+            start = (length - width) // 2
+        else:
+            start = length // 2 + max(int(np.ceil(params['platform_size'] / horizontal_scale / 2)), stride)
+        return [(start, min(length, start + width))] if start < length else []
+    if kind in ('gap', 'hurdle') and params['pattern'] == 'uniform':
+        return [(start, start + width) for start in range(stride // 2, length, stride)
+                if start + width <= length]
+    center = length // 2
+    half = int(np.ceil(params['platform_size'] / horizontal_scale / 2))
+    bands = []
+    for offset in range(half, max(center, length - center), stride):
+        bands.extend(((max(0, center - offset - width), max(0, center - offset)),
+                      (center + offset, min(length, center + offset + width))))
+    return sorted((a, b) for a, b in bands if a < b)
+
+
 def _generate(terrain, name, p):
     """Generate in local x; the assembler transposes for a world-y axis."""
     scale = terrain.horizontal_scale
@@ -144,16 +188,10 @@ def _generate(terrain, name, p):
     elif name == 'wave':
         terrain_utils.wave_terrain(terrain, num_waves=p['num_waves'], amplitude=p['amplitude_range'])
     elif name in ('gap', 'hurdle'):
-        # Repeated full-width bands on both sides of a central landing zone.
         h, v = terrain.horizontal_scale, terrain.vertical_scale
-        center = terrain.width // 2
-        half = int(np.ceil(p['platform_size'] / h / 2))
-        width = int(round(p['width_range'] / h))
-        stride = int(round(p['spacing'] / h))
         height = -p['depth_range'] if name == 'gap' else p['height_range']
-        for start in range(half, max(center, terrain.width - center), stride):
-            terrain.height_field_raw[center+start:center+start+width, :] = int(height / v)
-            terrain.height_field_raw[max(0, center-start-width):max(0, center-start), :] = int(height / v)
+        for start, end in obstacle_bands(terrain.width, h, p, name):
+            terrain.height_field_raw[start:end, :] = int(height / v)
     elif name == 'pit':
         region = _center_slice(terrain.height_field_raw.shape, p['size_range'], terrain.horizontal_scale)
         terrain.height_field_raw[region] = -int(p['depth_range'] / terrain.vertical_scale)
@@ -194,22 +232,29 @@ class BlindTerrain:
         self.env_width = self.width_per_env_pixels * self.horizontal_scale
         self.tot_rows = cfg.num_rows * self.length_per_env_pixels + 2 * self.border
         self.tot_cols = cfg.num_cols * self.width_per_env_pixels + 2 * self.border
-        columns = self._columns()
+        rows = self._rows()
+        columns = None if rows is not None else self._columns()
         self.difficulties = self._difficulties()
         self.tile_parameters = np.empty((cfg.num_rows, cfg.num_cols), dtype=object)
-        self.terrain_names = np.tile(np.array(columns, dtype=object), (cfg.num_rows, 1))
+        self.terrain_names = (np.array(rows, dtype=object)[:, None] if rows is not None
+                              else np.tile(np.array(columns, dtype=object), (cfg.num_rows, 1)))
         # Resolve and validate all parameters before allocating the map or invoking SDK.
         occurrences = {}
-        for col, name in enumerate(columns):
-            occurrence = occurrences.get(name, 0)
-            occurrences[name] = occurrence + 1
+        for col in range(cfg.num_cols):
             for row in range(cfg.num_rows):
+                name = self.terrain_names[row, col]
+                occurrence = occurrences.get(name, 0)
+                if rows is not None or row == 0:
+                    occurrences[name] = occurrence + 1
                 self.tile_parameters[row, col] = self._parameters(name, self.difficulties[row, col], occurrence)
         self.height_field_raw = np.zeros((self.tot_rows, self.tot_cols), dtype=np.int16)
         self.env_origins = np.zeros((cfg.num_rows, cfg.num_cols, 3), dtype=np.float32)
         stair_faces = []
-        for col, name in enumerate(columns):
+        for col in range(cfg.num_cols):
+            previous_ramp_edge = None
+            previous_row_edge = None
             for row in range(cfg.num_rows):
+                name = self.terrain_names[row, col]
                 p = self.tile_parameters[row, col]
                 transpose = p.get('axis', 'x') == 'y'
                 shape = (self.width_per_env_pixels, self.length_per_env_pixels) if transpose else (
@@ -229,11 +274,20 @@ class BlindTerrain:
                             _rough(terrain, p['roughness'])
                 raw = terrain.height_field_raw.T if transpose else terrain.height_field_raw
                 raw = raw.astype(np.int64) + int(p.get('height_offset', 0.) / self.vertical_scale)
-                if raw.min() < -32768 or raw.max() > 32767:
-                    raise ValueError(f'{name}: generated heights exceed int16; increase vertical_scale')
                 if getattr(cfg, 'spawn_platform', False):
                     region = _center_slice(raw.shape, p.get('platform_size', cfg.platform_size), self.horizontal_scale)
                     raw[region] = raw[raw.shape[0] // 2, raw.shape[1] // 2]
+                if rows is None and self._kind(name) == 'ramp' and p['axis'] == 'x':
+                    if previous_ramp_edge is not None:
+                        raw += previous_ramp_edge - raw[0, raw.shape[1] // 2]
+                    previous_ramp_edge = int(raw[-1, raw.shape[1] // 2])
+                if rows is not None:
+                    center = raw.shape[1] // 2
+                    if previous_row_edge is not None:
+                        raw += previous_row_edge - raw[0, center]
+                    previous_row_edge = int(raw[-1, center])
+                if raw.min() < -32768 or raw.max() > 32767:
+                    raise ValueError(f'{name}: generated heights exceed int16; increase vertical_scale')
                 if clean_stairs is not None:
                     clean_stairs = clean_stairs.T if transpose else clean_stairs
                     if getattr(cfg, 'spawn_platform', False):
@@ -274,6 +328,19 @@ class BlindTerrain:
 
     def _kind(self, name):
         return self.variants[name]['type'] if name in self.variants else name
+
+    def _rows(self):
+        explicit = getattr(self.cfg, 'terrain_rows', None)
+        if explicit is None:
+            return None
+        known = set(DEFAULT_PARAMS) | set(self.variants)
+        if (self.cfg.num_cols != 1 or self.cfg.selected is not None
+                or getattr(self.cfg, 'terrain_columns', None) is not None
+                or not isinstance(explicit, (list, tuple))
+                or len(explicit) != self.cfg.num_rows
+                or any(name not in known for name in explicit)):
+            raise ValueError('terrain_rows requires one column and num_rows known terrain names')
+        return list(explicit)
 
     def _columns(self):
         cfg = self.cfg
@@ -388,7 +455,40 @@ class BlindTerrain:
             length = self.env_width if p['axis'] == 'y' else self.env_length
             _number(p['width_range'], f'{name}.width_range', self.horizontal_scale,
                     (length - p['platform_size']) / 2)
-            _number(p['spacing'], f'{name}.spacing', p['width_range'] + self.horizontal_scale, length)
+            if kind == 'gap' and p['num_gaps'] is not None:
+                count = _integer(p['num_gaps'], f'{name}.num_gaps', 1)
+                if p['pattern'] not in ('uniform', 'centered'):
+                    raise ValueError(f'{name}.num_gaps requires a uniform or centered pattern')
+                axis_cells = self.width_per_env_pixels if p['axis'] == 'y' else self.length_per_env_pixels
+                if p['pattern'] == 'uniform':
+                    p['spacing'] = length / count
+                else:
+                    p['spacing'] = (round(p['width_range'] / self.horizontal_scale)
+                                    + round(p['platform_size'] / self.horizontal_scale)) * self.horizontal_scale
+            if p['pattern'] != 'centered':
+                _number(p['spacing'], f'{name}.spacing', p['width_range'] + self.horizontal_scale, length)
+            if kind == 'hurdle' and p['pattern'] not in ('mirrored', 'uniform', 'single'):
+                raise ValueError(f'{name}.pattern must be mirrored, uniform or single')
+            if kind == 'gap':
+                if p['pattern'] not in ('mirrored', 'uniform', 'centered', 'single'):
+                    raise ValueError(f'{name}.pattern must be mirrored, uniform, centered or single')
+                if p['pattern'] == 'centered' and p['num_gaps'] is None:
+                    raise ValueError(f'{name}.centered pattern requires num_gaps')
+                if p['single_position'] not in ('after_platform', 'center'):
+                    raise ValueError(f'{name}.single_position must be after_platform or center')
+            if kind == 'gap' and p['num_gaps'] is not None:
+                bands = obstacle_bands(axis_cells, self.horizontal_scale, p, kind)
+                if len(bands) != count:
+                    raise ValueError(f'{name}.num_gaps cannot fit inside the tile')
+                sample = _center_slice((axis_cells, 1), getattr(self.cfg, 'origin_sample_size', 2.),
+                                       self.horizontal_scale)[0]
+                if any(start < sample.stop and end > sample.start for start, end in bands):
+                    raise ValueError(f'{name}.num_gaps leaves no safe centre landing segment')
+            elif p['pattern'] == 'uniform':
+                axis_cells = self.width_per_env_pixels if p['axis'] == 'y' else self.length_per_env_pixels
+                spacing_cells = round(p['spacing'] / self.horizontal_scale)
+                if axis_cells % spacing_cells:
+                    raise ValueError(f'{name}.spacing must divide the travel-axis tile length in cells')
         if kind == 'pit':
             _number(p['size_range'], f'{name}.size_range', self.horizontal_scale,
                     min(self.env_length, self.env_width) - 2 * self.horizontal_scale)

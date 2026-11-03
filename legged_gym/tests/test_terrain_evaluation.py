@@ -69,6 +69,7 @@ class EvaluationTests(unittest.TestCase):
         self.assertEqual(metrics.failed.tolist(), [False, False, True, False])
         torch.testing.assert_close(metrics.duration, torch.tensor([.02, .02, .02, .04]))
         self.assertEqual(metrics.max_forward.tolist(), [3.5, 3.5, 1., 3.5])
+        torch.testing.assert_close(metrics.final_lateral, torch.tensor([0., 2., 0., .1]))
 
 
 if __name__ == '__main__':

@@ -35,6 +35,40 @@ def _resolve_class(name, classes, class_kind):
         ) from None
 
 
+def aggregate_episode_metrics(ep_infos, episode_counts, device):
+    """Combine optional per-terrain metrics using their own episode counts."""
+    counts = torch.as_tensor(episode_counts, device=device, dtype=torch.float)
+    metrics = {}
+    keys = dict.fromkeys(key for info in ep_infos for key in info)
+    suffixes = ('_start_level', '_promoted_rate', '_demoted_rate', '_failure_rate')
+    for key in keys:
+        if key.endswith('_completed_count'):
+            metrics[key] = sum(
+                torch.as_tensor(info.get(key, 0.), device=device).float().mean()
+                for info in ep_infos)
+            continue
+        count_key = None
+        if key.startswith('terrain_'):
+            for suffix in suffixes:
+                if key.endswith(suffix):
+                    candidate = key[:-len(suffix)] + '_completed_count'
+                    if any(candidate in info for info in ep_infos):
+                        count_key = candidate
+                    break
+        numerator = torch.zeros((), device=device)
+        denominator = torch.zeros((), device=device)
+        for index, info in enumerate(ep_infos):
+            if key not in info:
+                continue
+            weight = (torch.as_tensor(info[count_key], device=device).float()
+                      if count_key is not None else counts[index])
+            numerator += torch.as_tensor(info[key], device=device).float().mean() * weight
+            denominator += weight
+        if denominator > 0:
+            metrics[key] = numerator / denominator
+    return metrics
+
+
 class MultiInteroceptivePolicyRunner(OnPolicyRunner):
     def __init__(self, env, train_cfg, log_dir=None, device='cpu'):
         self.cfg=train_cfg["runner"]
@@ -60,13 +94,31 @@ class MultiInteroceptivePolicyRunner(OnPolicyRunner):
             _ALGORITHM_CLASSES,
             "algorithm class",
         )
+        primitive_policy_cfg = dict(self.policy_cfg)
+        primitive_policy_cfg['primitive_uniform_mix'] = self.cfg.get('primitive_uniform_mix', 0.)
+        primitive_policy_cfg['primitive_temperature'] = self.cfg.get('primitive_temperature', 1.)
+        command_start = self.cfg.get('primitive_command_obs_start')
+        if command_start is not None:
+            expected = (self.env.num_obs - self.env._scan_output_dim
+                        - self.env.cfg.env.num_controller_observations - 3)
+            if command_start != expected:
+                raise ValueError('primitive_command_obs_start does not match environment observations')
+            primitive_policy_cfg['command_obs_start'] = command_start
         self.primitive_selection_actor_critic: ActorCriticDiscrete = primitive_actor_critic_class( self.env.num_obs,
                                             num_critic_obs,
                                             self.env.num_primitives,
                                             self.env.num_primitives,
-                                            **self.policy_cfg).to(self.device)
+                                            **primitive_policy_cfg).to(self.device)
         
-        self.primitive_selection_alg: PPOevent_discrete = primitive_alg_class(self.primitive_selection_actor_critic, device=self.device, **self.alg_cfg)
+        primitive_alg_cfg = dict(self.alg_cfg)
+        primitive_alg_cfg['entropy_coef'] = self.cfg.get(
+            'primitive_entropy_coef', self.alg_cfg['entropy_coef'])
+        primitive_alg_cfg['learning_rate'] = self.cfg.get(
+            'primitive_learning_rate', self.alg_cfg['learning_rate'])
+        primitive_alg_cfg['context_supervision_coef'] = self.cfg.get(
+            'primitive_context_supervision_coef', 0.)
+        self.primitive_selection_alg: PPOevent_discrete = primitive_alg_class(
+            self.primitive_selection_actor_critic, device=self.device, **primitive_alg_cfg)
 
         self.primitive_selection_reservoir_states = None
         if getattr(self.primitive_selection_alg.actor_critic, "is_reservoir", False):
@@ -139,7 +191,6 @@ class MultiInteroceptivePolicyRunner(OnPolicyRunner):
         self.tot_time = 0
         self.current_learning_iteration = 0
 
-        self.num = 0
         self.current_step = 0
         self.primitive_selection_update_cycle = torch.ones(self.env.num_envs, dtype=torch.long, device=self.device) * self.env.cfg.control.primitive_selection_update_cycle
         self.modulation_param_update_cycle = torch.ones(self.env.num_envs, dtype=torch.long, device=self.device) * self.env.cfg.control.modulation_param_update_cycle
@@ -164,14 +215,48 @@ class MultiInteroceptivePolicyRunner(OnPolicyRunner):
 
     @torch.no_grad
     def inference_rollout(self, obs, primitive_selection_actor, modulation_parameter_actor):
+        gate = getattr(self, 'inference_forward_hold', None)
+        if gate is not None and hasattr(gate, 'observe'):
+            gate.observe(self.env.episode_length_buf, self.env.base_ang_vel)
+        if gate is not None and hasattr(gate, 'observe_tracking'):
+            gate.observe_tracking(self.env.episode_length_buf, self.env.commands,
+                                  self.env.base_lin_vel, self.env.base_ang_vel)
+        self.last_inference_decisions = {}
+
+        def selected_candidates(actor, candidates, period):
+            reasons = {}
+            selected = candidates
+            if gate is not None:
+                scan = getattr(self.env, 'scan_cache', None)
+                if scan is None:
+                    raise ValueError('inference forward/hold requires a cached terrain scan')
+                shape = (self.env.num_envs, len(scan.x), len(scan.y))
+                selected, reasons = gate.select(
+                    actor, candidates,
+                    episode_steps=self.env.episode_length_buf,
+                    commands=self.env.commands,
+                    lin_vel=self.env.base_lin_vel,
+                    ang_vel=self.env.base_ang_vel,
+                    gravity=self.env.projected_gravity,
+                    low=self.env._dense_lower_heights.reshape(shape),
+                    high=self.env._dense_upper_heights.reshape(shape),
+                    known=self.env.scan_known_mask.reshape(shape),
+                    scan_age_steps=self.env.scan_age_steps,
+                    scan_period_steps=self.env.cfg.terrain.scan_period_steps,
+                    dt=self.env.dt,
+                    period_steps=period,
+                )
+            self.last_inference_decisions[actor] = dict(
+                candidates=candidates, forward=selected, reasons=reasons)
+            return selected
+
         next_update_env_ids = self.get_update_env_ids(
             self.env.episode_length_buf,
             self.primitive_selection_update_cycle,
         )
-        update_env_ids = next_update_env_ids
-        # update_env_ids = next_update_env_ids[
-        #     self.env.behavior_quality[next_update_env_ids] < self.env.cfg.control.update_quality_threshold
-        # ]
+        update_env_ids = selected_candidates(
+            'gait', next_update_env_ids,
+            self.env.cfg.control.primitive_selection_update_cycle if gate is not None else 0)
         if update_env_ids.numel() == 0:
             primitive_selections = self.primitive_selections[update_env_ids]
         elif getattr(self, "primitive_selection_reservoir_states", None) is not None:
@@ -188,10 +273,9 @@ class MultiInteroceptivePolicyRunner(OnPolicyRunner):
             self.env.episode_length_buf,
             self.modulation_param_update_cycle,
         )
-        update_env_ids = next_update_env_ids
-        # update_env_ids = next_update_env_ids[
-        #     self.env.behavior_quality[next_update_env_ids] < self.env.cfg.control.update_quality_threshold
-        # ]
+        update_env_ids = selected_candidates(
+            'modulation', next_update_env_ids,
+            self.env.cfg.control.modulation_param_update_cycle if gate is not None else 0)
         if update_env_ids.numel() == 0:
             modulation_params = self.modulation_params[update_env_ids]
         elif getattr(self, "modulation_param_reservoir_states", None) is not None:
@@ -205,18 +289,6 @@ class MultiInteroceptivePolicyRunner(OnPolicyRunner):
 
         self.actions[update_env_ids, 1:] = self.modulation_params[update_env_ids]
 
-
-        # self.last_actions[update_env_ids] = self.actions[update_env_ids]
-        # self.actions[update_env_ids, 0] = self.primitive_selections[update_env_ids].float()
-        # self.actions[update_env_ids, 1:] = self.modulation_params[update_env_ids]
-        # self.env.primitive_diff[update_env_ids] = torch.sum(torch.square(self.last_actions[update_env_ids, :1] - self.actions[update_env_ids, :1]), dim=1)
-        # self.env.param_actions_diff[update_env_ids] = torch.sum(torch.square(self.last_actions[update_env_ids, 1:] - self.actions[update_env_ids, 1:]), dim=1)
-
-        # self.env.update_idx_buffer.append([self.update_cycle.cpu().numpy()])
-
-        if update_env_ids.numel() > 0:
-            self.num += 1
-        print(self.num)
 
         obs, privileged_obs, rewards, dones, infos = self.env.step(self.actions)
 
@@ -235,6 +307,10 @@ class MultiInteroceptivePolicyRunner(OnPolicyRunner):
         next_update_env_ids = self.get_update_env_ids(
             self.env.episode_length_buf,
             self.primitive_selection_update_cycle)
+        context_targets = (self.env._primitive_context_targets()
+                           if getattr(self.primitive_selection_alg,
+                                      'context_supervision_coef', 0.) > 0.
+                           else None)
 
         step_ids = torch.full(
             (next_update_env_ids.shape[0],),
@@ -250,13 +326,15 @@ class MultiInteroceptivePolicyRunner(OnPolicyRunner):
                                                                             step_ids, 
                                                                             obs, 
                                                                             critic_obs, 
-                                                                            self.primitive_selection_reservoir_states)
+                                                                            self.primitive_selection_reservoir_states,
+                                                                            context_targets=context_targets)
             self.primitive_selection_reservoir_states[next_update_env_ids] = reservoir_states
         else:
             primitive_selections = self.primitive_selection_alg.act(next_update_env_ids, 
                                                           step_ids, 
                                                           obs[:, -1], 
-                                                          critic_obs)
+                                                          critic_obs,
+                                                          context_targets=context_targets)
         self.last_primitive_selections[next_update_env_ids] = self.primitive_selections[next_update_env_ids]
         self.primitive_selections[next_update_env_ids] = primitive_selections[:, 0]
 
@@ -475,30 +553,60 @@ class MultiInteroceptivePolicyRunner(OnPolicyRunner):
                         f"""Training done""")
         print(log_string)
 
+    def _record_collected_env_steps(self):
+        collected_steps = self.current_step - getattr(self, '_last_logged_step', 0)
+        if collected_steps < 0:
+            raise RuntimeError('current_step moved backwards between training logs')
+        self.tot_timesteps += collected_steps * self.env.num_envs
+        self._last_logged_step = self.current_step
+        return collected_steps
+
     def log(self, locs, width=40, pad=35):
-        self.tot_timesteps += self.num_steps_per_env * self.env.num_envs
+        collected_steps = self._record_collected_env_steps()
         self.tot_time += locs['collection_time'] + locs['learn_time']
         iteration_time = locs['collection_time'] + locs['learn_time']
 
         ep_string = f''
         if locs['ep_infos']:
-            episode_counts = torch.tensor(locs['ep_counts'], device=self.device)
-            for key in locs['ep_infos'][0]:
-                infotensor = torch.tensor([], device=self.device)
-                for ep_info in locs['ep_infos']:
-                    ep_value = torch.as_tensor(ep_info[key], device=self.device).float().mean().view(1)
-                    infotensor = torch.cat((infotensor, ep_value))
-                value = torch.sum(infotensor * episode_counts) / episode_counts.sum()
+            for key, value in aggregate_episode_metrics(
+                    locs['ep_infos'], locs['ep_counts'], self.device).items():
                 self.writer.add_scalar('Episode/' + key, value, locs['it'])
                 ep_string += f"""{f'Mean episode {key}:':>{pad}} {value:.4f}\n"""
         # mean_primitive_selection_entropy = self.primitive_selection_alg.mean_entropy
         mean_modulation_param_std = self.modulation_param_alg.actor_critic.std.mean()
-        fps = int(self.num_steps_per_env * self.env.num_envs / iteration_time)
+        fps = int(collected_steps * self.env.num_envs / iteration_time)
 
         self.writer.add_scalar('Loss/value_function', (locs['mean_modulation_param_value_loss']), locs['it'])
         self.writer.add_scalar('Loss/surrogate', (locs['mean_modulation_param_surrogate_loss']), locs['it'])
+        if 'mean_primitive_selection_value_loss' in locs:
+            self.writer.add_scalar('Loss/primitive_value_function',
+                                   locs['mean_primitive_selection_value_loss'], locs['it'])
+            self.writer.add_scalar('Loss/primitive_surrogate',
+                                   locs['mean_primitive_selection_surrogate_loss'], locs['it'])
+            self.writer.add_scalar('Loss/primitive_actor_grad_norm',
+                                   self.primitive_selection_alg.mean_actor_grad_norm, locs['it'])
+            self.writer.add_scalar('Loss/primitive_critic_grad_norm',
+                                   self.primitive_selection_alg.mean_critic_grad_norm, locs['it'])
+            self.writer.add_scalar('Loss/primitive_total_grad_norm',
+                                   self.primitive_selection_alg.mean_total_grad_norm, locs['it'])
+            self.writer.add_scalar('Loss/primitive_context_supervision',
+                                   self.primitive_selection_alg.mean_context_loss, locs['it'])
         self.writer.add_scalar('Loss/learning_rate', self.modulation_param_alg.learning_rate, locs['it'])
+        self.writer.add_scalar('Loss/primitive_learning_rate',
+                               self.primitive_selection_alg.learning_rate, locs['it'])
+        self.writer.add_scalar('Loss/modulation_learning_rate',
+                               self.modulation_param_alg.learning_rate, locs['it'])
         self.writer.add_scalar('Policy/mean_noise_std', mean_modulation_param_std.item(), locs['it'])
+        self.writer.add_scalar('Policy/max_noise_std',
+                               self.modulation_param_alg.actor_critic.std.max().item(), locs['it'])
+        continuous = self.env.actions[:, 1:1 + self.env.num_modulation_params]
+        self.writer.add_scalar('Policy/applied_action_near_limit_fraction',
+                               (continuous.abs() >= .95).float().mean().item(), locs['it'])
+        self.writer.add_scalar('Policy/raw_action_outside_fraction',
+                               (self.modulation_params.abs() >= 1.).float().mean().item(), locs['it'])
+        for gait in range(self.env.num_primitives):
+            self.writer.add_scalar(f'Policy/primitive_{gait}_fraction',
+                                   (self.primitive_selections == gait).float().mean().item(), locs['it'])
         # self.writer.add_scalar('Policy/entropy', mean_primitive_selection_entropy, locs['it'])
         self.writer.add_scalar('Perf/total_fps', fps, locs['it'])
         self.writer.add_scalar('Perf/collection time', locs['collection_time'], locs['it'])
@@ -561,10 +669,19 @@ class MultiInteroceptivePolicyRunner(OnPolicyRunner):
             map_location=self.device,
             weights_only=True,
         )
-        self.primitive_selection_actor_critic.load_state_dict(
-            loaded_dict['primitive_selection_model_state_dict'],
-            strict=True,
-        )
+        if self.cfg.get('reset_primitive_selection_on_resume', False):
+            print('Resetting primitive selection policy; loading archived low policy')
+        else:
+            incompatible = self.primitive_selection_actor_critic.load_state_dict(
+                loaded_dict['primitive_selection_model_state_dict'], strict=False)
+            expected_missing = ({'actor.command_readout_head.weight',
+                                 'actor.command_readout_head.bias'}
+                                if hasattr(self.primitive_selection_actor_critic.actor,
+                                           'command_readout_head') else set())
+            if (incompatible.unexpected_keys
+                    or set(incompatible.missing_keys) not in (set(), expected_missing)):
+                raise RuntimeError('primitive checkpoint has incompatible keys: '
+                                   f'{incompatible}')
         self.modulation_param_actor_critic.load_state_dict(
             loaded_dict['modulation_param_model_state_dict'],
             strict=True,

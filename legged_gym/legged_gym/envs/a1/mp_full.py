@@ -30,18 +30,32 @@ from isaacgym import gymtorch, gymapi, gymutil
 import torch
 
 from legged_gym.envs.base.base_task import BaseTask
-from legged_gym.utils.terrains.blind_terrain import BlindTerrain
+from legged_gym.utils.terrains.blind_terrain import BlindTerrain, obstacle_bands
 from legged_gym.utils.terrains.terrain_curriculum import TerrainCurriculum
+from legged_gym.utils.signed_scan import scan_bin_ids, signed_scan_observations
+from legged_gym.utils.temporal_scan import TemporalScanCache, scan_due
 from legged_gym.envs.base.legged_robot_config import LeggedRobotCfg
-from legged_gym.utils.dynamics.a1.equilibrium_dynamics import (
-    EquilibriumPrimitiveDynamics, AdaptiveEquilibriumDynamics, ModalEquilibriumDynamics, bounded_inverse_kinematics,
-)
-from legged_gym.utils.gait_model import GaitModel, env_cfg
+from legged_gym.utils.dynamics.a1.adaptive_equilibrium_dynamics import AdaptiveEquilibriumDynamics
+from legged_gym.utils.dynamics.a1.equilibrium_dynamics import bounded_inverse_kinematics
 
 from legged_gym.utils.math_ import quat_apply_yaw, wrap_to_pi
-from legged_gym.utils.helpers import class_to_dict, append_to_npy_file
+from legged_gym.utils.helpers import class_to_dict
 
-from legged_gym.utils import task_registry
+
+def sample_speed_bands(bands, count, device):
+    """Sample a configured mixture of uniform commanded-speed intervals."""
+    values = torch.as_tensor(bands, dtype=torch.float, device=device)
+    if (values.ndim != 2 or values.shape[1] != 3 or values.shape[0] == 0
+            or not torch.isfinite(values).all()
+            or (values[:, 0] < 0).any() or (values[:, 1] <= values[:, 0]).any()
+            or (values[:, 2] <= 0).any() or count < 0):
+        raise ValueError('speed bands must be [low, high, positive weight] rows')
+    if count == 0:
+        return torch.empty(0, device=device)
+    choices = torch.multinomial(values[:, 2], count, replacement=True)
+    selected = values[choices]
+    return selected[:, 0] + torch.rand(count, device=device) * (selected[:, 1] - selected[:, 0])
+
 
 class MotorPrimitives(BaseTask):
     def __init__(self, cfg: LeggedRobotCfg, sim_params, physics_engine, sim_device, headless):
@@ -63,7 +77,6 @@ class MotorPrimitives(BaseTask):
         self.cfg.control.varied_decimation = False
         self.sim_params = sim_params
         self.height_samples = None
-        self.debug_viz = False
         self.init_done = False
         self._parse_cfg(self.cfg)
         super().__init__(self.cfg, sim_params, physics_engine, sim_device, headless)
@@ -79,44 +92,48 @@ class MotorPrimitives(BaseTask):
         self._prepare_reward_function()
         self.init_done = True
 
-        self.folder_path = os.path.join(LEGGED_GYM_ROOT_DIR, 'legged_gym', 'metrics', 'EXP_MP')
-        self.count = 0
-        self._playback_buffers = {
-            'base_position': 'base_pos_buffer',
-            'base_lin_vel': 'base_lin_vel_buffer',
-            'base_ang_vel': 'base_ang_vel_buffer',
-            'contact_boolean': 'contact_boolean_buffer',
-            'ee_pos': 'ee_pos_buffer',
-            'power': 'power_buffer',
-            'dof_pos': 'dof_pos_buffer',
-            'command': 'command_buffer',
-            'update_idx': 'update_idx_buffer',
-            'mu': 'mu_history',
-            'omega': 'omega_history',
-            'amplitude': 'amplitude_history',
-            'phase': 'phase_history',
-            'x_history': 'x_history',
-            'z_history': 'z_history',
-        }
-        for attribute in self._playback_buffers.values():
-            setattr(self, attribute, [])
-        if self.cfg.env.play:
-            os.makedirs(self.folder_path, exist_ok=True)
-
     def _validate_action_config(self):
         """Fail before creating a simulator when an old run config is loaded."""
         cfg = self.cfg
-        controllers = {cls.ACTION_SPACE: cls for cls in
-                       (EquilibriumPrimitiveDynamics, AdaptiveEquilibriumDynamics, ModalEquilibriumDynamics)}
+        controllers = {AdaptiveEquilibriumDynamics.ACTION_SPACE: AdaptiveEquilibriumDynamics}
         
         controller = controllers.get(getattr(cfg.env, 'action_space', None))
         if controller is None:
             raise ValueError(
-                'MP_pro_terrain_a1 requires a supported equilibrium action_space (v1, v2 or modal v3). '
-                'Old joint-residual configs/checkpoints are incompatible; start a new training run.')
+                'MP_full_a1 requires the 19-action cpg_equilibrium_v3 action_space.')
         self._controller_class = controller
+        if (cfg.env.num_actions != controller.NUM_ACTIONS
+                or cfg.env.num_modulation_params != controller.NUM_ACTIONS - 1
+                or cfg.env.num_controller_observations != controller.NUM_OBSERVATIONS):
+            raise ValueError('Action or controller observation dimensions do not match the selected action_space')
+        gap_floor = getattr(cfg.terrain, 'curriculum_gap_min_level', 0)
+        if (cfg.terrain.curriculum and
+                (not isinstance(gap_floor, int) or not 0 <= gap_floor < cfg.terrain.num_rows)):
+            raise ValueError('curriculum_gap_min_level must be a valid terrain row')
         if not np.isfinite(cfg.control.action_scale) or cfg.control.action_scale <= 0:
             raise ValueError('control.action_scale must be a positive finite scalar')
+        scan_period = getattr(cfg.terrain, 'scan_period_steps', 1)
+        if type(scan_period) is not int or scan_period < 1:
+            raise ValueError('terrain.scan_period_steps must be a positive integer')
+        if scan_period > 1 and (not cfg.terrain.measure_heights
+                                or cfg.terrain.scan_mode != 'signed_dense'):
+            raise ValueError('periodic terrain scans require signed_dense height measurements')
+        cot_reference = getattr(cfg.rewards, 'pi_g_cot_reference', 1.)
+        if not np.isfinite(cot_reference) or cot_reference <= 0:
+            raise ValueError('rewards.pi_g_cot_reference must be positive and finite')
+        if (getattr(cfg.env, 'observe_lane_offset', False)
+                and any(abs(value) > 1e-8 for value in cfg.commands.ranges.lin_vel_y)):
+            raise ValueError('MP_full_a1 uses the zero lateral-command observation slot for lane offset')
+        if (getattr(cfg.env, 'observe_lane_offset', False)
+                and (not np.isfinite(cfg.env.lane_offset_observation_scale)
+                     or cfg.env.lane_offset_observation_scale <= 0)):
+            raise ValueError('lane_offset_observation_scale must be positive and finite')
+        lane_gain = getattr(cfg.commands, 'lane_heading_gain', 0.)
+        if not np.isfinite(lane_gain) or lane_gain < 0:
+            raise ValueError('lane_heading_gain must be nonnegative and finite')
+        heading_kp = getattr(cfg.commands, 'heading_kp', 0.5)
+        if not np.isfinite(heading_kp) or heading_kp <= 0:
+            raise ValueError('heading_kp must be positive and finite')
         eq = cfg.control.equilibrium
         if not np.isfinite(eq.joint_limit_margin) or eq.joint_limit_margin <= 0:
             raise ValueError('equilibrium.joint_limit_margin must be positive and finite')
@@ -124,13 +141,6 @@ class MotorPrimitives(BaseTask):
             raise ValueError('equilibrium.min_foot_depth must be positive and finite')
         if not np.isfinite(eq.min_sagittal_reach) or eq.min_sagittal_reach <= 0:
             raise ValueError('equilibrium.min_sagittal_reach must be positive and finite')
-
-    def _save_playback_metrics(self):
-        for name, attribute in self._playback_buffers.items():
-            samples = getattr(self, attribute)
-            append_to_npy_file(os.path.join(self.folder_path, f"{self.count}_{name}.npy"), np.array(samples))
-            samples.clear()
-        self.count += 1
 
     def step(self, actions):
         """ Apply actions, simulate, call self.post_physics_step()
@@ -170,16 +180,6 @@ class MotorPrimitives(BaseTask):
             self.base_ang_vel[:] = quat_rotate_inverse(self.base_quat, self.root_states[:, 10:13])
             self.projected_gravity[:] = quat_rotate_inverse(self.base_quat, self.gravity_vec)
 
-            if self.cfg.env.play:
-                self.base_pos_buffer.append(self.root_states[:, 0:3].cpu().numpy())
-                self.base_lin_vel_buffer.append(self.base_lin_vel[:, 0:3].cpu().numpy())
-                self.base_ang_vel_buffer.append(self.base_ang_vel[:, 0:3].cpu().numpy())
-                contact_booleans = self.contact_forces[:, self.feet_indices, 2] > 0.
-                self.contact_boolean_buffer.append(contact_booleans.cpu().numpy())
-                self.ee_pos_buffer.append((self.rigid_body_state.view(self.num_envs, self.num_bodies, -1)[:, self.feet_indices, 0:3]).cpu().numpy())
-                self.power_buffer.append(torch.sum(torch.abs(self.torques*self.dof_vel), dim=1).cpu().detach().numpy())
-                self.dof_pos_buffer.append(self.dof_pos.cpu().numpy())
-                self.command_buffer.append(self.commands.cpu().numpy())
             self.post_decimation_step(substep)
             self.render()
         self.post_physics_step()
@@ -201,7 +201,6 @@ class MotorPrimitives(BaseTask):
     def post_physics_step(self, env_ids_end=None):
         """ check terminations, compute observations and rewards
             calls self._post_physics_step_callback() for common computations
-            calls self._draw_debug_vis() if needed
         """
         self.gym.refresh_actor_root_state_tensor(self.sim)
         self.gym.refresh_net_contact_force_tensor(self.sim)
@@ -220,6 +219,9 @@ class MotorPrimitives(BaseTask):
         # compute observations, rewards, resets, ...
         self.episode_length_buf += 1
         self.check_termination()
+        if self.terrain_curriculum is not None:
+            self.terrain_curriculum.observe_position(
+                self.root_states[:, :2], ~self.terrain_failure_buf)
         self.compute_reward()
         env_ids = self.reset_buf.nonzero(as_tuple=False).flatten()
         self.reset_idx(env_ids, completed_episode=True)
@@ -229,9 +231,6 @@ class MotorPrimitives(BaseTask):
         self.last_root_vel[:] = self.root_states[:, 7:13]
         self.last_base_pos[:] = self.root_states[:, 0]
 
-        if self.viewer and self.enable_viewer_sync and self.debug_viz:
-            self._draw_debug_vis()
-
     def check_termination(self, env_ids=None):
         """ Check if environments need to be reset
         """
@@ -239,13 +238,47 @@ class MotorPrimitives(BaseTask):
         self.time_out_buf = self.episode_length_buf > self.max_episode_length # no terminal reward for time-outs
         if self.cfg.terrain.mesh_type in ('heightfield', 'trimesh'):
             ground = self._get_terrain_heights(self.root_states[:, :2])
-            half_size = self.root_states.new_tensor([self.terrain.env_length, self.terrain.env_width]) / 2
-            outside = ((self.root_states[:, :2] - self.env_origins[:, :2]).abs()
-                       > half_size - self.cfg.terrain.boundary_margin).any(dim=1)
+            map_size = self.root_states.new_tensor([
+                self.cfg.terrain.num_rows * self.terrain.env_length,
+                self.cfg.terrain.num_cols * self.terrain.env_width,
+            ])
+            xy = self.root_states[:, :2]
+            margin = self.cfg.terrain.boundary_margin
+            border = getattr(self.cfg.terrain, 'border_size', 0.)
+            outside = ((xy < -border + margin)
+                       | (xy > map_size + border - margin)).any(dim=1)
             self.time_out_buf |= outside
         else:
             ground = 0.
-        self.terrain_failure_buf = self.reset_buf | (self.root_states[:, 2] - ground < 0.15)
+        min_clearance = getattr(self.cfg.terrain, 'min_base_clearance', .15)
+        lane_exit = torch.zeros_like(self.reset_buf)
+        if self.cfg.terrain.mesh_type in ('heightfield', 'trimesh') and hasattr(self, '_hurdle_columns'):
+            if getattr(self.cfg.terrain, 'terrain_rows', None) is not None:
+                row = torch.div(self.root_states[:, 0], self.terrain.env_length,
+                                rounding_mode='floor').long().clamp(0, self.cfg.terrain.num_rows - 1)
+                names = self.terrain.terrain_names[:, 0]
+                kind_of = self.terrain._kind
+                hurdle = torch.as_tensor(
+                    [kind_of(name) == 'hurdle' for name in names], device=row.device)[row]
+                gap = torch.as_tensor(
+                    [kind_of(name) == 'gap' for name in names], device=row.device)[row]
+            else:
+                hurdle = self._hurdle_columns[self.terrain_types]
+                gap = (self._gap_columns[self.terrain_types] if hasattr(self, '_gap_columns')
+                       else torch.zeros_like(hurdle))
+            min_clearance = torch.where(
+                hurdle,
+                self.root_states.new_tensor(getattr(self.cfg.terrain, 'hurdle_min_base_clearance', .15)),
+                self.root_states.new_tensor(min_clearance))
+            lane_half_width = self.terrain.env_width / 2 - self.cfg.terrain.boundary_margin
+            hazard_width = getattr(self.cfg.terrain, 'hazard_lane_half_width', lane_half_width)
+            lane_half_width = torch.where(gap | hurdle, self.root_states.new_tensor(hazard_width),
+                                          self.root_states.new_tensor(lane_half_width))
+            lane_exit = (self.root_states[:, 1] - self.env_origins[:, 1]).abs() > lane_half_width
+        self.terrain_lane_exit_buf = lane_exit
+        self.terrain_low_clearance_buf = self.root_states[:, 2] - ground < min_clearance
+        self.terrain_failure_buf = (self.reset_buf | self.terrain_lane_exit_buf
+                                    | self.terrain_low_clearance_buf)
         # A fall at the boundary/time limit remains a failure, not a bootstrapped timeout.
         self.time_out_buf &= ~self.terrain_failure_buf
         self.reset_buf = self.terrain_failure_buf | self.time_out_buf
@@ -272,16 +305,25 @@ class MotorPrimitives(BaseTask):
         if len(env_ids) == 0:
             return
 
+        terrain_episode_info = {}
         if self.terrain_curriculum is not None and completed_episode:
+            start_levels = self.terrain_levels[env_ids].clone()
             self.terrain_curriculum.update(
                 env_ids, self.root_states[env_ids, :2], self.terrain_failure_buf[env_ids],
                 self.episode_length_buf[env_ids])
+            self._clamp_hazard_curriculum_levels(env_ids)
+            terrain_episode_info = self._terrain_episode_metrics(env_ids, start_levels)
             self.env_origins[env_ids] = self.terrain_origins[
                 self.terrain_levels[env_ids], self.terrain_types[env_ids]]
 
         # reset robot states
         self._reset_dofs(env_ids)
         self._reset_root_states(env_ids)
+        if self.cfg.terrain.measure_heights:
+            # The first policy decision after reset must see the new terrain.
+            self._refresh_height_scan(env_ids)
+        if self.cfg.terrain.mesh_type in ('heightfield', 'trimesh'):
+            self._obstacle_cleared_count[env_ids] = self._passed_obstacle_count()[env_ids]
         if self.terrain_curriculum is not None:
             self.terrain_curriculum.reset(env_ids, self.root_states[env_ids, :2])
 
@@ -305,11 +347,7 @@ class MotorPrimitives(BaseTask):
 
         # fill extras
         self.extras["episode"] = {}
-        if self.terrain_curriculum is not None:
-            self.extras["episode"]["terrain_level"] = self.terrain_levels.float().mean()
-            self.extras["episode"]["terrain_difficulty"] = self.terrain_difficulties[
-                self.terrain_levels, self.terrain_types].mean()
-            self.extras["episode"]["terrain_curriculum_enabled"] = float(self.terrain_curriculum.enabled)
+        self.extras["episode"].update(terrain_episode_info)
         for key in self.episode_sums.keys():
             self.extras["episode"]['rew_' + key] = torch.mean(self.episode_sums[key][env_ids]) / self.max_episode_length_s
             self.episode_sums[key][env_ids] = 0.
@@ -317,8 +355,65 @@ class MotorPrimitives(BaseTask):
         if self.cfg.env.send_timeouts:
             self.extras["time_outs"] = self.time_out_buf
 
-        # if self.cfg.env.play and self.time_out_buf[0] == 1:
-        #     self._save_playback_metrics()
+    def _terrain_episode_metrics(self, env_ids, start_levels):
+        end_rows = torch.div(self.root_states[env_ids, 0], self.terrain.env_length,
+                             rounding_mode='floor').clamp(0, self.cfg.terrain.num_rows - 1)
+        level_change = self.terrain_levels[env_ids] - start_levels
+        failed = self.terrain_failure_buf[env_ids]
+        promoted_after_failure = (level_change > 0) & failed
+        result = {
+            'terrain_start_level': start_levels.float().mean(),
+            'terrain_start_difficulty': self.terrain_difficulties[
+                start_levels, self.terrain_types[env_ids]].mean(),
+            'terrain_end_row': end_rows.float().mean(),
+            'terrain_promoted_rate': (level_change > 0).float().mean(),
+            'terrain_demoted_rate': (level_change < 0).float().mean(),
+            'terrain_failure_rate': failed.float().mean(),
+            'terrain_promoted_after_failure_rate': promoted_after_failure.float().mean(),
+        }
+        if hasattr(self.terrain, 'terrain_names'):
+            names = self.terrain.terrain_names[0]
+            for name in dict.fromkeys(names):
+                columns = torch.as_tensor(names == name, device=self.device)
+                selected = columns[self.terrain_types[env_ids]]
+                label = f'terrain_{name}_'
+                result[label + 'completed_count'] = selected.sum().float()
+                if selected.any():
+                    result[label + 'start_level'] = start_levels[selected].float().mean()
+                    result[label + 'promoted_rate'] = (level_change[selected] > 0).float().mean()
+                    result[label + 'demoted_rate'] = (level_change[selected] < 0).float().mean()
+                    result[label + 'failure_rate'] = failed[selected].float().mean()
+                    result[label + 'promoted_after_failure_rate'] = (
+                        promoted_after_failure[selected].float().mean())
+        return result
+
+    def _clamp_hazard_curriculum_levels(self, env_ids):
+        if (not self.cfg.terrain.curriculum
+                or getattr(getattr(self.cfg, 'env', None), 'play', False)
+                or len(env_ids) == 0):
+            return
+        for name in ('gap', 'hurdle'):
+            columns = getattr(self, '_' + name + '_columns', None)
+            if columns is None:
+                continue
+            hazard_ids = env_ids[columns[self.terrain_types[env_ids]]]
+            if hazard_ids.numel() == 0:
+                continue
+            selected_columns = columns.nonzero(as_tuple=False).flatten()
+            minimum = int(getattr(self.cfg.terrain, 'curriculum_' + name + '_min_level', 0))
+            floors = torch.full_like(self.terrain_levels[hazard_ids], minimum)
+            for band in ('medium', 'hard'):
+                count = int(getattr(self.cfg.terrain,
+                                    'curriculum_' + name + '_' + band + '_columns', 0))
+                if count <= 0:
+                    continue
+                selected = selected_columns[-count:]
+                matches = (self.terrain_types[hazard_ids, None] == selected[None, :]).any(dim=1)
+                floor = int(getattr(self.cfg.terrain,
+                                    'curriculum_' + name + '_' + band + '_min_level', minimum))
+                floors[matches] = torch.maximum(floors[matches],
+                                                 torch.full_like(floors[matches], floor))
+            self.terrain_levels[hazard_ids] = torch.maximum(self.terrain_levels[hazard_ids], floors)
 
     def compute_reward(self, env_ids=None):
         """ Compute rewards
@@ -330,14 +425,20 @@ class MotorPrimitives(BaseTask):
         self.modulation_param_rew_buf.zero_()
         self.ee_equilibrium_rew_buf.zero_()
         rewards = {}
+        raw_rewards = {}
         for name, function in zip(self.reward_names, self.reward_functions):
-            reward = function() * self.reward_scales[name]
+            raw_rewards[name] = function()
+            reward = raw_rewards[name] * self.reward_scales[name]
             rewards[name] = reward
             self.rew_buf += reward
             self.episode_sums[name] += reward
 
         for name, scale in self.primitive_selection_reward_scales.items():
-            reward = getattr(self, "_reward_" + name)() * scale
+            raw_reward = raw_rewards.get(name)
+            if raw_reward is None:
+                raw_reward = getattr(self, "_reward_" + name)()
+                raw_rewards[name] = raw_reward
+            reward = raw_reward * scale
             self.primitive_selection_rew_buf += reward
             key = 'selection_' + name if name in self.reward_scales else name
             self.episode_sums[key] += reward
@@ -367,7 +468,6 @@ class MotorPrimitives(BaseTask):
         if self.cfg.env.play:
             self.behavior_quality = track_quality - torch.sum(torch.square(self.projected_gravity[:, :2]), dim=-1)
             self.behavior_quality += 0.2
-            # print(self.behavior_quality)
 
 
         if self.cfg.rewards.only_positive_rewards:
@@ -378,48 +478,72 @@ class MotorPrimitives(BaseTask):
         if "termination" in self.reward_scales:
             rew = self._reward_termination() * self.reward_scales["termination"]
             self.rew_buf += rew
+            if "termination" in self.cfg.rewards.primitive_selection_rewards:
+                self.primitive_selection_rew_buf += rew
+            if "termination" in self.cfg.rewards.modulation_param_rewards:
+                self.modulation_param_rew_buf += rew
             self.episode_sums["termination"] += rew
 
         return [self.rew_buf, self.primitive_selection_rew_buf, self.modulation_param_rew_buf, self.ee_equilibrium_rew_buf]
+
+    def _policy_command_observations(self):
+        """Expose lane error in the unused lateral-command observation slot."""
+        observed = self.commands[:, :3] * self.commands_scale
+        if not getattr(self.cfg.env, 'observe_lane_offset', False):
+            return observed
+        lane_width = float(self.cfg.env.lane_offset_observation_scale)
+        observed[:, 1] = ((self.root_states[:, 1] - self.env_origins[:, 1])
+                          / lane_width).clamp(-1., 1.)
+        return observed
 
     def compute_observations(self):
         """ Computes observations
         """
         controller_obs = self.ID.controller_observations()
+        policy_commands = self._policy_command_observations()
+        scan_dim = getattr(self, '_scan_output_dim', 60)
         self.obs_buf[:, :-1] = self.obs_buf[:, 1:].clone()
-        self.obs_buf[:, -1,:-60] = torch.cat((
+        self.obs_buf[:, -1,:-scan_dim] = torch.cat((
+                                # self.base_lin_vel * self.obs_scales.lin_vel,
                                 self.base_ang_vel * self.obs_scales.ang_vel,
                                 self.projected_gravity,
                                 (self.dof_pos - self.default_dof_pos) * self.obs_scales.dof_pos,
                                 self.dof_vel * self.obs_scales.dof_vel,
                                 self.contact_forces[:, self.feet_indices, 2] > 1.,
-                                self.actions[:,:-1],
-                                self.commands[:, :3] * self.commands_scale,
-                                # controller_obs,
+                                self.actions[:, :1 + self.num_modulation_params],
+                                policy_commands,
+                                controller_obs,
                                 ),dim=-1)
         if self.cfg.terrain.measure_heights:
-            heights = torch.clip(self.root_states[:, 2].unsqueeze(1) - 0.5 - self.measured_heights, -1, 1.) * self.obs_scales.height_measurements
-            self.obs_buf[:, -1,-60:] = heights
+            if getattr(self.cfg.terrain, 'scan_mode', 'legacy') == 'signed_dense':
+                heights = signed_scan_observations(
+                    self._dense_lower_heights, self._dense_upper_heights,
+                    self.root_states[:, 2:3] - 0.5, self._scan_bin_ids,
+                    self.cfg.terrain.scan_bins_x, self.cfg.terrain.scan_bins_y,
+                    self.obs_scales.height_measurements)
+            else:
+                heights = torch.clip(self.root_states[:, 2].unsqueeze(1) - 0.5 - self.measured_heights, -1, 1.) * self.obs_scales.height_measurements
+            self.obs_buf[:, -1,-scan_dim:] = heights
 
         # add noise if needed
         if self.add_noise:
             self.obs_buf[:, -1] += (2 * torch.rand_like(self.obs_buf[:, -1]) - 1) * self.noise_scale_vec
 
         if self.privileged_obs_buf is not None:
-            self.privileged_obs_buf[:,:-60] = torch.cat((  self.base_lin_vel * self.obs_scales.lin_vel,
+            self.privileged_obs_buf[:,:-scan_dim] = torch.cat((  self.base_lin_vel * self.obs_scales.lin_vel,
                                     self.base_ang_vel * self.obs_scales.ang_vel,
                                     self.projected_gravity,
                                     self.root_states[:, 3:7],
                                     (self.dof_pos - self.default_dof_pos) * self.obs_scales.dof_pos,
                                     self.dof_vel * self.obs_scales.dof_vel,
                                     self.contact_forces[:, self.feet_indices, 2] > 1.,
-                                    self.actions[:,:-1],
-                                    self.commands[:, :3] * self.commands_scale,
-                                    # controller_obs,
+                                    self.actions[:, :1 + self.num_modulation_params],
+                                    policy_commands,
+                                    controller_obs,
                                     ),dim=-1)
 
             if self.cfg.terrain.measure_heights:
-                self.privileged_obs_buf[:,-60:] = heights
+                self.privileged_obs_buf[:,-scan_dim:] = heights
 
         return
 
@@ -519,20 +643,36 @@ class MotorPrimitives(BaseTask):
             # props[0].mass += mass[env_id % 11]
         return props
 
+    def _lane_heading_target(self):
+        lane_error = self.root_states[:, 1] - self.env_origins[:, 1]
+        return self.commands[:, 3] - torch.atan(
+            float(getattr(self.cfg.commands, 'lane_heading_gain', 0.)) * lane_error)
+
+    def _heading_rate_target(self, heading):
+        return torch.clip(
+            float(getattr(self.cfg.commands, 'heading_kp', 0.5))
+            * wrap_to_pi(self._lane_heading_target() - heading), -1., 1.)
+
     def _post_physics_step_callback(self):
         """ Callback called before computing terminations, rewards, and observations
             Default behaviour: Compute ang vel command based on target and heading, compute measured terrain heights and randomly push robots
         """
         #
         env_ids = (self.episode_length_buf % int(self.cfg.commands.resampling_time / self.dt) == 0).nonzero(as_tuple=False).flatten()
+        if env_ids.numel() and hasattr(self, '_gap_columns'):
+            hazard = (self._gap_columns | self._hurdle_columns)[self.terrain_types[env_ids]]
+            obstacle_period = int(getattr(self.cfg.commands, 'obstacle_resampling_time',
+                                          self.cfg.commands.resampling_time) / self.dt)
+            due = self.episode_length_buf[env_ids] % obstacle_period == 0
+            env_ids = env_ids[~hazard | due]
         self._resample_commands(env_ids)
         if self.cfg.commands.heading_command:
             forward = quat_apply(self.base_quat, self.forward_vec)
             heading = torch.atan2(forward[:, 1], forward[:, 0])
-            self.commands[:, 2] = torch.clip(0.5*wrap_to_pi(self.commands[:, 3] - heading), -1., 1.)
+            self.commands[:, 2] = self._heading_rate_target(heading)
 
         if self.cfg.terrain.measure_heights:
-            self.measured_heights = self._get_heights()
+            self._refresh_height_scan()
         if self.cfg.domain_rand.push_robots and (self.common_step_counter % self.cfg.domain_rand.push_interval == 0):
             self._push_robots()
 
@@ -544,12 +684,29 @@ class MotorPrimitives(BaseTask):
 
         if self.cfg.env.play:
             if self.episode_length_buf[0] < 245:
-                self.commands[:, 0] = 1.5
+                self.commands[:, 0] = 1.
             else:
-                self.commands[:, 0] = 1.5
+                self.commands[:, 0] = 1.
             self.commands[env_ids, 1] = -0.
         else:
-            self.commands[env_ids, 0] = torch_rand_float(self.command_ranges["lin_vel_x"][0], self.command_ranges["lin_vel_x"][1], (len(env_ids), 1), device=self.device).squeeze(1)
+            ordinary_bands = getattr(self.cfg.commands, 'lin_vel_x_bands', None)
+            if ordinary_bands:
+                self.commands[env_ids, 0] = sample_speed_bands(ordinary_bands, len(env_ids), self.device)
+            else:
+                self.commands[env_ids, 0] = torch_rand_float(self.command_ranges["lin_vel_x"][0], self.command_ranges["lin_vel_x"][1], (len(env_ids), 1), device=self.device).squeeze(1)
+            if env_ids.numel() and hasattr(self, '_gap_columns'):
+                hazard_ids = env_ids[(self._gap_columns | self._hurdle_columns)[self.terrain_types[env_ids]]]
+                if hazard_ids.numel():
+                    hazard_bands = getattr(self.cfg.commands, 'obstacle_lin_vel_x_bands', None)
+                    if hazard_bands:
+                        self.commands[hazard_ids, 0] = sample_speed_bands(
+                            hazard_bands, len(hazard_ids), self.device)
+                    else:
+                        obstacle_range = getattr(self.cfg.commands, 'obstacle_lin_vel_x',
+                                                 self.command_ranges["lin_vel_x"])
+                        self.commands[hazard_ids, 0] = torch_rand_float(
+                            obstacle_range[0], obstacle_range[1], (len(hazard_ids), 1),
+                            device=self.device).squeeze(1)
             self.commands[env_ids, 1] = torch_rand_float(self.command_ranges["lin_vel_y"][0], self.command_ranges["lin_vel_y"][1], (len(env_ids), 1), device=self.device).squeeze(1)
 
         if self.cfg.commands.heading_command:
@@ -577,14 +734,6 @@ class MotorPrimitives(BaseTask):
         actions_scaled[:, 1:] *= self.cfg.control.action_scale
 
         xs,ys,zs = self.ID.intrinsic_dynamics(actions_scaled, self.commands[:, :3], contact_forces=torch.norm(self.contact_forces[:, self.feet_indices, :], dim=-1))
-        if self.cfg.env.play:
-            self.phase_history.append(self.ID.X[:, 2, :].detach().cpu().numpy().copy())
-            self.amplitude_history.append((torch.clip(self.ID.X[:, 0, :], self.ID.mu_low, self.ID.mu_up)).detach().cpu().numpy())
-            self.mu_history.append(np.sqrt(self.ID._mu_x.detach().cpu().numpy()))
-            self.omega_history.append(self.ID.X_dot[:, 2, :].detach().cpu().numpy().copy())
-            self.x_history.append(xs.detach().cpu().numpy())
-            self.z_history.append(zs.detach().cpu().numpy())
-
         # All RL modulation happens inside the dynamical system before IK.
         # Targets include the signed anatomical hip offset, FL/FR/RL/RR.
         hip_y = ys.new_tensor([1., -1., 1., -1.]) * self.cfg.asset.hip_link_length_a1
@@ -691,6 +840,32 @@ class MotorPrimitives(BaseTask):
         self.contact_forces = gymtorch.wrap_tensor(net_contact_forces).view(self.num_envs, -1, 3) # shape: num_envs, num_bodies, xyz axis
 
         self.obs_buf = torch.zeros(self.num_envs, self.num_obs_history, self.num_obs, device=self.device, dtype=torch.float)
+        self._obstacle_cleared_count = torch.zeros(
+            self.num_envs, device=self.device, dtype=torch.long)
+        self._hurdle_columns = torch.zeros(self.cfg.terrain.num_cols, device=self.device, dtype=torch.bool)
+        column_targets = [[] for _ in range(self.cfg.terrain.num_cols)]
+        if self.cfg.terrain.mesh_type in ('heightfield', 'trimesh'):
+            names = self.terrain.terrain_names
+            self._hurdle_columns[:] = torch.as_tensor(
+                [self.terrain._kind(name) == 'hurdle' for name in names[0]], device=self.device)
+            for row in range(self.cfg.terrain.num_rows):
+                for col in range(self.cfg.terrain.num_cols):
+                    kind = self.terrain._kind(names[row, col])
+                    if kind in ('gap', 'hurdle'):
+                        params = self.terrain.tile_parameters[row, col]
+                        if params['axis'] != 'x':
+                            continue
+                        scale = self.terrain.horizontal_scale
+                        length = self.terrain.length_per_env_pixels
+                        for _, far_edge in obstacle_bands(length, scale, params, kind):
+                            column_targets[col].append((row * length + far_edge) * scale + .35)
+        max_targets = max(1, *(len(targets) for targets in column_targets))
+        self._obstacle_clear_targets = torch.full(
+            (self.cfg.terrain.num_cols, max_targets), float('inf'), device=self.device)
+        for col, targets in enumerate(column_targets):
+            if targets:
+                self._obstacle_clear_targets[col, :len(targets)] = torch.tensor(
+                    sorted(targets), device=self.device)
 
         # initialize some data used later on
         self.common_step_counter = 0
@@ -716,17 +891,33 @@ class MotorPrimitives(BaseTask):
 
         self.rigid_body_state = gymtorch.wrap_tensor(rigid_body_state)[:self.num_envs * self.num_bodies, :]
 
-        controller_kwargs = {}
-        if issubclass(self._controller_class, AdaptiveEquilibriumDynamics):
-            controller_kwargs['timing_cfg'] = self.cfg.control.timing
         self.ID = self._controller_class(
             equilibrium_cfg=self.cfg.control.equilibrium,
+            timing_cfg=self.cfg.control.timing,
             time_step=self.sim_params.dt, num_envs=self.num_envs, device=self.device,
             nominal_clearance=self.cfg.asset.ground_clearance,
-            max_clearance=self.cfg.asset.max_ground_clearance, **controller_kwargs)
+            max_clearance=self.cfg.asset.max_ground_clearance)
+        extension_gait = self.cfg.asset.stance_extension_gait_id
+        extension_limit = float(self.cfg.asset.max_stance_extension)
+        if (extension_gait is not None and
+                (not isinstance(extension_gait, int)
+                 or not 0 <= extension_gait < self.cfg.env.num_primitives)):
+            raise ValueError('asset.stance_extension_gait_id must be a valid primitive index or None')
+        if not np.isfinite(extension_limit) or not 0 <= extension_limit <= .05:
+            raise ValueError('asset.max_stance_extension must be in [0, 0.05] metres')
+        self.ID.stance_extension_gait_id = extension_gait
+        self.ID.max_stance_extension = extension_limit
         oscillator_type = self.cfg.control.oscillator_type
         self.ID.oscillator = getattr(self.ID, oscillator_type)
         self.ID._MAX_STEP_LEN = self.cfg.asset.max_step_length
+        rear_forward_limit = float(getattr(self.cfg.asset, 'rear_forward_stroke_limit', .07))
+        if not np.isfinite(rear_forward_limit) or not 0 < rear_forward_limit <= .2:
+            raise ValueError('asset.rear_forward_stroke_limit must be in (0, 0.2] metres')
+        self.ID.rear_forward_stroke_limit = rear_forward_limit
+        step_scales = getattr(self.cfg.asset, 'gait_step_length_scales', [1.] * self.cfg.env.num_primitives)
+        if len(step_scales) != self.cfg.env.num_primitives or any(scale <= 0 for scale in step_scales):
+            raise ValueError('asset.gait_step_length_scales must have one positive value per primitive')
+        self.ID._gait_step_scales = torch.tensor(step_scales, device=self.device)
         self.ID._GROUND_CLEARANCE = self.cfg.asset.ground_clearance
         self.ID._GROUND_PENETRATION = self.cfg.asset.ground_penetration
 
@@ -761,7 +952,19 @@ class MotorPrimitives(BaseTask):
 
         if self.cfg.terrain.measure_heights:
             self.height_points = self._init_height_points()
-        self.measured_heights = 0
+        self.measured_heights = torch.zeros(
+            self.num_envs, getattr(self, 'num_height_points', 0), device=self.device)
+        self.scan_age_steps = torch.zeros(self.num_envs, device=self.device, dtype=torch.long)
+        self.scan_unknown_fraction = torch.zeros(self.num_envs, device=self.device)
+        self.scan_known_mask = torch.ones(
+            self.num_envs, self.num_height_points, device=self.device, dtype=torch.bool)
+        self.scan_cache = None
+        if (self.cfg.terrain.measure_heights
+                and getattr(self.cfg.terrain, 'scan_period_steps', 1) > 1):
+            self.scan_cache = TemporalScanCache(
+                torch.as_tensor(self.cfg.terrain.measured_points_x, device=self.device),
+                torch.as_tensor(self.cfg.terrain.measured_points_y, device=self.device),
+                self.num_envs, self.device)
         self.behavior_quality = torch.zeros(self.num_envs,  dtype=torch.float, device=self.device, requires_grad=False)
 
         self.substep_torques = torch.zeros(self.num_envs, self.cfg.control.cycle * self.cfg.control.decimation, self.num_dof, dtype=torch.float, device=self.device, requires_grad=False)
@@ -874,25 +1077,14 @@ class MotorPrimitives(BaseTask):
         self.primitive_selection_reward_scales = {
             name: getattr(self.cfg.rewards.primitive_selection_scales, name) * self.dt
             for name in self.cfg.rewards.primitive_selection_rewards
-            if getattr(self.cfg.rewards.primitive_selection_scales, name) != 0
+            if name != "termination"
+            and getattr(self.cfg.rewards.primitive_selection_scales, name) != 0
         }
         for name in self.primitive_selection_reward_scales:
             getattr(self, "_reward_" + name)  # Fail early for an invalid configured term.
             key = 'selection_' + name if name in self.reward_scales else name
             self.episode_sums[key] = torch.zeros_like(self.rew_buf)
         self.episode_sums["pi_g"] = torch.zeros_like(self.rew_buf)
-
-    def import_gait_model(self, paths):
-        self.gait_models = []
-        _, train_cfg = task_registry.get_cfgs('MP_a1')
-        train_cfg_dict = class_to_dict(train_cfg)
-        cfg = env_cfg(num_envs=self.num_envs, num_obs=44, num_privileged_obs=None, num_actions=8)
-
-        for path in paths:
-            model = GaitModel(train_cfg_dict, cfg, None, self.device)
-            model.load(path,False)
-            policy = model.get_inference_policy(device=self.device)
-            self.gait_models.append(policy)
 
     def _create_ground_plane(self):
         """ Adds a ground plane to the simulation, sets friction and restitution based on the cfg.
@@ -1071,6 +1263,29 @@ class MotorPrimitives(BaseTask):
                 play=self.cfg.env.play)
             self.terrain_levels = self.terrain_curriculum.levels
             self.terrain_types = torch.div(torch.arange(self.num_envs, device=self.device), (self.num_envs/self.cfg.terrain.num_cols), rounding_mode='floor').to(torch.long)
+            kind_of = getattr(self.terrain, '_kind', lambda name: name)
+            self._gap_columns = torch.as_tensor(
+                [kind_of(name) == 'gap' for name in self.terrain.terrain_names[0]],
+                device=self.device)
+            self._gap_single_columns = torch.as_tensor(
+                [name == 'gap_single' for name in self.terrain.terrain_names[0]],
+                device=self.device)
+            self._gap_continuous_columns = torch.as_tensor(
+                [name == 'gap_continuous' for name in self.terrain.terrain_names[0]],
+                device=self.device)
+            self._pit_columns = torch.as_tensor(
+                [kind_of(name) == 'pit' for name in self.terrain.terrain_names[0]],
+                device=self.device)
+            self._stairs_columns = torch.as_tensor(
+                [kind_of(name) == 'stairs' for name in self.terrain.terrain_names[0]],
+                device=self.device)
+            self._hurdle_columns = torch.as_tensor(
+                [kind_of(name) == 'hurdle' for name in self.terrain.terrain_names[0]],
+                device=self.device)
+            self._flat_columns = torch.as_tensor(
+                [kind_of(name) == 'flat' for name in self.terrain.terrain_names[0]],
+                device=self.device)
+            self._clamp_hazard_curriculum_levels(torch.arange(self.num_envs, device=self.device))
             self.max_terrain_level = self.cfg.terrain.num_rows
             self.terrain_origins = torch.from_numpy(self.terrain.env_origins).to(self.device).to(torch.float)
             self.terrain_difficulties = torch.as_tensor(
@@ -1105,14 +1320,63 @@ class MotorPrimitives(BaseTask):
         """
         y = torch.tensor(self.cfg.terrain.measured_points_y, device=self.device, requires_grad=False)
         x = torch.tensor(self.cfg.terrain.measured_points_x, device=self.device, requires_grad=False)
-        grid_x, grid_y = torch.meshgrid(x, y)
+        scan_mode = getattr(self.cfg.terrain, 'scan_mode', 'legacy')
+        if scan_mode not in ('legacy', 'signed_dense'):
+            raise ValueError('scan_mode must be legacy or signed_dense')
+        grid_x, grid_y = torch.meshgrid(x, y, indexing='ij')
 
         self.num_height_points = grid_x.numel()
+        if scan_mode == 'signed_dense':
+            self._scan_bin_ids = scan_bin_ids(
+                x, y, self.cfg.terrain.scan_bins_x, self.cfg.terrain.scan_bins_y)
+            self._scan_output_dim = 2 * self.cfg.terrain.scan_bins_x * self.cfg.terrain.scan_bins_y
+            self._dense_lower_heights = torch.zeros(
+                self.num_envs, self.num_height_points, device=self.device)
+            self._dense_upper_heights = torch.zeros_like(self._dense_lower_heights)
+            # if self.num_obs != 37 + self.num_actions + self.cfg.env.num_controller_observations + self._scan_output_dim:
+            #     raise ValueError('signed dense scan observation dimension does not match configuration')
+        else:
+            self._scan_output_dim = 60
         points = torch.zeros(self.num_envs, self.num_height_points, 3, device=self.device, requires_grad=False)
         points[:, :, 0] = grid_x.flatten()
         points[:, :, 1] = grid_y.flatten()
         return points
     
+    def _refresh_height_scan(self, env_ids=None):
+        """Sample due terrain frames, then align cached heights to the current pose."""
+        period = getattr(self.cfg.terrain, 'scan_period_steps', 1)
+        ids = (torch.arange(self.num_envs, device=self.device) if env_ids is None
+               else torch.as_tensor(env_ids, device=self.device, dtype=torch.long).flatten())
+        if ids.numel() == 0:
+            return
+        if self.scan_cache is None:
+            self.measured_heights[ids] = self._get_heights(ids)
+            self.scan_age_steps[ids] = 0
+            self.scan_unknown_fraction[ids] = 0.
+            self.scan_known_mask[ids] = True
+            return
+
+        if env_ids is None:
+            due_ids = ids[scan_due(self.episode_length_buf, period)]
+            completed_steps = self.episode_length_buf + 1
+        else:
+            due_ids = ids
+            completed_steps = self.episode_length_buf.clone()
+            completed_steps[due_ids] = 0
+        if due_ids.numel():
+            self.measured_heights[due_ids] = self._get_heights(due_ids)
+            self.scan_cache.capture(
+                due_ids, self._dense_lower_heights[due_ids],
+                self._dense_upper_heights[due_ids],
+                self.root_states[due_ids, :2], self.base_quat[due_ids],
+                completed_steps[due_ids])
+        low, high, known = self.scan_cache.project(self.root_states[:, :2], self.base_quat)
+        self._dense_lower_heights[:] = low.flatten(1)
+        self._dense_upper_heights[:] = high.flatten(1)
+        self.scan_known_mask = known.flatten(1)
+        self.scan_age_steps[:] = (completed_steps - self.scan_cache.frame_step).clamp_min(0)
+        self.scan_unknown_fraction[:] = 1. - known.float().mean(dim=(1, 2))
+
     def _get_heights(self, env_ids=None):
             """ Samples heights of the terrain at required points around each robot.
                 The points are offset by the base's position and rotated by the base's yaw
@@ -1126,15 +1390,20 @@ class MotorPrimitives(BaseTask):
             Returns:
                 [type]: [description]
             """
+            ids = (torch.arange(self.num_envs, device=self.device) if env_ids is None
+                   else torch.as_tensor(env_ids, device=self.device, dtype=torch.long).flatten())
+            count = ids.numel()
             if self.cfg.terrain.mesh_type == 'plane':
-                return torch.zeros(self.num_envs, self.num_height_points, device=self.device, requires_grad=False)
+                if getattr(self.cfg.terrain, 'scan_mode', 'legacy') == 'signed_dense':
+                    self._dense_lower_heights[ids] = 0.
+                    self._dense_upper_heights[ids] = 0.
+                return torch.zeros(count, self.num_height_points, device=self.device, requires_grad=False)
             elif self.cfg.terrain.mesh_type == 'none':
                 raise NameError("Can't measure height with terrain mesh type 'none'")
 
-            if env_ids:
-                points = quat_apply_yaw(self.base_quat[env_ids].repeat(1, self.num_height_points), self.height_points[env_ids]) + (self.root_states[env_ids, :3]).unsqueeze(1)
-            else:
-                points = quat_apply_yaw(self.base_quat.repeat(1, self.num_height_points), self.height_points) + (self.root_states[:, :3]).unsqueeze(1)
+            points = (quat_apply_yaw(self.base_quat[ids].repeat(1, self.num_height_points),
+                                     self.height_points[ids])
+                      + self.root_states[ids, :3].unsqueeze(1))
 
             points += self.terrain.cfg.border_size
             points = (points/self.terrain.cfg.horizontal_scale).long()
@@ -1147,10 +1416,18 @@ class MotorPrimitives(BaseTask):
             heights1 = self.height_samples[px, py]
             heights2 = self.height_samples[px+1, py]
             heights3 = self.height_samples[px, py+1]
+            if getattr(self.cfg.terrain, 'scan_mode', 'legacy') == 'signed_dense':
+                self._dense_lower_heights[ids] = torch.minimum(
+                    torch.minimum(heights1, heights2), heights3).view(
+                        count, self.num_height_points) * self.terrain.cfg.vertical_scale
+                self._dense_upper_heights[ids] = torch.maximum(
+                    torch.maximum(heights1, heights2), heights3).view(
+                        count, self.num_height_points) * self.terrain.cfg.vertical_scale
+                return heights1.view(count, self.num_height_points) * self.terrain.cfg.vertical_scale
             heights = torch.min(heights1, heights2)
             heights = torch.min(heights, heights3)
 
-            return heights.view(self.num_envs, -1) * self.terrain.cfg.vertical_scale
+            return heights.view(count, -1) * self.terrain.cfg.vertical_scale
 
     #------------ reward functions---------------
     def _reward_tracking_ang_vel(self):
@@ -1166,15 +1443,17 @@ class MotorPrimitives(BaseTask):
         return torch.sum(torch.square(self.projected_gravity[:, :2]), dim=1)
 
     def _reward_orientation_yaw(self):
-        # Penalize non flat base orientation
-        return torch.sum(torch.square(self.projected_gravity[:, 2:3]-(-1)), dim=1)
+        qx, qy, qz, qw = self.base_quat.unbind(-1)
+        heading = torch.atan2(2 * (qw * qz + qx * qy),
+                              1 - 2 * (qy.square() + qz.square()))
+        error = self._lane_heading_target() - heading
+        return torch.atan2(error.sin(), error.cos()).square()
 
     def _reward_ang_vel_xy(self):
         return torch.sum(torch.square(self.base_ang_vel[:, :2]), dim=1)
 
     def _reward_action_rate_ps(self):
         tmp = torch.sum(1.*(torch.norm(self.contact_forces[:, self.penalised_contact_indices, :], dim=-1) > 0.1), dim=1)
-        # print(tmp)
         return self.primitive_diff
 
     def _reward_action_rate_mp(self):
@@ -1275,7 +1554,34 @@ class MotorPrimitives(BaseTask):
         return self.cfg.rewards.pi_g_utility_weight * (self._pi_g_psi(velocity_error) + smooth)
 
     def _reward_pi_g_cot(self):
-        return self._pi_g_psi(self._pi_g_cost_of_transport())
+        reference = getattr(self.cfg.rewards, 'pi_g_cot_reference', 1.)
+        return (self._reward_tracking_lin_vel()
+                * self._pi_g_psi(self._pi_g_cost_of_transport() / reference))
+
+    def _primitive_context_targets(self):
+        """Return flat and named-gap gait labels, or -1 when unlabelled."""
+        if not hasattr(self, '_flat_columns'):
+            return torch.full_like(self.terrain_types, -1)
+        speed = self.commands[:, 0]
+        flat = self._flat_columns[self.terrain_types]
+        cfg = self.cfg.rewards
+        target = torch.full_like(self.terrain_types, -1)
+        target[flat & (speed < cfg.context_guidance_flat_walk_max)] = 0
+        trot_min, trot_max = cfg.context_guidance_flat_trot_range
+        target[flat & (speed >= trot_min) & (speed <= trot_max)] = 1
+        gap = self._gap_single_columns | self._gap_continuous_columns
+        target[gap[self.terrain_types]] = 2
+        return target
+
+    def _reward_pi_g_context_guidance(self):
+        """Reward only the labelled flat and gap gait preferences."""
+        target = self._primitive_context_targets()
+        speed = self.commands[:, 0]
+        cfg = self.cfg.rewards
+        matched = (target >= 0) & (self.actions[:, 0].long() == target)
+        guided = torch.where(matched, self._reward_tracking_lin_vel(),
+                             -cfg.context_guidance_mismatch_penalty)
+        return torch.where(target >= 0, guided, torch.zeros_like(speed))
 
     def _reward_pi_g_torque(self):
         return self._pi_g_psi(self._pi_g_torque_fraction())
@@ -1296,12 +1602,44 @@ class MotorPrimitives(BaseTask):
         # Penalize collisions on selected bodies
         return torch.sum(1.*(torch.norm(self.contact_forces[:, self.penalised_contact_indices, :], dim=-1) > 0.1), dim=1)
 
+    def _reward_termination(self):
+        """Penalize falls, while preserving timeout bootstrapping."""
+        return (self.reset_buf & ~self.time_out_buf).float()
+
     def _reward_feet_stumble(self):
         # Penalize feet hitting vertical surfaces
 
         tmp = torch.any(torch.norm(self.contact_forces[:, self.feet_indices, :2], dim=2) >\
              5 *torch.abs(self.contact_forces[:, self.feet_indices, 2]), dim=1)
 
-        # print(tmp)
         return torch.any(torch.norm(self.contact_forces[:, self.feet_indices, :2], dim=2) >\
              5 *torch.abs(self.contact_forces[:, self.feet_indices, 2]), dim=1)
+
+    def _reward_locomotion_distance(self):
+        forward_velocity = (
+            self.root_states[:, 0] - self.last_base_pos
+        ) / self.dt
+
+        return torch.minimum(
+            forward_velocity,
+            self.commands[:, 0].clamp(max=self.cfg.commands.max_vel_x),
+        )
+
+    def _reward_lateral_deviation(self):
+        return (self.root_states[:, 1] - self.env_origins[:, 1]).square()
+
+    def _passed_obstacle_count(self):
+        targets = self._obstacle_clear_targets[self.terrain_types]
+        return (self.root_states[:, 0:1] >= targets).sum(dim=1)
+
+    def _reward_obstacle_clearance(self):
+        """Reward each full-width band after the rear of the robot clears it."""
+        if self.cfg.terrain.mesh_type not in ('heightfield', 'trimesh'):
+            return torch.zeros(self.num_envs, device=self.device)
+        passed = self._passed_obstacle_count()
+        cleared = torch.where(
+            self.terrain_failure_buf, self._obstacle_cleared_count,
+            torch.maximum(passed, self._obstacle_cleared_count))
+        reward = (cleared - self._obstacle_cleared_count).float()
+        self._obstacle_cleared_count = cleared
+        return reward

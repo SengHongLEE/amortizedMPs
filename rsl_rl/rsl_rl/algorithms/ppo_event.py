@@ -14,7 +14,21 @@ from rsl_rl.modules.snn import SNNActor_SINGLE_output_head
 
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 from torch.distributions import Categorical, kl_divergence
+
+
+def context_guidance_loss(logits, targets):
+    """Class-balanced cross entropy on labelled flat and gap contexts."""
+    valid = targets >= 0
+    if not valid.any():
+        return logits.sum() * 0.
+    valid_logits = logits[valid]
+    valid_targets = targets[valid].long()
+    per_sample = F.cross_entropy(valid_logits, valid_targets, reduction='none')
+    classes = torch.unique(valid_targets)
+    return torch.stack([per_sample[valid_targets == gait].mean()
+                        for gait in classes]).mean()
 
 class PPOevent(PPO):
     def __init__(self, actor_critic, 
@@ -229,22 +243,27 @@ class PPOevent(PPO):
             return super().update()
 
 class PPOevent_discrete(PPOevent):
-    def __init__(self, actor_critic, num_learning_epochs=1, num_mini_batches=1, clip_param=0.2, gamma=0.998, lam=0.95, value_loss_coef=1, entropy_coef=0, learning_rate=0.001, max_grad_norm=1, use_clipped_value_loss=True, schedule="fixed", desired_kl=0.01, device='cpu'):
+    def __init__(self, actor_critic, num_learning_epochs=1, num_mini_batches=1, clip_param=0.2, gamma=0.998, lam=0.95, value_loss_coef=1, entropy_coef=0, learning_rate=0.001, max_grad_norm=1, use_clipped_value_loss=True, schedule="fixed", desired_kl=0.01, device='cpu', context_supervision_coef=0.):
         # lam = 0.
         # gamma = 0.
         # num_learning_epochs = 10
         # num_mini_batches = 2
         # entropy_coef = 0.02
         super().__init__(actor_critic, num_learning_epochs, num_mini_batches, clip_param, gamma, lam, value_loss_coef, entropy_coef, learning_rate, max_grad_norm, use_clipped_value_loss, schedule, desired_kl, device)
+        if context_supervision_coef < 0:
+            raise ValueError('context_supervision_coef must be nonnegative')
+        self.context_supervision_coef = float(context_supervision_coef)
 
     def init_storage(self, num_envs, num_transitions_per_env, actor_obs_shape, critic_obs_shape, actions_shape, logits_shape):
         self.storage = RolloutStorage_event_discrete(num_envs, num_transitions_per_env, actor_obs_shape, critic_obs_shape, actions_shape, logits_shape, self.device)
 
-    def act(self, env_ids, step_ids, obs, critic_obs, reservoir_states=None):
+    def act(self, env_ids, step_ids, obs, critic_obs, reservoir_states=None, context_targets=None):
         obs = obs[env_ids]
         critic_obs = critic_obs[env_ids]
         self.start_transition.env_ids = env_ids
         self.start_transition.step_ids = step_ids
+        self.start_transition.context_targets = (
+            None if context_targets is None else context_targets[env_ids])
         
         if getattr(self.actor_critic, "is_reservoir", False):
             reservoir_states = reservoir_states[env_ids]
@@ -273,22 +292,24 @@ class PPOevent_discrete(PPOevent):
         mean_value_loss = 0
         mean_surrogate_loss = 0
         self.mean_entropy = 0
+        actor_grad_norm_total = 0.
+        critic_grad_norm_total = 0.
+        total_grad_norm_total = 0.
+        context_loss_total = 0.
         if getattr(self.actor_critic, "is_reservoir", False):
             generator = self.storage.reservoir_mini_batch_generator(self.num_mini_batches, self.num_learning_epochs)
         else:
             generator = self.storage.mini_batch_generator(self.num_mini_batches, self.num_learning_epochs)
 
         for obs_batch, critic_obs_batch, actions_batch, logits_batch, target_values_batch, advantages_batch, returns_batch, old_actions_log_prob_batch, \
-        old_mu_batch, old_sigma_batch, reservoir_states_batch, _ in generator:
+        old_mu_batch, old_sigma_batch, reservoir_states_batch, context_targets_batch in generator:
 
             if getattr(self.actor_critic, "is_reservoir", False):
-                self.actor_critic.act_for_ppo_update(obs_batch, reservoir_states_batch)
+                current_logits = self.actor_critic.act_for_ppo_update(obs_batch, reservoir_states_batch)
             else:
-                self.actor_critic.act(obs_batch)
+                _, current_logits = self.actor_critic.act(obs_batch)
             actions_log_prob_batch = self.actor_critic.get_actions_log_prob(actions_batch)
             value_batch = self.actor_critic.evaluate(critic_obs_batch)
-            # mu_batch = self.actor_critic.action_mean
-            # sigma_batch = self.actor_critic.action_std
             entropy_batch = self.actor_critic.entropy
 
             # KL
@@ -337,22 +358,35 @@ class PPOevent_discrete(PPOevent):
             else:
                 value_loss = (returns_batch - value_batch).pow(2).mean()
 
-            loss = surrogate_loss + self.value_loss_coef * value_loss - self.entropy_coef * entropy_batch.mean()
+            context_loss = context_guidance_loss(current_logits, context_targets_batch)
+            loss = (surrogate_loss + self.value_loss_coef * value_loss
+                    - self.entropy_coef * entropy_batch.mean()
+                    + self.context_supervision_coef * context_loss)
 
             # Gradient step
             self.optimizer.zero_grad()
             loss.backward()
+            actor_grad_norm = nn.utils.clip_grad_norm_(self.actor_critic.actor.parameters(), float('inf'))
+            critic_grad_norm = nn.utils.clip_grad_norm_(self.actor_critic.critic.parameters(), float('inf'))
+            actor_grad_norm_total += actor_grad_norm.item()
+            critic_grad_norm_total += critic_grad_norm.item()
+            total_grad_norm_total += (actor_grad_norm.square() + critic_grad_norm.square()).sqrt().item()
             nn.utils.clip_grad_norm_(self.actor_critic.parameters(), self.max_grad_norm)
             self.optimizer.step()
 
             mean_value_loss += value_loss.item()
             mean_surrogate_loss += surrogate_loss.item()
             self.mean_entropy += entropy_batch.mean().item()
+            context_loss_total += context_loss.item()
 
         num_updates = self.num_learning_epochs * self.num_mini_batches
         mean_value_loss /= num_updates
         mean_surrogate_loss /= num_updates
         self.mean_entropy /= num_updates
+        self.mean_actor_grad_norm = actor_grad_norm_total / num_updates
+        self.mean_critic_grad_norm = critic_grad_norm_total / num_updates
+        self.mean_total_grad_norm = total_grad_norm_total / num_updates
+        self.mean_context_loss = context_loss_total / num_updates
         self.storage.clear()
 
         return mean_value_loss, mean_surrogate_loss

@@ -20,22 +20,22 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-import numpy as np
-
 from legged_gym import LEGGED_GYM_ROOT_DIR
 from legged_gym.envs.base.base_config import BaseConfig
 
 class MotorPrimitivesCfg(BaseConfig):
     class env:
         num_envs = 4096
-        num_modulation_params = 8 + 8
-        num_ee_equilibriums = 1
+        num_modulation_params = 8 + 4 + 4 + 2
+        num_ee_equilibriums = 0
         num_primitives = 4
         num_actions = num_modulation_params + num_ee_equilibriums + 1
-        # cpg_equilibrium_v1: gait + amplitude[4] + bx[4] + by[4] + bz[4].
-        action_space = 'cpg_equilibrium_v1'
-        num_controller_observations = 70
-        num_observations = 37 + num_actions + 60 - 1
+        # cpg_equilibrium_v3: v1 plus frequency scale and duty offset.
+        action_space = 'cpg_equilibrium_v3'
+        num_controller_observations = 46
+        observe_lane_offset = False  # optional: reuse the zero lateral-command observation channel
+        lane_offset_observation_scale = 1.5  # metres per normalized unit
+        num_observations = 37 + num_actions + 2 * 16 * 5 + num_controller_observations
         num_privileged_obs = num_observations + 3 + 4 # if not None a priviledge_obs_buf will be returned by step() (critic obs for assymetric training). None is returned otherwise
 
         send_timeouts = True # send time out information to the algorithm
@@ -56,13 +56,23 @@ class MotorPrimitivesCfg(BaseConfig):
         terrain_length = 8.0  # x extent of each tile, m
         terrain_width = 8.0    # y extent of each tile, m
         num_rows = 10           # difficulty levels
-        num_cols = 16         # two columns per enabled type, including both slope/stair signs
+        num_cols = 20         # two columns per enabled type, including both slope/stair signs
         max_init_terrain_level = None  # curriculum off: None samples all rows; otherwise inclusive maximum
         curriculum = True  # False disables automatic level changes; also disabled in play mode
         curriculum_initial_level = 1  # inclusive initial maximum, used only when curriculum=True
         curriculum_min_level = 0
+        curriculum_gap_min_level = 1  # keep gap practice above the trivial first row
+        curriculum_gap_medium_min_level = 4  # reserve half the gap columns for medium practice
+        curriculum_gap_medium_columns = 2
+        curriculum_gap_hard_min_level = 7
+        curriculum_gap_hard_columns = 1
+        curriculum_hurdle_min_level = 0
+        curriculum_hurdle_medium_min_level = 4
+        curriculum_hurdle_medium_columns = 2
+        curriculum_hurdle_hard_min_level = 7
+        curriculum_hurdle_hard_columns = 1
         curriculum_max_level = None  # None allows the last row
-        curriculum_promote_distance = 2.5  # m along commanded direction, beyond the central platform
+        curriculum_promote_distance = 4.25  # m along command; clears the second gap or first widened hurdle
         curriculum_promote_ratio = 0.8  # achieved / integrated commanded distance
         curriculum_demote_ratio = 0.5   # below this ratio, or a fall, moves down one row
         fixed_terrain_level = None  # curriculum=False: None randomly assigns rows; integer fixes a row
@@ -75,17 +85,31 @@ class MotorPrimitivesCfg(BaseConfig):
         # Example: {'type': 'pyramid_sloped_terrain', 'slope': 0.2, 'platform_size': 3.0}
         selected_kwargs = None
         # Optional exact column order (length must equal num_cols), overrides weights.
-        terrain_columns = None  # e.g. ['uphill', 'downhill'] with num_cols=2
+        # Last two gap columns receive medium floors; the last receives the hard floor.
+        # Put the hard floor on continuous gaps and retain easy/medium practice for both.
+        terrain_columns = (
+            ['flat'] + ['rough_slope', 'ramp'] * 2
+            + ['gap_continuous', 'gap_single', 'gap_single', 'gap_continuous']
+            + ['hurdle'] * 4 + ['pit'] * 3 + ['stairs'] * 4)
         terrain_variants = {
             'uphill': {'type': 'ramp', 'params': {'slope_range': [0.02, 0.30], 'slope_signs': [1]}},
             'downhill': {'type': 'ramp', 'params': {'slope_range': [0.02, 0.30], 'slope_signs': [-1]}},
             'side_slope': {'type': 'ramp', 'params': {'slope_range': [0.02, 0.20], 'axis': 'y'}},
+            # width_range is the gap width [easy, hard], in metres. For a continuous
+            # tile, num_gaps sets equal spacing; it leaves num_gaps + 1 landing segments.
+            'gap_continuous': {'type': 'gap', 'params': {
+                'pattern': 'uniform', 'width_range': [0.1, 0.25],
+                'depth_range': [0.6, 0.6], 'num_gaps': 6, 'platform_size': 0.5}},
+            'gap_single': {'type': 'gap', 'params': {
+                'pattern': 'single', 'width_range': [0.1, 0.5],
+                'depth_range': [0.6, 0.6], 'spacing': 3.0, 'platform_size': 3.0}},
         }
         terrain_proportions = {
-            'flat': 1., 'slope': 1., 'rough_slope': 1., 'rough': 1.,
-            'rubble': 1., 'stairs': 1., 'ramp': 1., 'stairs_linear': 0.,
-            'stepping_stones': 0., 'wave': 1., 'gap': 0., 'pit': 0.,
-            'hurdle': 0., 'beam': 0.,
+            'flat': 1., 'slope': 0., 'rough_slope': 1., 'rough': 0.,
+            'rubble': 0., 'stairs': 2., 'ramp': 1., 'stairs_linear': 0.,
+            'stepping_stones': 0., 'wave': 0., 'gap': 0.,
+            'gap_continuous': 1., 'gap_single': 1., 'pit': 2.,
+            'hurdle': 2., 'beam': 0.,
         }
         # *_range accepts a fixed scalar or [easy, hard]; descending ranges are allowed.
         # Exception: rubble.stone_size_range is the random min/max block size.
@@ -106,7 +130,7 @@ class MotorPrimitivesCfg(BaseConfig):
                        'num_rects': 12},
             # True risers at every curriculum height; global slope_threshold
             # otherwise turns <=7.5 cm steps on this grid into short ramps.
-            'stairs': {'step_height_range': [0.01, 0.08], 'step_width': 0.6, 'mesh_vertical_faces': True,
+            'stairs': {'step_height_range': [0.01, 0.1], 'step_width': 0.3, 'mesh_vertical_faces': True,
                        'step_signs': [-1, 1]},
             'stairs_linear': {'step_height_range': [0.01, 0.08], 'step_width': 0.4, 'mesh_vertical_faces': True,
                               'step_signs': [-1, 1]},
@@ -114,27 +138,43 @@ class MotorPrimitivesCfg(BaseConfig):
                                'height_range': [0., 0.05], 'depth_range': [0.2, 0.6]},
             'wave': {'amplitude_range': [0.01, 0.12], 'num_waves': 2},
             # The following are opt-in challenge terrains, not validated blind-training defaults.
-            'gap': {'width_range': [0.1, 0.5], 'depth_range': [0.2, 0.6], 'spacing': 1.5},
-            'pit': {'size_range': [2.5, 3.0], 'depth_range': [0.1, 0.5]},
-            'hurdle': {'width_range': [0.2, 0.3], 'height_range': [0.05, 0.2], 'spacing': 1.5},
+            'gap': {'width_range': [0.1, 0.5], 'depth_range': [0.6, 0.6], 'spacing': 2.},
+            'pit': {'size_range': [4., 4.0], 'depth_range': [0.1, 0.2]},
+            'hurdle': {'width_range': [0.2, 0.2], 'height_range': [0.05, 0.2],
+                       'spacing': 4., 'pattern': 'uniform'},
             'beam': {'width_range': [1.0, 0.3], 'depth_range': [0.2, 0.6]},
         }
         platform_size = 3.0   # passed to official generators that support a platform
         spawn_platform = False  # True explicitly flattens the central platform on every type
         origin_sample_size = 1.0  # covers standing feet plus jitter without a large ramp drop
         spawn_xy_jitter = 0.1
-        boundary_margin = 0.6  # reaching tile edge ends the rollout as a timeout
-        measured_points_x = [  0.13, 0.18, 0.23, 0.28, 0.32, 0.37, 0.43, 0.48,0.52,0.57,0.62,0.67 ] # 1mx1.6m rectangle (without center line)
-        measured_points_y = [-0.23, -0.15, 0.,0.15, 0.23]
-        measure_heights = True  # no terrain samples in actor or critic observations
+        boundary_margin = 0.6  # evaluation/termination margin at the outer map border
+        min_base_clearance = 0.15
+        hurdle_min_base_clearance = 0.10  # base contact still terminates a real collision
+        hazard_lane_half_width = 1.5  # match the strict traversal evaluation corridor
+        scan_mode = 'signed_dense'
+        scan_bins_x = 16
+        scan_bins_y = 5
+        measured_points_x = [round(0.1 * index, 2) for index in range(1, 34)]
+        measured_points_y = [round(0.1 * index, 2) for index in range(-3, 4)]
+        measure_heights = True
+        scan_period_steps = 1  # opt-in 5 means 10 Hz at the archived 20 ms environment step
 
     class commands:
         num_commands = 4 # default: lin_vel_x, lin_vel_y, ang_vel_yaw, heading (in heading mode ang_vel_yaw is recomputed from heading error)
-        max_vel_x = 1.5
+        max_vel_x = 2.
         resampling_time = 5 # time before command are changed[s]
+        obstacle_resampling_time = 10  # keep one forward target through both bands
+        obstacle_lin_vel_x = [0.8, 2.2]
+        # [low, high, weight]. Slow ordinary commands expose walk/trot benefits;
+        # the upper obstacle band gives canter/bound fast traversal practice.
+        lin_vel_x_bands = [[0.3, 0.8, 0.5], [0.8, 1.5, 0.3], [1.5, 2.5, 0.2]]
+        obstacle_lin_vel_x_bands = [[0.8, 1.5, 0.6], [1.5, 2.2, 0.4]]
         heading_command = True #True # if true: compute ang vel command from heading error
+        lane_heading_gain = 0.0  # optional radians of centerward heading per metre
+        heading_kp = 2.0  # recover yaw promptly after asymmetric obstacle contacts
         class ranges:
-            lin_vel_x = [.3, 1.5] # initial blind-terrain speed range [m/s]
+            lin_vel_x = [.3, 2.5] # initial blind-terrain speed range [m/s]
             lin_vel_y = [-0., 0.0]   # min max [m/s]
             ang_vel_yaw = [0.0, 0.0]    # min max [rad/s]
             heading = [-0.0, 0.0]
@@ -168,28 +208,28 @@ class MotorPrimitivesCfg(BaseConfig):
         decimation= 10
         cycle = 2
 
-        primitive_selection_update_cycle = 50
+        primitive_selection_update_cycle = 15
         ee_equilibrium_update_cycle = 5
-        modulation_param_update_cycle = 5
+        modulation_param_update_cycle = 3
         update_quality_threshold = 0.85
 
         oscillator_type = "phase_oscillator"
 
         class timing:
-            # Used only by cpg_equilibrium_v2; zero actions retain neutral values.
+            # Used by cpg_equilibrium_v3; zero actions retain neutral values.
             frequency_scale_range = [.35, 1.2]
             duty_offset_range = [-.15, .25]
             duty_factor_range = [.30, .80]
-            clearance_range = [.06, .20]  # m, neutral asset.ground_clearance
             time_constant = .10  # s, clock and duty filter
-            align_stroke = True  # horizontal reversal coincides with touchdown
+            align_stroke = False  # use the original horizontal phase mapping
 
         class equilibrium:
             # Per-axis XYZ limits, each shared by FL/FR/RL/RR.
-            offset_limits = [0.05, 0.001, 0.05]  # m; normalized actions map to +/- limits
+            offset_limits = [0.07, 0.00001, 0.05]  # m; normalized actions map to +/- limits
+            rear_x_offset_range = [-0.07, 0.03]  # m; RL/RR actions -1..1 map across this range
             frequency_hz = 3.0  # critically damped offset filter, not gait frequency
-            swing_velocity_limits = [0.4, 0.25, 0.4]  # m/s, offset motion only
-            stance_velocity_limits = [0.06, 0.04, 0.08]  # contact OR nominal stance
+            swing_velocity_limits = [4, 2.5, 4.]  # m/s, offset motion only
+            stance_velocity_limits = [0.6, 0.4, 0.8]  # contact OR nominal stance
             acceleration_limits = [4.0, 3.0, 4.0]  # m/s^2 between contact/phase gates
             joint_limit_margin = 0.02  # rad inside URDF hard position limits
             min_foot_depth = 0.06  # m below the hip before bounded IK
@@ -222,17 +262,21 @@ class MotorPrimitivesCfg(BaseConfig):
         hip_link_length_a1 = 0.0838
         thigh_link_length_a1 = 0.200  # match a1_updated_v2.urdf
         calf_link_length_a1 = 0.200
-        max_step_length = 0.1  # half stroke; leaves extension margin on 3 cm terrain changes
-        ground_clearance = 0.22
-        max_ground_clearance = 0.22  # combined lift + equilibrium targets use bounded IK
+        max_step_length = 0.1  # half stroke; preserve hurdle stability while medium gap columns train
+        rear_forward_stroke_limit = 0.07  # forward CPG displacement of rear feet, m
+        gait_step_length_scales = [1., 1., 1.5, 2.]  # only canter gets a longer stroke
+        ground_clearance = 0.15
+        max_ground_clearance = 0.2  # combined lift + equilibrium targets use bounded IK
+        stance_extension_gait_id = None  # opt-in: extend feet only for this primitive
+        max_stance_extension = 0.02  # m, mapped from the existing four clearance actions
         ground_penetration = 0.
 
     class domain_rand:
         randomize_friction = True
         friction_range = [0.6,1.]  # establish terrain competence before low-friction stress tests
-        randomize_base_mass = True 
+        randomize_base_mass = True
         added_mass_range = [-2., 3.]     #0. 3.
-        push_robots = True 
+        push_robots = True
         push_interval_s = 5    #5
         max_push_vel_xy = 0.3  # initial terrain training; increase after stable traversal
 
@@ -242,56 +286,69 @@ class MotorPrimitivesCfg(BaseConfig):
             orientation = -1.
             orientation_yaw = -1.
             action_rate_ps = -0.01
-            action_rate_mp = -0.005
-            action_rate_eee = -0.01
+            action_rate_mp = -0.02
+            action_rate_eee = 0.
             exceed_torque_limits_l1norm = -0.4
             dof_vel_limits = -0.4
             stance_slip = -0.2
-            collision = -3.
-            feet_stumble = -0.1 
+            lateral_deviation = -0.8
+            collision = -6.
+            feet_stumble = -0.2
             # touchdown_impact = -0.002
 
-            tracking_lin_vel = 3.
-            tracking_ang_vel = 1.5
+            locomotion_distance = 3.
+            obstacle_clearance = 150.  # one event is worth 3 reward at dt=0.02 s
+            tracking_lin_vel = 4.
+            tracking_ang_vel = 0.5
+            termination = -200.  # -4 per fall after dt scaling; one clearance event is +3
 
         task_rewards = ['tracking_lin_vel', 'tracking_ang_vel']
         # DOI: 10.1038/s42256-025-01065-z, Eqs. (14)--(15).
         # Selection terms use the same named-function routing as modulation.
         primitive_selection_rewards = [
             'pi_g_utility', 'pi_g_cot', 'pi_g_torque', 'pi_g_contact', 'pi_g_work',
+            'pi_g_context_guidance',
+            'tracking_lin_vel', 'locomotion_distance', 'collision', 'termination',
+            'obstacle_clearance', 'lateral_deviation', 'orientation', 'orientation_yaw',
         ]
         class primitive_selection_scales:
             pi_g_utility = 1.
-            pi_g_cot = 1.
-            pi_g_torque = 1.
-            pi_g_contact = 1.
-            pi_g_work = 1.
+            pi_g_cot = 0.5
+            pi_g_context_guidance = 20.0  # rare measured contexts need a visible PPO advantage
+            pi_g_torque = 0.1
+            pi_g_contact = 0.1
+            pi_g_work = 0.1
             # Optional task-aligned selection terms. The configured list above
             # controls activation; declare fields so saved presets reload fully.
-            tracking_lin_vel = 3.
+            tracking_lin_vel = 4.
+            locomotion_distance = 3.
+            obstacle_clearance = 150.
+            collision = -6.
             tracking_ang_vel = 1.5
             orientation = -2.
             orientation_yaw = -2.
             ang_vel_xy = -.1
             action_rate_mp = -.1
             stance_slip = -.2
+            lateral_deviation = -.8
             exceed_torque_limits_l1norm = -.4
             dof_vel_limits = -.4
 
         pi_g_utility_weight = 0.4
         pi_g_switch_cost = 2.  # motion-dependent switch cost inside utility, before dt scaling
+        pi_g_cot_reference = 5.0  # measured raw CoT spans roughly 2-14 in paired rollouts
+        context_guidance_flat_walk_max = 0.65
+        context_guidance_flat_trot_range = [1.2, 1.8]
+        context_guidance_mismatch_penalty = 0.5
         pi_g_contact_force = 1.0  # N; same contact threshold as the dynamics
-        modulation_param_rewards = ['tracking_lin_vel', 'tracking_ang_vel', 
-                                    'orientation', 'orientation_yaw', 
-                                    'ang_vel_xy', 'action_rate_mp', 
-                                    'stance_slip', 'feet_stumble', 'collision',
+        modulation_param_rewards = ['tracking_lin_vel', 'tracking_ang_vel', 'locomotion_distance',
+                                    'obstacle_clearance',
+                                    'orientation', 'orientation_yaw',
+                                    'ang_vel_xy',
+                                    'action_rate_mp',
+                                    'stance_slip', 'lateral_deviation', 'feet_stumble', 'collision', 'termination',
                                     'exceed_torque_limits_l1norm', 'dof_vel_limits']
-        ee_equilibrium_rewards =  ['tracking_lin_vel', 'tracking_ang_vel', 
-                                    'orientation', 'orientation_yaw', 
-                                    'ang_vel_xy', 
-                                    'action_rate_eee', 
-                                    'stance_slip', 'feet_stumble', 'collision',
-                                    'exceed_torque_limits_l1norm', 'dof_vel_limits']
+        ee_equilibrium_rewards = []
         only_positive_rewards = False # if true negative total rewards are clipped at zero (avoids early termination problems)
         tracking_sigma = 0.25 # tracking reward = exp(-error^2/sigma)
         soft_dof_vel_limit = .9
@@ -358,11 +415,14 @@ PRIMITIVE_SELECTION_ACTOR_TYPE = 'lif_reservoir_snn_single_output' #mlp, snn, an
 MODULATION_PARAM_ACTOR_TYPE = 'snn'
 class MotorPrimitivesCfgPPO(BaseConfig):
     seed = 1
-    runner_class_name = 'FullPolicyRunner'
+    runner_class_name = 'MultiInteroceptivePolicyRunner'
     class policy:
         actor_type = MODULATION_PARAM_ACTOR_TYPE      
         high_actor_type = PRIMITIVE_SELECTION_ACTOR_TYPE
-        init_noise_std = 1.0
+        init_noise_std = 0.35
+        squash_actions = True
+        min_action_std = 0.05
+        max_action_std = 0.6
         actor_hidden_dims = [64, 32]
         activation = 'elu' # can be elu, relu, selu, crelu, lrelu, tanh, sigmoid
 
@@ -382,6 +442,8 @@ class MotorPrimitivesCfgPPO(BaseConfig):
         reservoir_reset_mode = "subtract"
 
         include_input_in_readout = False
+        terrain_scan_shape = [2, 16, 5]
+        terrain_encoder_dim = 32
         readout_hidden_dims = [64,32]
         readout_activation ="elu"
 
@@ -400,11 +462,11 @@ class MotorPrimitivesCfgPPO(BaseConfig):
         value_loss_coef = 1.0
         use_clipped_value_loss = True
         clip_param = 0.2
-        entropy_coef = 0.01
+        entropy_coef = 0.001
         num_learning_epochs = 10
         num_mini_batches = 4 # mini batch size = num_envs*nsteps / nminibatches
-        learning_rate = 1.e-3 
-        schedule = 'adaptive' # could be adaptive, fixed
+        learning_rate = 1.e-4
+        schedule = 'fixed'
         gamma = 0.99
         lam = 0.95
         desired_kl = 0.01
@@ -413,54 +475,27 @@ class MotorPrimitivesCfgPPO(BaseConfig):
     class runner:
         # load and resume
         resume = False
+        reset_primitive_selection_on_resume = False
         load_run = -1 # -1 = last run
         checkpoint = -1 # -1 = last saved model
         resume_path = None # updated from load_run and chkpt
 
         primitive_policy_class_name = 'ActorCriticDiscrete'
         primitive_algorithm_class_name = 'PPOeventDiscrete'
+        primitive_uniform_mix = 0.2  # each gait retains at least 5% sampling probability
+        primitive_temperature = 3.0  # keep a learning gradient for rare gait logits
+        primitive_command_obs_start = 53  # direct commanded (vx, vy, yaw) logits path
+        primitive_entropy_coef = 0.01  # high policy only; low policy keeps algorithm.entropy_coef
+        primitive_learning_rate = 3.e-4  # compensate for softened high-policy logits
+        primitive_context_supervision_coef = 0.5  # class-balanced paired-trial labels; other contexts remain PPO-only
 
-        modulation_param_policy_class_name = ee_equilibrium_policy_class_name = 'ActorCritic'
-        modulation_param_algorithm_class_name = ee_equilibrium_algorithm_class_name = 'PPOevent'
+        modulation_param_policy_class_name = 'ActorCritic'
+        modulation_param_algorithm_class_name = 'PPOevent'
 
 
-        num_steps_per_env = 12  #24 # per iteration  24
-        max_iterations = 1000 # number of policy updates
+        num_steps_per_env = 24  #24 # per iteration  24
+        max_iterations = 5000 # number of policy updates
         # logging
         save_interval = 10 # check for potential saves every this many iterations
         experiment_name = 'A1'
-        run_name = "".join([
-            "A1MPfull",
-            ("-psF_" + np.format_float_scientific(1 / (MotorPrimitivesCfg.control.primitive_selection_update_cycle * MotorPrimitivesCfg.control.cycle * MotorPrimitivesCfg.control.decimation * MotorPrimitivesCfg.sim.dt), precision= 3, trim= "-")),
-            ("-mpF_" + np.format_float_scientific(1 / (MotorPrimitivesCfg.control.modulation_param_update_cycle * MotorPrimitivesCfg.control.cycle * MotorPrimitivesCfg.control.decimation * MotorPrimitivesCfg.sim.dt), precision= 3, trim= "-")),
-            ("-eeF_" + np.format_float_scientific(1 / (MotorPrimitivesCfg.control.ee_equilibrium_update_cycle * MotorPrimitivesCfg.control.cycle * MotorPrimitivesCfg.control.decimation * MotorPrimitivesCfg.sim.dt), precision= 3, trim= "-")),
-            ("-MF_" + np.format_float_scientific( 1 / MotorPrimitivesCfg.sim.dt, precision= 3, trim= "-")),
-            ("-noResume" if not resume else "-from" + "_".join(load_run.split("/")[-1].split("_")[:2])),
-        ])
-
-
-class AdaptiveMotorPrimitivesCfg(MotorPrimitivesCfg):
-    """Experimental v2, kept separate until mixed-terrain regression passes."""
-    class env(MotorPrimitivesCfg.env):
-        action_space = 'cpg_equilibrium_v2'
-        num_modulation_params = 22
-        num_actions = 23
-        num_controller_observations = 72
-        num_observations = 132
-        num_privileged_obs = 139
-
-
-class AdaptiveMotorPrimitivesCfgPPO(MotorPrimitivesCfgPPO):
-    class runner(MotorPrimitivesCfgPPO.runner):
-        run_name = 'A1MPproprioterrain-equilibrium-v2'
-        resume = False
-
-
-class ModalMotorPrimitivesCfg(AdaptiveMotorPrimitivesCfg):
-    class env(AdaptiveMotorPrimitivesCfg.env):
-        action_space = 'cpg_modal_equilibrium_v3'
-
-
-class ModalMotorPrimitivesCfgPPO(AdaptiveMotorPrimitivesCfgPPO):
-    class runner(AdaptiveMotorPrimitivesCfgPPO.runner):
-        run_name = 'A1MPproprioterrain-modal-v3'
+        run_name = 'A1MPfull-gait-balanced-v1'

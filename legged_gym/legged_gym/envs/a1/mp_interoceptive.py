@@ -28,20 +28,15 @@ from isaacgym.torch_utils import *
 from isaacgym import gymtorch, gymapi, gymutil
 
 import torch
-import matplotlib.pyplot as plt
-from matplotlib.collections import LineCollection
-from matplotlib.colors import Normalize
 
 from legged_gym.envs.base.base_task import BaseTask
 from legged_gym.utils.terrain import Terrain
 from legged_gym.envs.base.legged_robot_config import LeggedRobotCfg
-from legged_gym.utils.dynamics.a1.rhythmic_dynamics import Interoceptive_Dynamics, Kuramoto_Dynamics, Kuramoto_Reflex_Dynamics, Interoceptive_Reflex_Dynamics
-from legged_gym.utils.gait_model import GaitModel, env_cfg
+from legged_gym.utils.dynamics.a1.rhythmic_dynamics import Interoceptive_Dynamics
 
 from legged_gym.utils.math_ import quat_apply_yaw, wrap_to_pi
-from legged_gym.utils.helpers import class_to_dict, plot_colored_trajectory, append_to_npy_file
+from legged_gym.utils.helpers import class_to_dict
 
-from legged_gym.utils import task_registry
 
 class MotorPrimitives(BaseTask):
     def __init__(self, cfg: LeggedRobotCfg, sim_params, physics_engine, sim_device, headless):
@@ -67,7 +62,6 @@ class MotorPrimitives(BaseTask):
 
         self.sim_params = sim_params
         self.height_samples = None
-        self.debug_viz = False
         self.init_done = False
         self._parse_cfg(self.cfg)
         super().__init__(self.cfg, sim_params, physics_engine, sim_device, headless)
@@ -79,35 +73,6 @@ class MotorPrimitives(BaseTask):
         self._init_buffers()
         self._prepare_reward_function()
         self.init_done = True
-
-        self.folder_path = '/home/ubuntu/amortizedMPs/legged_gym/legged_gym/metrics/EXP_MP'
-        os.makedirs(self.folder_path, exist_ok=True)
-
-        self.phase_history = []
-        self.amplitude_history = []
-        self.amplitude_dot_history = []
-        self.mu_history = []
-        self.omega_history = []
-        self.x_history = []
-        self.z_history = []
-        self.x_act_history = []
-        self.z_act_history = []
-
-        self.base_pos_buffer = []
-        self.base_rot_buffer = []
-        self.command_buffer = []
-        self.base_lin_vel_buffer = []
-        self.base_ang_vel_buffer = []
-        self.contact_boolean_buffer = []
-        self.ee_pos_buffer = []
-        self.power_buffer = []
-        self.obs_buffer = []
-        self.update_idx_buffer = []
-        self.dof_pos_buffer = []
-        self.dof_pos_ref_buffer = []
-        self.count = 0
-        self.distance_buffer = []
-
 
     def step(self, actions):
         """ Apply actions, simulate, call self.post_physics_step()
@@ -123,24 +88,6 @@ class MotorPrimitives(BaseTask):
         self._slip_cost_integral.zero_()
         self._touchdown_cost.zero_()
 
-        if self.cfg.env.play:
-            print(self.actions)
-            print(self.commands)
-            print(self.base_lin_vel)
-            # print(self.actions)
-            # print(self.commands)
-            # print(self.base_lin_vel)
-
-        # if self.cfg.env.play and self.episode_length_buf[0] > 200:
-        #     init_phase = [0.0, 0.0, 0.5, 0.5]
-        #     self.ID.gait_phase_delta = torch.tensor(
-        #         init_phase, device=self.device
-        #     ) * np.pi
-            # self.ID.target_diff = (
-            #     self.ID.gait_phase_delta[None, :] - self.ID.gait_phase_delta[:, None]
-            # )
-
-
         for substep in range(decimation):        
             self.torques = self._compute_torques(self.actions).view(self.torques.shape)
             self.gym.set_dof_actuation_force_tensor(self.sim, gymtorch.unwrap_tensor(self.torques))
@@ -151,31 +98,22 @@ class MotorPrimitives(BaseTask):
             self.gym.refresh_rigid_body_state_tensor(self.sim)
             self.gym.refresh_actor_root_state_tensor(self.sim)
             self.gym.refresh_net_contact_force_tensor(self.sim)
-            self.gym.refresh_rigid_body_state_tensor(self.sim)
-
             # prepare quantities
             self.base_quat[:] = self.root_states[:, 3:7]
             self.base_lin_vel[:] = quat_rotate_inverse(self.base_quat, self.root_states[:, 7:10])
             self.base_ang_vel[:] = quat_rotate_inverse(self.base_quat, self.root_states[:, 10:13])
             self.projected_gravity[:] = quat_rotate_inverse(self.base_quat, self.gravity_vec)
 
-            if self.cfg.env.play:
-                self.x_act_history.append((self.rigid_body_state.view(self.num_envs, self.num_bodies, -1)[:, self.feet_indices, 0]).detach().cpu().clone())
-                self.z_act_history.append((self.rigid_body_state.view(self.num_envs, self.num_bodies, -1)[:, self.feet_indices, 2]).detach().cpu().clone())
-                self.base_pos_buffer.append(self.root_states[:, 0:3].cpu().numpy())
-                # self.base_rot_buffer.append(torch.abs(quaternion2rpy_torch(self.base_quat)).cpu().numpy())
-                self.base_lin_vel_buffer.append(self.base_lin_vel[:, 0:3].cpu().numpy())
-                self.base_ang_vel_buffer.append(self.base_ang_vel[:, 0:3].cpu().numpy())
-                contact_booleans = self.contact_forces[:, self.feet_indices, 2] > 0.
-                self.contact_boolean_buffer.append(contact_booleans.cpu().numpy())
-                self.ee_pos_buffer.append((self.rigid_body_state.view(self.num_envs, self.num_bodies, -1)[:, self.feet_indices, 0:3]).cpu().numpy())
-                self.power_buffer.append(torch.sum(torch.abs(self.torques*self.dof_vel), dim=1).cpu().detach().numpy())
-                self.dof_pos_buffer.append(self.dof_pos.cpu().numpy())
-                self.command_buffer.append(self.commands.cpu().numpy())
-                # self.dof_pos_ref_buffer.append(self.dof_pos_ref.cpu().numpy())
             self.post_decimation_step(substep)
             self.render()
         self.post_physics_step()
+
+        if self.cfg.env.play:
+            print(self.actions)
+            print(self.commands)
+            print(self.base_lin_vel)
+            print('---')
+
 
         # return clipped obs, clipped states (None), rewards, dones and infos
         clip_obs = self.cfg.normalization.clip_observations
@@ -200,7 +138,6 @@ class MotorPrimitives(BaseTask):
     def post_physics_step(self, env_ids_end=None):
         """ check terminations, compute observations and rewards
             calls self._post_physics_step_callback() for common computations 
-            calls self._draw_debug_vis() if needed
         """
         self.gym.refresh_actor_root_state_tensor(self.sim)
         self.gym.refresh_net_contact_force_tensor(self.sim)
@@ -214,7 +151,6 @@ class MotorPrimitives(BaseTask):
         self.projected_gravity[:] = quat_rotate_inverse(self.base_quat, self.gravity_vec)
 
 
-        self.first_iteartion = False
         self._post_physics_step_callback()
 
         # compute observations, rewards, resets, ...
@@ -228,9 +164,6 @@ class MotorPrimitives(BaseTask):
         self.last_dof_vel[:] = self.dof_vel[:]
         self.last_root_vel[:] = self.root_states[:, 7:13]
         self.last_base_pos[:] = self.root_states[:, 0]
-
-        if self.viewer and self.enable_viewer_sync and self.debug_viz:
-            self._draw_debug_vis()
 
     def check_termination(self, env_ids=None):
         """ Check if environments need to be reset
@@ -261,7 +194,9 @@ class MotorPrimitives(BaseTask):
         """
         if len(env_ids) == 0:
             return
-        
+        else:
+            if self.cfg.env.play:
+                breakpoint()
         # reset robot states
         self._reset_dofs(env_ids)
         self._reset_root_states(env_ids)
@@ -289,46 +224,6 @@ class MotorPrimitives(BaseTask):
         if self.cfg.env.send_timeouts:
             self.extras["time_outs"] = self.time_out_buf
 
-        if self.cfg.env.play and self.time_out_buf[0] == 1:
-            breakpoint()
-            append_to_npy_file(f"{self.folder_path}/{self.count}_base_position.npy", np.array(self.base_pos_buffer))
-            append_to_npy_file(f"{self.folder_path}/{self.count}_base_lin_vel.npy", np.array(self.base_lin_vel_buffer))
-            append_to_npy_file(f"{self.folder_path}/{self.count}_base_ang_vel.npy", np.array(self.base_ang_vel_buffer))
-            append_to_npy_file(f"{self.folder_path}/{self.count}_contact_boolean.npy", np.array(self.contact_boolean_buffer))
-            append_to_npy_file(f"{self.folder_path}/{self.count}_ee_pos.npy", np.array(self.ee_pos_buffer))
-            append_to_npy_file(f"{self.folder_path}/{self.count}_power.npy", np.array(self.power_buffer))
-            append_to_npy_file(f"{self.folder_path}/{self.count}_dof_pos.npy", np.array(self.dof_pos_buffer))
-            append_to_npy_file(f"{self.folder_path}/{self.count}_command.npy", np.array(self.command_buffer))
-            append_to_npy_file(f"{self.folder_path}/{self.count}_update_idx.npy", np.array(self.update_idx_buffer))
-            append_to_npy_file(f"{self.folder_path}/{self.count}_mu.npy", np.array(self.mu_history))
-            append_to_npy_file(f"{self.folder_path}/{self.count}_omega.npy", np.array(self.omega_history))
-            append_to_npy_file(f"{self.folder_path}/{self.count}_amplitude.npy", np.array(self.amplitude_history))
-            append_to_npy_file(f"{self.folder_path}/{self.count}_phase.npy", np.array(self.phase_history))
-            append_to_npy_file(f"{self.folder_path}/{self.count}_x_history.npy", np.array(self.x_history))
-            append_to_npy_file(f"{self.folder_path}/{self.count}_z_history.npy", np.array(self.z_history))
-
-            self.base_pos_buffer = []
-            self.base_lin_vel_buffer = []
-            self.base_ang_vel_buffer = []
-            self.contact_boolean_buffer = []
-            self.ee_pos_buffer = []
-            self.power_buffer = []
-            self.dof_pos_buffer = []
-            self.command_buffer = []
-            self.update_idx_buffer = []
-            self.phase_history = []
-            self.amplitude_history = []
-            self.amplitude_dot_history = []
-            self.mu_history = []
-            self.omega_history = []
-            self.x_history = []
-            self.z_history = []
-            self.count += 1
-            if self.count == 5:
-                print(np.mean(self.distance_buffer))
-                print(np.std(self.distance_buffer))
-                exit()
-    
     def compute_reward(self, env_ids=None):
         """ Compute rewards
             Calls each reward function which had a non-zero scale (processed in self._prepare_reward_function())
@@ -365,7 +260,6 @@ class MotorPrimitives(BaseTask):
 
         if self.cfg.env.play:
             self.behavior_quality = track_quality - torch.sum(torch.square(self.projected_gravity[:, :2]), dim=-1)
-            print(self.behavior_quality)
 
         if self.cfg.rewards.only_positive_rewards:
             self.rew_buf[:] = torch.clip(self.rew_buf[:], min=0.)
@@ -522,26 +416,16 @@ class MotorPrimitives(BaseTask):
             env_ids (List[int]): Environments ids for which new commands are needed
         """
 
-        if self.cfg.env.play:
-            if self.episode_length_buf[0] < 245:
-                self.commands[:, 0] = 2.
-            else:
-                self.commands[:, 0] = 2.
-            self.commands[env_ids, 1] = -0.
-        else:
-            self.commands[env_ids, 0] = torch_rand_float(self.command_ranges["lin_vel_x"][0], self.command_ranges["lin_vel_x"][1], (len(env_ids), 1), device=self.device).squeeze(1)
-            self.commands[env_ids, 1] = torch_rand_float(self.command_ranges["lin_vel_y"][0], self.command_ranges["lin_vel_y"][1], (len(env_ids), 1), device=self.device).squeeze(1)
+        self.commands[env_ids, 0] = torch_rand_float(self.command_ranges["lin_vel_x"][0], self.command_ranges["lin_vel_x"][1], (len(env_ids), 1), device=self.device).squeeze(1)
+        self.commands[env_ids, 1] = torch_rand_float(self.command_ranges["lin_vel_y"][0], self.command_ranges["lin_vel_y"][1], (len(env_ids), 1), device=self.device).squeeze(1)
         
         if self.cfg.commands.heading_command:
-            if self.cfg.env.play:
-                self.commands[env_ids, 3] = 0.
-            else:
-                self.commands[env_ids, 3] = torch_rand_float(self.command_ranges["heading"][0], self.command_ranges["heading"][1], (len(env_ids), 1), device=self.device).squeeze(1)
+            self.commands[env_ids, 3] = torch_rand_float(self.command_ranges["heading"][0], self.command_ranges["heading"][1], (len(env_ids), 1), device=self.device).squeeze(1)
         else:
-            if self.cfg.env.play:
-                self.commands[env_ids, 2] = 0.
-            else:
-                self.commands[env_ids, 2] = torch_rand_float(self.command_ranges["ang_vel_yaw"][0], self.command_ranges["ang_vel_yaw"][1], (len(env_ids), 1), device=self.device).squeeze(1)
+            self.commands[env_ids, 2] = torch_rand_float(self.command_ranges["ang_vel_yaw"][0], self.command_ranges["ang_vel_yaw"][1], (len(env_ids), 1), device=self.device).squeeze(1)
+
+        if self.cfg.env.play:
+            self.commands[env_ids, 0] = 2.
 
         return
    
@@ -556,17 +440,7 @@ class MotorPrimitives(BaseTask):
         actions_scaled = actions * self.cfg.control.action_scale
         des_joint_pos = torch.zeros_like(self.torques,device=self.device)
 
-        # xs,ys,zs = self.ID.intrinsic_dynamics(actions_scaled, self.commands[:, :3])
         xs,ys,zs = self.ID.intrinsic_dynamics(actions_scaled, self.commands[:, :3], contact_forces=self.contact_forces[:, self.feet_indices, 2])
-        #TODO
-        if self.cfg.env.play:
-            self.phase_history.append(self.ID.X[:, 1, :].detach().cpu().numpy())
-            self.amplitude_history.append((torch.clip(self.ID.X[:, 0, :], self.ID.mu_low, self.ID.mu_up)).detach().cpu().numpy())
-            self.amplitude_dot_history.append(self.ID.X_dot[:, 0, :].detach().cpu().numpy())
-            self.mu_history.append(np.sqrt(self.ID._mu_x.detach().cpu().numpy()))
-            self.omega_history.append(self.ID.X_dot[:, 1, :].detach().cpu().numpy())
-            self.x_history.append(xs.detach().cpu().numpy())
-            self.z_history.append(zs.detach().cpu().numpy())
 
         sideSign = np.array([-1,1,-1,1]) 
         foot_y = torch.ones(self.num_envs,device=self.device,requires_grad=False) * self.cfg.asset.hip_link_length_a1
@@ -631,8 +505,6 @@ class MotorPrimitives(BaseTask):
         """
         max_vel = self.cfg.domain_rand.max_push_vel_xy
         self.root_states[:, 7:9] = torch_rand_float(-max_vel, max_vel, (self.num_envs, 2), device=self.device) 
-        if self.cfg.env.play:
-            self.root_states[:, 7:9] = torch_rand_float(-max_vel, -max_vel, (self.num_envs, 2), device=self.device)
         self.gym.set_actor_root_state_tensor(self.sim, gymtorch.unwrap_tensor(self.root_states))
 
 
@@ -703,28 +575,22 @@ class MotorPrimitives(BaseTask):
         self.last_actions = torch.zeros(self.num_envs, self.num_actions, dtype=torch.float, device=self.device, requires_grad=False)
         self.last_base_pos = torch.zeros(self.num_envs,  dtype=torch.float, device=self.device, requires_grad=False)
         self.last_dof_vel = torch.zeros_like(self.dof_vel)
-        self.last_dof_pos = torch.zeros_like(self.dof_pos)
         self.last_root_vel = torch.zeros_like(self.root_states[:, 7:13])
         self.commands = torch.zeros(self.num_envs, self.cfg.commands.num_commands, dtype=torch.float, device=self.device, requires_grad=False) # x vel, y vel, yaw vel, heading
         self.commands_scale = torch.tensor([self.obs_scales.lin_vel, self.obs_scales.lin_vel, self.obs_scales.ang_vel], device=self.device, requires_grad=False,)
         self.base_lin_vel = quat_rotate_inverse(self.base_quat, self.root_states[:, 7:10])
         self.base_ang_vel = quat_rotate_inverse(self.base_quat, self.root_states[:, 10:13])
-        self.first_iteartion= True
         self.projected_gravity = quat_rotate_inverse(self.base_quat, self.gravity_vec)
 
         self.rigid_body_state = gymtorch.wrap_tensor(rigid_body_state)[:self.num_envs * self.num_bodies, :]
 
         init_phase = self.cfg.control.init_phase
-        # self.ID = Interoceptive_Dynamics(time_step=self.sim_params.dt,num_envs=self.num_envs,device=self.device, init_phase=init_phase)
-        self.ID = Interoceptive_Reflex_Dynamics(time_step=self.sim_params.dt,num_envs=self.num_envs,device=self.device, init_phase=init_phase)
+        self.ID = Interoceptive_Dynamics(time_step=self.sim_params.dt,num_envs=self.num_envs,device=self.device, init_phase=init_phase)
         oscillator_type = self.cfg.control.oscillator_type
         self.ID.oscillator = getattr(self.ID, oscillator_type)
         self.ID._MAX_STEP_LEN = self.cfg.asset.max_step_length
         self.ID._GROUND_CLEARANCE = self.cfg.asset.ground_clearance
         self.ID._GROUND_PENETRATION = self.cfg.asset.ground_penetration
-
-        self.actions_slow = torch.zeros(self.num_envs, 8, device=self.device, dtype=torch.float)
-        self.last_actions_slow = torch.zeros_like(self.actions_slow)
 
         self.actions_diff = torch.zeros(self.num_envs,  dtype=torch.float, device=self.device, requires_grad=False)
 
@@ -920,18 +786,6 @@ class MotorPrimitives(BaseTask):
             self.reward_functions.append(getattr(self, name))
         self.episode_sums = {name: torch.zeros(self.num_envs, dtype=torch.float, device=self.device, requires_grad=False)
                              for name in self.reward_scales.keys()}
-
-    def import_gait_model(self, paths):
-        self.gait_models = []
-        _, train_cfg = task_registry.get_cfgs('MP_a1')
-        train_cfg_dict = class_to_dict(train_cfg)
-        cfg = env_cfg(num_envs=self.num_envs, num_obs=44, num_privileged_obs=None, num_actions=8)
-
-        for path in paths:
-            model = GaitModel(train_cfg_dict, cfg, None, self.device)
-            model.load(path,False)
-            policy = model.get_inference_policy(device=self.device)
-            self.gait_models.append(policy)
 
     def _create_ground_plane(self):
         """ Adds a ground plane to the simulation, sets friction and restitution based on the cfg.
@@ -1133,9 +987,6 @@ class MotorPrimitives(BaseTask):
     def _reward_action_rate(self):
         return self.actions_diff
     
-    def _reward_decision(self):
-        return 0.
-
     def _reward_dof_vel_limits(self):
         # Penalize dof velocities too close to the limit
         # clip to max error = 1 rad/s per joint to avoid huge penalties

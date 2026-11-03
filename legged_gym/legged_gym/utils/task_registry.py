@@ -5,11 +5,12 @@ import re
 import sys
 import json
 import shutil
+import copy
 from datetime import datetime
 from typing import Tuple
 
 from rsl_rl.env import VecEnv
-from rsl_rl.runners import OnPolicyRunner, TwinPolicyRunner, MPPolicyRunner, OmegaPolicyRunner, LowPolicyRunner, HighPolicyRunner, InteroceptivePolicyRunner, MultiInteroceptivePolicyRunner, FullPolicyRunner
+from rsl_rl.runners import OnPolicyRunner, InteroceptivePolicyRunner, MultiInteroceptivePolicyRunner
 
 
 from legged_gym import LEGGED_GYM_ROOT_DIR
@@ -47,8 +48,8 @@ class TaskRegistry():
         return self.task_classes[name]
     
     def get_cfgs(self, name) -> Tuple[LeggedRobotCfg, LeggedRobotCfgPPO]:
-        train_cfg = self.train_cfgs[name]
-        env_cfg = self.env_cfgs[name]
+        train_cfg = copy.deepcopy(self.train_cfgs[name])
+        env_cfg = copy.deepcopy(self.env_cfgs[name])
         # copy seed
         env_cfg.seed = train_cfg.seed
         return env_cfg, train_cfg
@@ -120,9 +121,6 @@ class TaskRegistry():
                 raise ValueError("Either 'name' or 'train_cfg' must be not None")
             # load config files
             _, train_cfg = self.get_cfgs(name)
-        else:
-            if name is not None:
-                print(f"'train_cfg' provided -> Ignoring 'name={name}'")
         # override cfg from args (if specified)
         _, train_cfg = update_cfg_from_args(None, train_cfg, args)
 
@@ -163,18 +161,11 @@ class TaskRegistry():
         resume = train_cfg.runner.resume
         if resume:
             # load previously trained model
-            if name in ('MP_interoceptive_a1', 'MP_multi_primitive_a1', 'MP_pro_terrain_a1', 'MP_pro_terrain_v2_a1', 'MP_pro_terrain_modal_a1', 'MP_full_a1'):
+            if name in ('MP_interoceptive_a1', 'MP_full_a1', "MP_refmotion_pace_a1", "MP_refmotion_trot_a1", "MP_refmotion_canter_a1"):
                 pattern = re.compile(r"^model_(\d+)_\d+\.pt$")
-            elif name == 'MP_adaptive_a1' or name == 'MP_transient_a1':
-                pattern = re.compile(r"^model_(\d+)_high-\d+_hip-\d+_mu-\d+_omega-\d+\.pt$")
-            elif name == 'MP_preset_a1' or name == 'MP_refmotion_a1':
-                pattern = re.compile(r"^model_(\d+)_high-\d+_low-\d+\.pt$")
-            elif name == 'MP_omega_a1':
-                pattern = re.compile(r"^model_(\d+)_omega-\d+\.pt$")
             else:
-                pattern = re.compile(r"^model_(\d+)+\.pt$")
+                pattern = re.compile(r"^model_(\d+)\.pt$")
             resume_path = get_load_path(log_root, pattern, load_run=train_cfg.runner.load_run, checkpoint=train_cfg.runner.checkpoint)
-            # resume_path = f'{LEGGED_GYM_ROOT_DIR}/logs/A1/amortized-control/model_500.pt'
             print(f"Loading model from: {resume_path}")
             if save_cfg:
                 shutil.copyfile(resume_path, os.path.join(log_dir, os.path.basename(resume_path)))

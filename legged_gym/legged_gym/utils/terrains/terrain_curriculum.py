@@ -31,9 +31,12 @@ class TerrainCurriculum:
             if not np.isfinite(difficulties).all() or np.any(np.diff(difficulties, axis=0) < 0):
                 raise ValueError('curriculum requires nondecreasing difficulty rows in every column')
             distance = cfg.curriculum_promote_distance
-            available = min(cfg.terrain_length, cfg.terrain_width) / 2 - cfg.boundary_margin - cfg.spawn_xy_jitter
+            # The robot keeps walking into the next tile and the outer map
+            # border; promotion may therefore require clearing the last band.
+            available = (cfg.terrain_length / 2 + getattr(cfg, 'border_size', 0.)
+                         - cfg.boundary_margin - cfg.spawn_xy_jitter)
             if not np.isfinite(distance) or not 0 < distance < available:
-                raise ValueError('curriculum_promote_distance must be positive and inside the usable tile half-length')
+                raise ValueError('curriculum_promote_distance must be positive and inside the usable map')
             up, down = cfg.curriculum_promote_ratio, cfg.curriculum_demote_ratio
             if not np.isfinite([up, down]).all() or not 0 <= down < up <= 1:
                 raise ValueError('curriculum ratios must satisfy 0 <= demote < promote <= 1')
@@ -47,11 +50,15 @@ class TerrainCurriculum:
         self.start_xy = torch.zeros(num_envs, 2, device=device)
         self.command_displacement = torch.zeros_like(self.start_xy)
         self.command_distance = torch.zeros(num_envs, device=device)
+        self.max_progress = torch.zeros(num_envs, device=device)
+        self.commanded_at_max = torch.zeros(num_envs, device=device)
 
     def reset(self, env_ids, xy):
         self.start_xy[env_ids] = xy
         self.command_displacement[env_ids] = 0.
         self.command_distance[env_ids] = 0.
+        self.max_progress[env_ids] = 0.
+        self.commanded_at_max[env_ids] = 0.
 
     def accumulate(self, commands, quaternion, dt):
         """Integrate the command used by this step, before command resampling."""
@@ -65,6 +72,19 @@ class TerrainCurriculum:
         self.command_displacement[:, 1] += (s * vx + c * vy) * dt
         self.command_distance += torch.linalg.vector_norm(commands[:, :2], dim=1) * dt
 
+    def observe_position(self, xy, valid):
+        """Remember safe progress so a later fall cannot erase a completed tile."""
+        if not self.enabled:
+            return
+        desired = self.command_displacement
+        length = torch.linalg.vector_norm(desired, dim=1)
+        direction = desired / length.clamp_min(1e-6).unsqueeze(1)
+        progress = ((xy - self.start_xy) * direction).sum(dim=1)
+        better = valid & (length > 1e-6) & (progress > self.max_progress)
+        self.max_progress = torch.where(better, progress, self.max_progress)
+        self.commanded_at_max = torch.where(
+            better, self.command_distance, self.commanded_at_max)
+
     def update(self, env_ids, xy, failed, episode_steps):
         """Update only completed episodes; stay at the hardest level after success."""
         if not self.enabled or len(env_ids) == 0:
@@ -75,8 +95,12 @@ class TerrainCurriculum:
         progress = ((xy - self.start_xy[env_ids]) * direction).sum(dim=1)
         commanded = self.command_distance[env_ids]
         moving = (commanded > 1e-6) & (length > 1e-6)
-        promote = (~failed & moving & (progress >= self.cfg.curriculum_promote_distance)
-                   & (progress >= self.cfg.curriculum_promote_ratio * commanded))
-        demote = failed | (moving & (progress < self.cfg.curriculum_demote_ratio * commanded))
+        safe_final = ~failed & moving & (progress > self.max_progress[env_ids])
+        best_progress = torch.where(safe_final, progress, self.max_progress[env_ids])
+        best_commanded = torch.where(safe_final, commanded, self.commanded_at_max[env_ids])
+        promote = ((best_commanded > 1e-6)
+                   & (best_progress >= self.cfg.curriculum_promote_distance)
+                   & (best_progress >= self.cfg.curriculum_promote_ratio * best_commanded))
+        demote = ~promote & (failed | (moving & (progress < self.cfg.curriculum_demote_ratio * commanded)))
         change = (promote.long() - demote.long()) * (episode_steps > 0).long()
         self.levels[env_ids] = (self.levels[env_ids] + change).clamp(self.minimum, self.maximum)

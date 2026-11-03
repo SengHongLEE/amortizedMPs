@@ -44,6 +44,123 @@ class TerrainTests(unittest.TestCase):
             self.skipTest('Generator not implemented yet')
         return self.Terrain(config(**changes), 12)
 
+    def test_uniform_gap_spacing_across_tiles_and_single_gap_pattern(self):
+        variants = {
+            'gap_continuous': {'type': 'gap', 'params': {'pattern': 'uniform'}},
+            'gap_single': {'type': 'gap', 'params': {'pattern': 'single'}},
+        }
+        for name, expected_count in (('gap_continuous', 8), ('gap_single', 2)):
+            terrain = self.terrain(
+                selected=name, terrain_variants=variants, num_cols=1,
+                terrain_length=8., terrain_width=8., platform_size=3.,
+                terrain_params={'gap': {'width_range': [.2, .2],
+                                        'depth_range': [.6, .6], 'spacing': 2.}})
+            y = terrain.border + terrain.width_per_env_pixels // 2
+            first = terrain.border
+            last = first + 2 * terrain.length_per_env_pixels
+            below = terrain.heightsamples[first:last, y] < 0
+            starts = np.flatnonzero(below & ~np.r_[False, below[:-1]])
+            self.assertEqual(len(starts), expected_count)
+            if name == 'gap_continuous':
+                np.testing.assert_array_equal(np.diff(starts), np.full(7, 20))
+
+    def test_gap_variants_can_set_separate_widths_and_continuous_count(self):
+        variants = {
+            'gap_continuous': {'type': 'gap', 'params': {
+                'pattern': 'uniform', 'num_gaps': 2, 'width_range': .3,
+                'depth_range': .6, 'platform_size': 3.}},
+            'gap_single': {'type': 'gap', 'params': {
+                'pattern': 'single', 'width_range': .2, 'depth_range': .6,
+                'spacing': 2., 'platform_size': 3.}},
+        }
+        terrain = self.terrain(
+            selected=None, mesh_type='heightfield', num_rows=1, num_cols=2,
+            terrain_length=8., terrain_width=8., terrain_columns=list(variants),
+            terrain_variants=variants,
+            terrain_params={'gap': {'width_range': .5, 'spacing': 1.5}})
+        for col, expected_starts, expected_width in ((0, [20, 60], 3), (1, [60], 2)):
+            x = terrain.border
+            y = terrain.border + col * terrain.width_per_env_pixels + 40
+            below = terrain.heightsamples[x:x + 80, y] < 0
+            starts = np.flatnonzero(below & ~np.r_[False, below[:-1]])
+            ends = np.flatnonzero(below & ~np.r_[below[1:], False]) + 1
+            np.testing.assert_array_equal(starts, expected_starts)
+            np.testing.assert_array_equal(ends - starts, expected_width)
+        self.assertEqual(terrain.tile_parameters[0, 0]['spacing'], 4.)
+
+    def test_counted_gap_supports_three_gaps_with_four_landing_segments(self):
+        terrain = self.terrain(
+            selected='gap_continuous', mesh_type='heightfield', num_rows=1,
+            num_cols=1, terrain_length=8., terrain_width=8., origin_sample_size=1.,
+            terrain_variants={'gap_continuous': {'type': 'gap', 'params': {
+                'pattern': 'uniform', 'num_gaps': 3, 'width_range': .3}}})
+        x = terrain.border
+        y = terrain.border + terrain.width_per_env_pixels // 2
+        below = terrain.heightsamples[x:x + 80, y] < 0
+        self.assertEqual(np.count_nonzero(below & ~np.r_[False, below[:-1]]), 3)
+        self.assertEqual(np.count_nonzero(~below & ~np.r_[False, (~below)[:-1]]), 4)
+        self.assertFalse(below[35:45].any())
+
+    def test_uniform_hurdle_spacing_across_tiles_and_safe_spawn(self):
+        for axis in ('x', 'y'):
+            with self.subTest(axis=axis):
+                terrain = self.terrain(
+                    selected='hurdle', mesh_type='heightfield',
+                    num_rows=3 if axis == 'x' else 1,
+                    num_cols=1 if axis == 'x' else 3,
+                    terrain_length=8., terrain_width=8., platform_size=3.,
+                    origin_sample_size=1.,
+                    terrain_params={'hurdle': {'width_range': [.2, .2],
+                                               'height_range': [.1, .1],
+                                               'spacing': 2., 'pattern': 'uniform',
+                                               'axis': axis}})
+                first = terrain.border
+                last = first + 3 * terrain.length_per_env_pixels
+                cross = terrain.border + terrain.width_per_env_pixels // 2
+                profile = (terrain.heightsamples[first:last, cross] if axis == 'x'
+                           else terrain.heightsamples[cross, first:last])
+                raised = profile > 0
+                starts = np.flatnonzero(raised & ~np.r_[False, raised[:-1]])
+                np.testing.assert_array_equal(starts, np.arange(10, 240, 20))
+                np.testing.assert_array_equal(np.diff(starts), np.full(11, 20))
+                for center in (40, 120, 200):
+                    self.assertTrue(np.all(profile[center-5:center+5] == 0))
+                np.testing.assert_array_equal(terrain.env_origins[:, :, 2], 0.)
+
+    def test_uniform_hurdle_rejects_tile_length_not_divisible_by_spacing(self):
+        with self.assertRaisesRegex(ValueError, 'spacing must divide'):
+            self.terrain(selected='hurdle', mesh_type='heightfield', num_cols=1,
+                         terrain_length=8., terrain_width=8.,
+                         terrain_params={'hurdle': {'spacing': 2.1, 'pattern': 'uniform'}})
+
+    def test_four_metre_hurdle_spacing_leaves_two_metre_approach(self):
+        terrain = self.terrain(
+            selected='hurdle', mesh_type='heightfield', num_rows=2, num_cols=1,
+            terrain_length=8., terrain_width=8., origin_sample_size=1.,
+            terrain_params={'hurdle': {'width_range': [.2, .2],
+                                       'height_range': [.1, .1],
+                                       'spacing': 4., 'pattern': 'uniform'}})
+        first = terrain.border
+        cross = terrain.border + terrain.width_per_env_pixels // 2
+        profile = terrain.heightsamples[first:first + 160, cross]
+        raised = profile > 0
+        starts = np.flatnonzero(raised & ~np.r_[False, raised[:-1]])
+        np.testing.assert_array_equal(starts, [20, 60, 100, 140])
+        self.assertEqual((starts[1] - 40) * terrain.horizontal_scale, 2.)
+        self.assertTrue(np.all(profile[35:45] == 0))
+
+    def test_ramp_rows_join_without_a_vertical_step(self):
+        for sign in (-1, 1):
+            terrain = self.terrain(
+                selected='ramp', num_cols=1, terrain_length=8., terrain_width=8.,
+                terrain_params={'ramp': {'slope_range': [.10, .10],
+                                           'slope_signs': [sign], 'center_platform': True}},
+                difficulty_range=[1., 1.])
+            seam = terrain.border + terrain.length_per_env_pixels
+            middle = terrain.border + terrain.width_per_env_pixels // 2
+            self.assertLessEqual(abs(int(terrain.heightsamples[seam, middle])
+                                     - int(terrain.heightsamples[seam - 1, middle])), 2)
+
     def test_rectangular_map_mesh_origins_and_safe_platform(self):
         terrain = self.terrain()
         self.assertEqual(terrain.env_origins.shape, (2, 5, 3))

@@ -24,13 +24,14 @@ import numpy as np
 
 from legged_gym import LEGGED_GYM_ROOT_DIR
 from legged_gym.envs.base.base_config import BaseConfig
+from legged_gym.envs.a1.mp_interoceptive_config import MotorPrimitivesCfgPPO as InteroceptiveCfgPPO
 
 class MotorPrimitivesCfg(BaseConfig):
     class env:
         num_envs = 4096
         num_actions = 8
-        num_observations = 37 + num_actions + 1
-        num_privileged_obs = num_observations - 1 + 3 + 4 # if not None a priviledge_obs_buf will be returned by step() (critic obs for assymetric training). None is returned otherwise
+        num_observations = 37 + num_actions
+        num_privileged_obs = num_observations + 3 + 4 # if not None a priviledge_obs_buf will be returned by step() (critic obs for assymetric training). None is returned otherwise
 
         send_timeouts = True # send time out information to the algorithm
         env_spacing = 3.
@@ -62,7 +63,7 @@ class MotorPrimitivesCfg(BaseConfig):
     class commands:
         num_commands = 4 # default: lin_vel_x, lin_vel_y, ang_vel_yaw, heading (in heading mode ang_vel_yaw is recomputed from heading error)
         max_vel_x = 2.5
-        resampling_time = 5 # time before command are changed[s]
+        resampling_time = 10 # time before command are changed[s]
         heading_command = True #True # if true: compute ang vel command from heading error
         class ranges:
             lin_vel_x = [.3, 2.5] # min max [m/s]
@@ -98,8 +99,8 @@ class MotorPrimitivesCfg(BaseConfig):
         action_scale = 1.
         decimation= 10
         cycle = 2
-
-        low_freq_idx = [2]
+        update_cycle = 5
+        update_quality_threshold = 0.85
 
         oscillator_type = "phase_oscillator" 
         stiffness = {'joint': 100.}  # [N*m/rad]
@@ -130,7 +131,7 @@ class MotorPrimitivesCfg(BaseConfig):
         thigh_link_length_a1 = 0.213
         calf_link_length_a1 = 0.213
         max_step_length = 0.1
-        ground_clearance = 0.15
+        ground_clearance = 0.1
         ground_penetration = 0.0
 
     class domain_rand:
@@ -144,12 +145,10 @@ class MotorPrimitivesCfg(BaseConfig):
 
     class rewards:
         class scales:
-            ang_vel_xy = -0.1
+            ang_vel_xy = -0.5
             action_rate = -0.1
             exceed_torque_limits_l1norm = -0.4
             dof_vel_limits = -0.4
-            stance_slip = -0.2
-            touchdown_impact = -0.002
 
             tracking_lin_vel = 3.
             tracking_ang_vel = 1.5
@@ -157,8 +156,9 @@ class MotorPrimitivesCfg(BaseConfig):
             ref_motion = 100.
 
         task_rewards = ['tracking_lin_vel', 'tracking_ang_vel']
-        low_rewards = ['tracking_lin_vel', 'tracking_ang_vel', 'ang_vel_xy', 'action_rate', 'exceed_torque_limits_l1norm', 'dof_vel_limits',
-                       'stance_slip', 'touchdown_impact']
+        low_rewards = ['tracking_lin_vel', 'tracking_ang_vel', 'ang_vel_xy',
+                       'ref_motion', 'action_rate', 
+                       'exceed_torque_limits_l1norm', 'dof_vel_limits']
         only_positive_rewards = False # if true negative total rewards are clipped at zero (avoids early termination problems)
         tracking_sigma = 0.25 # tracking reward = exp(-error^2/sigma)
         soft_dof_vel_limit = .9
@@ -233,81 +233,20 @@ class MotorPrimitivesCfg(BaseConfig):
 
 LOW_ACTOR_TYPE = 'snn' #mlp, snn, analog_reservoir_mlp, analog_reservoir_snn, lif_reservoir_mlp, lif_reservoir_snn
 
-class MotorPrimitivesCfgPPO(BaseConfig):
-    seed = 1
-    runner_class_name = 'InteroceptivePolicyRunner'
-    class policy:
-        actor_type = LOW_ACTOR_TYPE      
-        init_noise_std = 1.0
-        actor_hidden_dims = [32]
-        activation = 'elu' # can be elu, relu, selu, crelu, lrelu, tanh, sigmoid
+class MotorPrimitivesCfgPPO(InteroceptiveCfgPPO):
+    """Reuse the interoceptive policy and PPO settings with the original run schedule."""
 
-        # Reservoir parameters
-        reservoir_dim = 16
-        reservoir_connectivity = 0.5
-        spectral_radius = 0.9
-        reservoir_input_scale = 0.5
-        reservoir_bias_scale = 0.1
-        leak_rate = 1.
-        num_reservoir_steps = 1
-        reservoir_activation = "tanh"
+    class runner(InteroceptiveCfgPPO.runner):
+        # Keep the former names for saved configuration compatibility.
 
-        reservoir_lif_beta = 0.9
-        reservoir_lif_threshold = 1.0
-        reservoir_surrogate_alpha = 5.0
-        reservoir_reset_mode = "subtract"
-
-        include_input_in_readout = False
-        readout_hidden_dims = [32]
-        readout_activation ="elu"
-
-        #SNN
-        num_snn_steps = 8
-        snn_lif_beta = 0.9
-        snn_lif_threshold = 1.0
-        snn_surrogate_alpha = 5.0
-        snn_reset_mode = "subtract"
-        snn_input_scale = 1.0
-
-        critic_hidden_dims = [32, 16]
-
-    class algorithm:
-        # training params
-        value_loss_coef = 1.0
-        use_clipped_value_loss = True
-        clip_param = 0.2
-        entropy_coef = 0.01
-        num_learning_epochs = 10
-        num_mini_batches = 4 # mini batch size = num_envs*nsteps / nminibatches
-        learning_rate = 1.e-3 
-        schedule = 'adaptive' # could be adaptive, fixed
-        gamma = 0.99
-        lam = 0.95
-        desired_kl = 0.01
-        max_grad_norm = 1.
-
-    class runner:
-        # load and resume
-        resume = False
-        load_run = -1 # -1 = last run
-        checkpoint = -1 # -1 = last saved model
-        resume_path = None # updated from load_run and chkpt
-
-        procedure = 'low'
-
-        low_level_policy_class_name = 'ActorCritic'
-        low_algorithm_class_name = 'PPOevent'
-
-        num_steps_per_env = 24  #24 # per iteration  24
-        max_iterations = 200 # number of policy updates
-        # logging
-        save_interval = 20 # check for potential saves every this many iterations
-        experiment_name = 'A1'
+        num_steps_per_env = 24
+        save_interval = 20
+        max_iterations = 500
         run_name = "".join([
             "A1MPrm-",
             (MotorPrimitivesCfg.mp_modeling.ref_type + "-"),
             (LOW_ACTOR_TYPE),
-            ("-PolicyF_" + np.format_float_scientific(1 / (MotorPrimitivesCfg.control.low_freq_idx[0] * MotorPrimitivesCfg.control.cycle * MotorPrimitivesCfg.control.decimation * MotorPrimitivesCfg.sim.dt), precision= 3, trim= "-")),
+            ("-PolicyF_" + np.format_float_scientific(1 / (MotorPrimitivesCfg.control.update_cycle * MotorPrimitivesCfg.control.cycle * MotorPrimitivesCfg.control.decimation * MotorPrimitivesCfg.sim.dt), precision= 3, trim= "-")),
             ("-MF_" + np.format_float_scientific( 1 / MotorPrimitivesCfg.sim.dt, precision= 3, trim= "-")),
-            ("-noResume" if not resume else "-from" + "_".join(load_run.split("/")[-1].split("_")[:2])),
+            ("-noResume" if not InteroceptiveCfgPPO.runner.resume else "-from" + "_".join(InteroceptiveCfgPPO.runner.load_run.split("/")[-1].split("_")[:2])),
         ])
