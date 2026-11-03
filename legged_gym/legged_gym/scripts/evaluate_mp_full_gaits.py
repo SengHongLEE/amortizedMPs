@@ -91,6 +91,13 @@ def main():
                    help='override only the modulation actor horizontal angular rate threshold')
     p.add_argument('--filter-normal-sway', action='store_true',
                    help='smooth ordinary horizontal angular oscillation during inference')
+    p.add_argument('--tracking-linear-error-limit', type=float, default=.6,
+                   help='filtered planar linear velocity tracking error trigger in m/s')
+    p.add_argument('--tracking-yaw-error-limit', type=float, default=.6,
+                   help='filtered yaw angular velocity tracking error trigger in rad/s')
+    p.add_argument('--no-tracking-error-trigger', dest='tracking_error_trigger',
+                   action='store_false', help='disable inference-only command tracking error triggers')
+    p.set_defaults(tracking_error_trigger=True)
     p.add_argument('--obstacle-height-m', type=float, default=.05)
     p.add_argument('--extero-edge-trigger', action='store_true',
                    help='use the default abrupt known terrain-edge trigger')
@@ -118,6 +125,9 @@ def main():
         horizontal_rate_limit=args.horizontal_rate_limit,
         modulation_horizontal_rate_limit=args.modulation_horizontal_rate_limit,
         filter_normal_sway=args.filter_normal_sway,
+        tracking_error_trigger=args.tracking_error_trigger,
+        tracking_linear_error_limit=args.tracking_linear_error_limit,
+        tracking_yaw_error_limit=args.tracking_yaw_error_limit,
         obstacle_height_m=args.obstacle_height_m,
         extero_edge_trigger=args.extero_edge_trigger,
         terrain_edge_height_m=args.terrain_edge_height_m,

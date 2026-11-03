@@ -131,7 +131,10 @@ def play(args):
                               modulation_horizontal_rate_limit=args.modulation_horizontal_rate_limit,
                               extero_edge_trigger=args.extero_edge_trigger,
                               terrain_edge_height_m=args.terrain_edge_height_m,
-                              filter_normal_sway=args.filter_normal_sway),
+                              filter_normal_sway=args.filter_normal_sway,
+                              tracking_error_trigger=not getattr(args, 'no_tracking_error_trigger', False),
+                              tracking_linear_error_limit=getattr(args, 'tracking_linear_error_limit', .6),
+                              tracking_yaw_error_limit=getattr(args, 'tracking_yaw_error_limit', .6)),
             env.scan_cache.x, env.scan_cache.y, env.num_envs, env.device)
     policy = runner.get_inference_policy(device=env.device)
     obs = env.get_observations()
